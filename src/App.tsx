@@ -91,13 +91,13 @@ const LOGOS = import.meta.glob("/src/AFL_Logos_Official/*.{png,svg,jpg,jpeg,webp
 }) as Record<string, string>;
 
 // --- AFL logo (top-left nav tile) from src/data
-const AFL_LOGO = import.meta.glob("/src/data/AFL_logo.png", {
+const AFL_LOGO = import.meta.glob("/data/AFL_logo.png", {
   eager: true,
   query: "?url",
   import: "default",
 }) as Record<string, string>;
 
-const AFL_LOGO_URL = AFL_LOGO["/src/data/AFL_logo.png"] ?? null;
+const AFL_LOGO_URL = AFL_LOGO["/data/AFL_logo.png"] ?? null;
 
 function getLogoUrlByClubName(clubName: string) {
   // Try exact file names first (fast path)
@@ -2002,7 +2002,7 @@ const [careerProjections, setCareerProjections] = useState<CareerProjectionRow[]
         setLoadErr(null);
 
         const [roster, kpis, ranks, radar, acq, proj, aflFormRows, vflFormRows, careerProj, playerStatsAggRows] = await Promise.all([
-          loadCsvAsObjects<RosterPlayerRow>("/src/data/roster_players.csv", (r) => {
+          loadCsvAsObjects<RosterPlayerRow>("/data/roster_players.csv", (r) => {
             const seasonN = toNumberOrNull(r["season"]);
             const ageN = toNumberOrNull(r["age"]);
             const gamesN = toNumberOrNull(r["games"]);
@@ -2024,7 +2024,7 @@ return {
 
           }),
 
-          loadCsvAsObjects<TeamKpiRow>("/src/data/team_kpis.csv", (r) => {
+          loadCsvAsObjects<TeamKpiRow>("/data/team_kpis.csv", (r) => {
             const club = normalizeClubName(r["Club"] ?? "");
             const seasonN = toNumberOrNull(r["season"]);
             const ageAvg = toNumberOrNull(r["squad_age_avg"]);
@@ -2043,7 +2043,7 @@ return {
             };
           }),
 
-          loadCsvAsObjects<RankRow>("/src/data/team_rank_timeseries.csv", (r) => {
+          loadCsvAsObjects<RankRow>("/data/team_rank_timeseries.csv", (r) => {
             const club = normalizeClubName(r["Club"] ?? "");
             const yearN = toNumberOrNull(r["year"]);
             if (!club || yearN === null) return null;
@@ -2065,7 +2065,7 @@ return {
             };
           }),
 
-          loadCsvAsObjects<SkillRadarRow>("/src/data/team_skill_radar.csv", (r) => {
+          loadCsvAsObjects<SkillRadarRow>("/data/team_skill_radar.csv", (r) => {
             const squad = normalizeClubName(r["squad.name"] ?? r["squad_name"] ?? "");
             const seasonStr = (r["season"] ?? r["season.id"] ?? "").toString().trim();
             const seasonFinal = r["season"] ? String(r["season"]).trim() : seasonStr;
@@ -2090,7 +2090,7 @@ return {
             };
           }),
 
-          loadCsvAsObjects<AcquisitionRow>("/src/data/player_acquisition_breakdown.csv", (r) => {
+          loadCsvAsObjects<AcquisitionRow>("/data/player_acquisition_breakdown.csv", (r) => {
             const club = normalizeClubName(r["Club"] ?? "");
             const year = toNumberOrNull(r["Year"]);
             const value = toNumberOrNull(r["value"]);
@@ -2099,7 +2099,7 @@ return {
             return { Club: club, Year: year, Draft: draft, value };
           }),
 
-          loadCsvAsObjects<PlayerProjectionRow>("/src/data/player_projections.csv", (r) => {
+          loadCsvAsObjects<PlayerProjectionRow>("/data/player_projections.csv", (r) => {
             const t = normalizeClubName(r["team"] ?? "");
             const seasonN = toNumberOrNull(r["season"]);
             const rating = toNumberOrNull(r["rating"]);
@@ -2122,7 +2122,7 @@ return {
           }),
 
           // NEW: AFL form
-          loadCsvAsObjects<AflFormRow>("/src/data/form_player_afl.csv", (r) => {
+          loadCsvAsObjects<AflFormRow>("/data/form_player_afl.csv", (r) => {
             const seasonN = toNumberOrNull(r["season"]);
             const wavg = toNumberOrNull(r["weighted_avg"]);
             const fchg = toNumberOrNull(r["form_change"]);
@@ -2144,7 +2144,7 @@ return {
           }),
 
           // NEW: VFL form
-          loadCsvAsObjects<VflFormRow>("/src/data/form_player_vfl.csv", (r) => {
+          loadCsvAsObjects<VflFormRow>("/data/form_player_vfl.csv", (r) => {
             const seasonN = toNumberOrNull(r["season"]);
             const wavg = toNumberOrNull(r["weighted_avg"]);
             const teamS = (r["team"] ?? "").trim();
@@ -2163,7 +2163,7 @@ return {
           }),
 
           // NEW: Career projections
-          loadCsvAsObjects<CareerProjectionRow>("/src/data/career_projections.csv", (r) => {
+          loadCsvAsObjects<CareerProjectionRow>("/data/career_projections.csv", (r) => {
             const seasonN = toNumberOrNull(r["Season"]);
             const horizonN = toNumberOrNull(r["Horizon"]);
             const srcSeasonN = toNumberOrNull(r["SourceSeason"]);
@@ -2222,7 +2222,7 @@ return {
             };
           }),
 
-          loadCsvAsObjects<PlayerStatsAggRow>("/src/data/CD_player_stats_agg.csv", (r) => {
+          loadCsvAsObjects<PlayerStatsAggRow>("/data/CD_player_stats_agg.csv", (r) => {
             const seasonN = toNumberOrNull(r["season"] ?? r["Season"] ?? "");
             const playerId = (r["player.id"] ?? r["player_id"] ?? r["playerId"] ?? "").toString().trim();
             const playerName = (r["player.name"] ?? r["player_name"] ?? r["playerName"] ?? "").toString().trim();
