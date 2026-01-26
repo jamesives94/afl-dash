@@ -417,7 +417,7 @@ const DATA_API_KEY = (import.meta as any).env?.VITE_DATA_API_KEY as string | und
 
 function toTrimmedString(x: any): string {
   // Ensures we can safely call .trim() even if the API returns numbers/nulls.
-  return toTrimmedString(x);
+  return String(x ?? "").trim();
 }
 
 function toNumberOrNull(x: any): number | null {
