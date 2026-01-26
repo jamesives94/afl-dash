@@ -74,7 +74,7 @@ const ACQ_COLOR_MAP: Record<string, string> = {
 
 // deterministic fallback so any unknown category is still consistent
 function stableColorForKey(key: string) {
-  const k = (key ?? "").trim();
+  const k = toTrimmedString(key);
   if (ACQ_COLOR_MAP[k]) return ACQ_COLOR_MAP[k];
 
   let h = 0;
@@ -156,8 +156,8 @@ const PLAYER_IMAGES = import.meta.glob("/src/players/*.png", {
   import: "default",
 }) as Record<string, string>;
 
-function getPlayerImgUrl(playerId: string) {
-  const id = (playerId ?? "").trim();
+function getPlayerImgUrl(playerId: string | number | null | undefined) {
+  const id = toTrimmedString(playerId);
   const key = `/src/players/${id}.png`;
   return PLAYER_IMAGES[key] ?? null;
 }
@@ -377,7 +377,7 @@ const AGE_CAT_COLOR: Record<string, string> = {
 
 
 function normalizeClubName(s: string) {
-  const x = (s ?? "").trim();
+  const x = toTrimmedString(s);
   const map: Record<string, string> = {
     "Adelaide Crows": "Adelaide",
     "Brisbane": "Brisbane Lions",
@@ -415,10 +415,15 @@ function clamp(n: number, lo: number, hi: number) {
 // If a server/SharePoint process calls the API, keep the key server-side.
 const DATA_API_KEY = (import.meta as any).env?.VITE_DATA_API_KEY as string | undefined;
 
+function toTrimmedString(x: any): string {
+  // Ensures we can safely call .trim() even if the API returns numbers/nulls.
+  return StringtoTrimmedString(x);
+}
+
 function toNumberOrNull(x: any): number | null {
   if (x === null || x === undefined) return null;
   if (typeof x === "number") return Number.isFinite(x) ? x : null;
-  const t = String(x ?? "").trim();
+  const t = StringtoTrimmedString(x);
   if (t === "" || t.toLowerCase() === "na" || t.toLowerCase() === "null") return null;
   const n = Number(t);
   return Number.isFinite(n) ? n : null;
@@ -807,15 +812,15 @@ function CareerProjectionDashboard({
   // Primary list: players at the selected club (if team column exists)
   const clubPlayers = useMemo(() => {
     const rows = careerProjections.filter((r) => {
-      const t = (r.team ?? "").trim();
+      const t = toTrimmedString(r.team);
       if (!t) return true; // if no team column, don't filter it out
       return normalizeClubName(t) === teamKey;
     });
 
     const map = new Map<string, { name: string; id: string; team?: string; pos?: string }>();
     for (const r of rows) {
-      const id = (r.SourceproviderId ?? "").trim();
-      const name = (r.SourcePlayer ?? "").trim();
+      const id = toTrimmedString(r.SourceproviderId);
+      const name = toTrimmedString(r.SourcePlayer);
       if (!id || !name) continue;
       const key = `${id}__${name}`;
       if (!map.has(key)) map.set(key, { name, id, team: r.team, pos: r.SourcePosition });
@@ -828,8 +833,8 @@ function CareerProjectionDashboard({
   const allPlayers = useMemo(() => {
     const map = new Map<string, { name: string; id: string; team?: string; pos?: string }>();
     for (const r of careerProjections) {
-      const id = (r.SourceproviderId ?? "").trim();
-      const name = (r.SourcePlayer ?? "").trim();
+      const id = toTrimmedString(r.SourceproviderId);
+      const name = toTrimmedString(r.SourcePlayer);
       if (!id || !name) continue;
       const key = `${id}__${name}`;
       if (!map.has(key)) map.set(key, { name, id, team: r.team, pos: r.SourcePosition });
@@ -864,7 +869,7 @@ function CareerProjectionDashboard({
     if (!id) return [] as any[];
 
     const rows = careerProjections
-      .filter((r) => (r.SourceproviderId ?? "").trim() === id)
+      .filter((r) => toTrimmedString(r.SourceproviderId) === id)
       .sort((a, b) => a.Season - b.Season);
 
     return rows.map((r) => {
@@ -884,8 +889,8 @@ function CareerProjectionDashboard({
         AA: r.AA,
         Games: r.Games,
         Seasons: r.Seasons,
-        position: (r.SourcePosition ?? "").trim(),
-        team: (r.team ?? "").trim(),
+        position: toTrimmedString(r.SourcePosition),
+        team: toTrimmedString(r.team),
         rank_all: r.rank_all ?? null,
         rank_pos: r.rank_pos ?? null,
         horizon: r.Horizon,
@@ -918,7 +923,7 @@ function CareerProjectionDashboard({
   );
 
   const compareTeamKey = useMemo(() => {
-    const t = (compareTraj.find((d: any) => d.team)?.team ?? "").trim();
+    const t = toTrimmedString(compareTraj.find((d: any) => d.team)?.team);
     return t ? normalizeClubName(t) : "";
   }, [compareTraj]);
 
@@ -1083,20 +1088,20 @@ return [minFinal, maxFinal];
     const usable = hasActual ? seasonRows.filter((r) => ["actual", "hist", "history"].includes((r.Type ?? "").toLowerCase())) : seasonRows;
 
     const playerRow =
-      usable.find((r) => (r.SourceproviderId ?? "").trim() === player.id) ??
-      seasonRows.find((r) => (r.SourceproviderId ?? "").trim() === player.id) ??
+      usable.find((r) => toTrimmedString(r.SourceproviderId) === player.id) ??
+      seasonRows.find((r) => toTrimmedString(r.SourceproviderId) === player.id) ??
       null;
 
-    const playerPos = (playerRow?.SourcePosition ?? "").trim();
+    const playerPos = toTrimmedString(playerRow?.SourcePosition);
 
     // Build a unique player list for counts (and as fallback for ranks)
     const byPlayer = new Map<string, { id: string; pos: string; rating: number }>();
     for (const r of usable) {
-      const id = (r.SourceproviderId ?? "").trim();
+      const id = toTrimmedString(r.SourceproviderId);
       if (!id) continue;
       const rating = r.estimate ?? null;
       if (rating == null) continue;
-      const pos = (r.SourcePosition ?? "").trim();
+      const pos = toTrimmedString(r.SourcePosition);
       const prev = byPlayer.get(id);
       if (!prev || rating > prev.rating) byPlayer.set(id, { id, pos, rating });
     }
@@ -1104,7 +1109,7 @@ return [minFinal, maxFinal];
     const allSorted = Array.from(byPlayer.values()).sort((a, b) => b.rating - a.rating);
     const totalAll = allSorted.length || null;
 
-    const posSorted = playerPos ? allSorted.filter((x) => (x.pos ?? "").trim() === playerPos) : [];
+    const posSorted = playerPos ? allSorted.filter((x) => toTrimmedString(x.pos) === playerPos) : [];
     const totalPos = posSorted.length || null;
 
     // Prefer direct ranks from the export if available
@@ -1203,7 +1208,7 @@ return [minFinal, maxFinal];
 
     for (const r of careerProjections) {
       const season = r.Season;
-      const id = (r.SourceproviderId ?? "").trim();
+      const id = toTrimmedString(r.SourceproviderId);
       if (!id || season == null) continue;
 
       let byPlayer = seasonPlayerRow.get(season);
@@ -1306,12 +1311,12 @@ return [minFinal, maxFinal];
     const byMetric = new Map<string, { category: string; vals: number[]; a?: number; b?: number }>();
 
     for (const r of seasonRows) {
-      const metric = (r.metric_name ?? "").trim();
+      const metric = toTrimmedString(r.metric_name);
       if (!metric) continue;
 
       let rec = byMetric.get(metric);
       if (!rec) {
-        rec = { category: (r.category ?? "").trim() || "Other", vals: [] };
+        rec = { category: toTrimmedString(r.category) || "Other", vals: [] };
         byMetric.set(metric, rec);
       }
 
@@ -1983,7 +1988,7 @@ const [careerProjections, setCareerProjections] = useState<CareerProjectionRow[]
             const gamesN = toNumberOrNull(r["games"]);
             const teamS = normalizeClubName(r["team"] ?? "");
 const ratingsN = toNumberOrNull(r["ratings"]) ?? 0;
-const ageCat = (r["age_cat"] ?? "").trim();
+const ageCat = toTrimmedString(r["age_cat"]);
 if (seasonN === null || ageN === null || gamesN === null || !teamS) return null;
 return {
   season: seasonN,
@@ -2069,7 +2074,7 @@ return {
             const club = normalizeClubName(r["Club"] ?? "");
             const year = toNumberOrNull(r["Year"]);
             const value = toNumberOrNull(r["value"]);
-            const draft = (r["Draft"] ?? "").trim();
+            const draft = toTrimmedString(r["Draft"]);
             if (!club || year === null || value === null || !draft) return null;
             return { Club: club, Year: year, Draft: draft, value };
           }),
@@ -2087,8 +2092,8 @@ return {
             return {
               team: t,
               season: seasonN,
-              playerId: (r["playerId"] ?? "").trim(),
-              player_name: (r["player_name"] ?? "").trim(),
+              playerId: toTrimmedString(r["playerId"]),
+              player_name: toTrimmedString(r["player_name"]),
               rating,
               salary,
               AA: aa,
@@ -2102,8 +2107,8 @@ return {
             const wavg = toNumberOrNull(r["weighted_avg"]);
             const fchg = toNumberOrNull(r["form_change"]);
             const teamS = normalizeClubName(r["team"] ?? "");
-            const playerId = (r["playerId"] ?? "").trim();
-            const playerName = (r["player_name"] ?? "").trim();
+            const playerId = toTrimmedString(r["playerId"]);
+            const playerName = toTrimmedString(r["player_name"]);
 
             if (seasonN === null || wavg === null || fchg === null || !teamS || !playerId || !playerName) return null;
 
@@ -2122,9 +2127,9 @@ return {
           loadApiDataAsObjects<VflFormRow>("form_player_vfl.csv", (r) => {
             const seasonN = toNumberOrNull(r["season"]);
             const wavg = toNumberOrNull(r["weighted_avg"]);
-            const teamS = (r["team"] ?? "").trim();
-            const playerId = (r["playerId"] ?? "").trim();
-            const playerName = (r["player_name"] ?? "").trim();
+            const teamS = toTrimmedString(r["team"]);
+            const playerId = toTrimmedString(r["playerId"]);
+            const playerName = toTrimmedString(r["player_name"]);
 
             if (seasonN === null || wavg === null || !teamS || !playerId || !playerName) return null;
 
@@ -2146,11 +2151,11 @@ return {
             if (seasonN === null || horizonN === null) return null;
 
             return {
-              SourceproviderId: (r["SourceproviderId"] ?? "").trim(),
-              SourcePlayer: (r["SourcePlayer"] ?? "").trim(),
+              SourceproviderId: toTrimmedString(r["SourceproviderId"]),
+              SourcePlayer: toTrimmedString(r["SourcePlayer"]),
               SourceSeason: srcSeasonN ?? seasonN,
               SourceRating: toNumberOrNull(r["SourceRating"]) ?? 0,
-              SourcePosition: (r["SourcePosition"] ?? "").trim(),
+              SourcePosition: toTrimmedString(r["SourcePosition"]),
               Horizon: horizonN,
               Season: seasonN,
               estimate: toNumberOrNull(r["estimate"]),
@@ -2160,8 +2165,8 @@ return {
               AA: toNumberOrNull(r["AA"] ?? r["AA "] ?? r["All Australian"] ?? r["AllAustralian"] ?? r["AA_prob"] ?? r["AAProb"] ?? r["AA Probability"] ?? r["AA_Prob"]),
               Seasons: toNumberOrNull(r["Seasons"]),
               Games: toNumberOrNull(r["Games"] ?? r["Games100"] ?? r["Games_100"] ?? r["Games100+"] ?? r["Games100Plus"] ?? r["Games Probability"] ?? r["Games_prob"] ?? r["GamesProb"]),
-                            Type: (r["Type"] ?? "").trim() || undefined,
-              team: (r["team"] ?? "").trim() || undefined,
+                            Type: toTrimmedString(r["Type"]) || undefined,
+              team: toTrimmedString(r["team"]) || undefined,
               rank_all: toNumberOrNull(r["rank_all"] ?? r["Rank_all"] ?? r["rankAll"] ?? r["rank_all "]),
               rank_pos: toNumberOrNull(r["rank_pos"] ?? r["Rank_pos"] ?? r["rankPos"] ?? r["rank_pos "]),
 
@@ -2294,7 +2299,7 @@ function calcAgeCatShare(ps: RosterPlayerRow[]) {
   let grandTotal = 0;
 
   for (const p of ps) {
-    const cat = (p.age_cat ?? "").trim();
+    const cat = toTrimmedString(p.age_cat);
     if (!cat) continue;
 
     const v = Number(p.ratings ?? 0);
@@ -2751,7 +2756,7 @@ const kpis = useMemo(() => {
   const vflRowsForClubSeason = vflForm
     .filter((r) => r.season === season)
     .filter((r) => normalizeClubName(r.team) === clubKey)
-    .filter((r) => (r.team ?? "").trim().toLowerCase() !== "multiple"); // safety
+    .filter((r) => toTrimmedString(r.team).toLowerCase() !== "multiple"); // safety
 
   const vflPick =
     vflRowsForClubSeason.length === 0
