@@ -710,17 +710,6 @@ function makeAgeHistogram(players: RosterPlayerRow[]) {
   return bins.map((age) => ({ age, count: counts.get(age) ?? 0, label: String(age) }));
 }
 
-function countByPosition(players: RosterPlayerRow[]) {
-  const map = new Map<string, number>();
-  for (const p of players) {
-    const pos = (p.position_group ?? "").trim();
-    if (!pos) continue;
-    map.set(pos, (map.get(pos) ?? 0) + 1);
-  }
-  return Array.from(map.entries())
-    .map(([position, count]) => ({ position, count }))
-    .sort((a, b) => b.count - a.count);
-}
 
 function safeYoY(v: number | null | undefined, decimals = 1) {
   if (v === null || v === undefined || !Number.isFinite(v)) return "YoY: —";
