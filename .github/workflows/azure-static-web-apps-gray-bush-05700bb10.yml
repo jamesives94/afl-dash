@@ -40,8 +40,11 @@ jobs:
           api_location: "api"
           skip_app_build: true
 
-            
-      
+          
+      - name: Build
+        run: npm run build
+        env:
+          VITE_DATA_API_KEY: ${{ secrets.VITE_DATA_API_KEY }}
 
 
 
