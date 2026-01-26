@@ -1,0 +1,1680 @@
+Club,Year,Draft,value
+Adelaide,2012,National,18
+Adelaide,2012,Rookie/Post-Draft,16
+Adelaide,2012,Top-10 National,2
+Adelaide,2012,Top-20 National,4
+Adelaide,2012,Trade,8
+Adelaide,2013,National,16
+Adelaide,2013,Rookie/Post-Draft,17
+Adelaide,2013,Top-10 National,2
+Adelaide,2013,Top-20 National,4
+Adelaide,2013,Trade,8
+Adelaide,2014,Free Agency,1
+Adelaide,2014,National,15
+Adelaide,2014,Rookie/Post-Draft,15
+Adelaide,2014,Top-10 National,2
+Adelaide,2014,Top-20 National,4
+Adelaide,2014,Trade,8
+Adelaide,2015,Free Agency,1
+Adelaide,2015,National,17
+Adelaide,2015,Rookie/Post-Draft,12
+Adelaide,2015,Top-10 National,2
+Adelaide,2015,Top-20 National,5
+Adelaide,2015,Trade,8
+Adelaide,2016,Free Agency,1
+Adelaide,2016,National,15
+Adelaide,2016,Rookie/Post-Draft,12
+Adelaide,2016,Top-10 National,1
+Adelaide,2016,Top-20 National,6
+Adelaide,2016,Trade,11
+Adelaide,2017,Free Agency,1
+Adelaide,2017,National,16
+Adelaide,2017,Rookie/Post-Draft,10
+Adelaide,2017,Top-10 National,1
+Adelaide,2017,Top-20 National,7
+Adelaide,2017,Trade,10
+Adelaide,2018,Free Agency,1
+Adelaide,2018,National,15
+Adelaide,2018,Rookie/Post-Draft,11
+Adelaide,2018,Top-10 National,1
+Adelaide,2018,Top-20 National,7
+Adelaide,2018,Trade,9
+Adelaide,2019,Free Agency,1
+Adelaide,2019,National,14
+Adelaide,2019,Rookie/Post-Draft,11
+Adelaide,2019,Top-10 National,2
+Adelaide,2019,Top-20 National,8
+Adelaide,2019,Trade,8
+Adelaide,2020,National,16
+Adelaide,2020,Rookie/Post-Draft,11
+Adelaide,2020,Top-10 National,3
+Adelaide,2020,Top-20 National,7
+Adelaide,2020,Trade,7
+Adelaide,2021,Free Agency,1
+Adelaide,2021,Mid-Season,1
+Adelaide,2021,National,16
+Adelaide,2021,Rookie/Post-Draft,11
+Adelaide,2021,Top-10 National,3
+Adelaide,2021,Top-20 National,7
+Adelaide,2021,Trade,7
+Adelaide,2022,Free Agency,1
+Adelaide,2022,Mid-Season,2
+Adelaide,2022,National,16
+Adelaide,2022,Rookie/Post-Draft,11
+Adelaide,2022,Top-10 National,4
+Adelaide,2022,Top-20 National,6
+Adelaide,2022,Trade,5
+Adelaide,2023,Free Agency,1
+Adelaide,2023,Mid-Season,1
+Adelaide,2023,National,16
+Adelaide,2023,Rookie/Post-Draft,13
+Adelaide,2023,Top-10 National,4
+Adelaide,2023,Top-20 National,7
+Adelaide,2023,Trade,4
+Adelaide,2024,Free Agency,1
+Adelaide,2024,Mid-Season,2
+Adelaide,2024,National,17
+Adelaide,2024,Pre-Draft,1
+Adelaide,2024,Rookie/Post-Draft,10
+Adelaide,2024,Top-10 National,4
+Adelaide,2024,Top-20 National,6
+Adelaide,2024,Trade,3
+Adelaide,2025,Free Agency,2
+Adelaide,2025,Mid-Season,1
+Adelaide,2025,National,14
+Adelaide,2025,Pre-Draft,1
+Adelaide,2025,Rookie/Post-Draft,11
+Adelaide,2025,Top-10 National,5
+Adelaide,2025,Top-20 National,5
+Adelaide,2025,Trade,5
+Brisbane,2012,National,21
+Brisbane,2012,Rookie/Post-Draft,14
+Brisbane,2012,Top-10 National,4
+Brisbane,2012,Top-20 National,2
+Brisbane,2012,Trade,7
+Brisbane,2013,Free Agency,1
+Brisbane,2013,National,20
+Brisbane,2013,Rookie/Post-Draft,12
+Brisbane,2013,Top-10 National,5
+Brisbane,2013,Top-20 National,2
+Brisbane,2013,Trade,6
+Brisbane,2014,Free Agency,2
+Brisbane,2014,National,19
+Brisbane,2014,Rookie/Post-Draft,12
+Brisbane,2014,Top-10 National,4
+Brisbane,2014,Top-20 National,1
+Brisbane,2014,Trade,8
+Brisbane,2015,Free Agency,2
+Brisbane,2015,National,21
+Brisbane,2015,Rookie/Post-Draft,12
+Brisbane,2015,Top-10 National,4
+Brisbane,2015,Trade,8
+Brisbane,2016,Free Agency,1
+Brisbane,2016,National,21
+Brisbane,2016,Rookie/Post-Draft,10
+Brisbane,2016,Top-10 National,3
+Brisbane,2016,Top-20 National,1
+Brisbane,2016,Trade,11
+Brisbane,2017,Free Agency,1
+Brisbane,2017,National,20
+Brisbane,2017,Pre-Draft,1
+Brisbane,2017,Rookie/Post-Draft,10
+Brisbane,2017,Top-10 National,4
+Brisbane,2017,Top-20 National,2
+Brisbane,2017,Trade,10
+Brisbane,2018,Free Agency,1
+Brisbane,2018,National,19
+Brisbane,2018,Pre-Draft,1
+Brisbane,2018,Rookie/Post-Draft,6
+Brisbane,2018,Top-10 National,4
+Brisbane,2018,Top-20 National,4
+Brisbane,2018,Trade,11
+Brisbane,2019,Free Agency,2
+Brisbane,2019,National,22
+Brisbane,2019,Pre-Draft,3
+Brisbane,2019,Rookie/Post-Draft,3
+Brisbane,2019,Top-10 National,3
+Brisbane,2019,Top-20 National,4
+Brisbane,2019,Trade,10
+Brisbane,2020,Free Agency,4
+Brisbane,2020,National,22
+Brisbane,2020,Pre-Draft,3
+Brisbane,2020,Rookie/Post-Draft,3
+Brisbane,2020,Top-10 National,3
+Brisbane,2020,Top-20 National,4
+Brisbane,2020,Trade,8
+Brisbane,2021,Free Agency,5
+Brisbane,2021,Mid-Season,1
+Brisbane,2021,National,19
+Brisbane,2021,Pre-Draft,3
+Brisbane,2021,Rookie/Post-Draft,3
+Brisbane,2021,Top-10 National,3
+Brisbane,2021,Top-20 National,4
+Brisbane,2021,Trade,7
+Brisbane,2022,Free Agency,4
+Brisbane,2022,Mid-Season,1
+Brisbane,2022,National,17
+Brisbane,2022,Pre-Draft,3
+Brisbane,2022,Rookie/Post-Draft,3
+Brisbane,2022,Top-10 National,3
+Brisbane,2022,Top-20 National,6
+Brisbane,2022,Trade,8
+Brisbane,2023,Free Agency,2
+Brisbane,2023,Mid-Season,1
+Brisbane,2023,National,13
+Brisbane,2023,Pre-Draft,3
+Brisbane,2023,Rookie/Post-Draft,5
+Brisbane,2023,Top-10 National,4
+Brisbane,2023,Top-20 National,7
+Brisbane,2023,Trade,10
+Brisbane,2024,Free Agency,3
+Brisbane,2024,Mid-Season,4
+Brisbane,2024,National,15
+Brisbane,2024,Pre-Draft,1
+Brisbane,2024,Rookie/Post-Draft,6
+Brisbane,2024,Top-10 National,3
+Brisbane,2024,Top-20 National,7
+Brisbane,2024,Trade,8
+Brisbane,2025,Free Agency,1
+Brisbane,2025,Mid-Season,3
+Brisbane,2025,National,15
+Brisbane,2025,Rookie/Post-Draft,6
+Brisbane,2025,Top-10 National,4
+Brisbane,2025,Top-20 National,7
+Brisbane,2025,Trade,8
+Carlton,2012,National,14
+Carlton,2012,Rookie/Post-Draft,17
+Carlton,2012,Top-10 National,6
+Carlton,2012,Top-20 National,4
+Carlton,2012,Trade,7
+Carlton,2013,National,15
+Carlton,2013,Rookie/Post-Draft,13
+Carlton,2013,Top-10 National,5
+Carlton,2013,Top-20 National,4
+Carlton,2013,Trade,7
+Carlton,2014,Free Agency,1
+Carlton,2014,National,13
+Carlton,2014,Rookie/Post-Draft,15
+Carlton,2014,Top-10 National,5
+Carlton,2014,Top-20 National,4
+Carlton,2014,Trade,7
+Carlton,2015,Free Agency,2
+Carlton,2015,National,10
+Carlton,2015,Rookie/Post-Draft,17
+Carlton,2015,Top-10 National,5
+Carlton,2015,Top-20 National,4
+Carlton,2015,Trade,8
+Carlton,2016,Free Agency,4
+Carlton,2016,National,10
+Carlton,2016,Rookie/Post-Draft,13
+Carlton,2016,Top-10 National,6
+Carlton,2016,Top-20 National,3
+Carlton,2016,Trade,10
+Carlton,2017,Free Agency,3
+Carlton,2017,National,12
+Carlton,2017,Rookie/Post-Draft,10
+Carlton,2017,Top-10 National,6
+Carlton,2017,Top-20 National,3
+Carlton,2017,Trade,12
+Carlton,2018,Free Agency,3
+Carlton,2018,National,13
+Carlton,2018,Pre-Draft,1
+Carlton,2018,Rookie/Post-Draft,8
+Carlton,2018,Top-10 National,7
+Carlton,2018,Top-20 National,2
+Carlton,2018,Trade,11
+Carlton,2019,Free Agency,2
+Carlton,2019,Mid-Season,1
+Carlton,2019,National,13
+Carlton,2019,Pre-Draft,1
+Carlton,2019,Rookie/Post-Draft,6
+Carlton,2019,Top-10 National,8
+Carlton,2019,Top-20 National,3
+Carlton,2019,Trade,12
+Carlton,2020,Free Agency,1
+Carlton,2020,National,11
+Carlton,2020,Pre-Draft,1
+Carlton,2020,Rookie/Post-Draft,10
+Carlton,2020,Top-10 National,8
+Carlton,2020,Top-20 National,5
+Carlton,2020,Trade,10
+Carlton,2021,Free Agency,2
+Carlton,2021,Mid-Season,2
+Carlton,2021,National,8
+Carlton,2021,Pre-Draft,1
+Carlton,2021,Rookie/Post-Draft,9
+Carlton,2021,Top-10 National,7
+Carlton,2021,Top-20 National,5
+Carlton,2021,Trade,11
+Carlton,2022,Free Agency,3
+Carlton,2022,Mid-Season,4
+Carlton,2022,National,8
+Carlton,2022,Pre-Draft,1
+Carlton,2022,Rookie/Post-Draft,7
+Carlton,2022,Top-10 National,5
+Carlton,2022,Top-20 National,5
+Carlton,2022,Trade,13
+Carlton,2023,Free Agency,2
+Carlton,2023,Mid-Season,3
+Carlton,2023,National,10
+Carlton,2023,Pre-Draft,1
+Carlton,2023,Rookie/Post-Draft,7
+Carlton,2023,Top-10 National,5
+Carlton,2023,Top-20 National,5
+Carlton,2023,Trade,12
+Carlton,2024,Free Agency,3
+Carlton,2024,Mid-Season,4
+Carlton,2024,National,11
+Carlton,2024,Pre-Draft,2
+Carlton,2024,Rookie/Post-Draft,6
+Carlton,2024,Top-10 National,3
+Carlton,2024,Top-20 National,4
+Carlton,2024,Trade,12
+Carlton,2025,Free Agency,4
+Carlton,2025,Mid-Season,3
+Carlton,2025,National,12
+Carlton,2025,Pre-Draft,2
+Carlton,2025,Rookie/Post-Draft,7
+Carlton,2025,Top-10 National,4
+Carlton,2025,Top-20 National,4
+Carlton,2025,Trade,10
+Collingwood,2012,National,21
+Collingwood,2012,Rookie/Post-Draft,14
+Collingwood,2012,Top-10 National,6
+Collingwood,2012,Top-20 National,1
+Collingwood,2012,Trade,6
+Collingwood,2013,Free Agency,2
+Collingwood,2013,National,15
+Collingwood,2013,Rookie/Post-Draft,16
+Collingwood,2013,Top-10 National,5
+Collingwood,2013,Top-20 National,4
+Collingwood,2013,Trade,5
+Collingwood,2014,Free Agency,3
+Collingwood,2014,National,14
+Collingwood,2014,Rookie/Post-Draft,14
+Collingwood,2014,Top-10 National,5
+Collingwood,2014,Top-20 National,4
+Collingwood,2014,Trade,5
+Collingwood,2015,Free Agency,2
+Collingwood,2015,National,14
+Collingwood,2015,Rookie/Post-Draft,11
+Collingwood,2015,Top-10 National,7
+Collingwood,2015,Top-20 National,4
+Collingwood,2015,Trade,7
+Collingwood,2016,National,17
+Collingwood,2016,Rookie/Post-Draft,11
+Collingwood,2016,Top-10 National,6
+Collingwood,2016,Top-20 National,3
+Collingwood,2016,Trade,9
+Collingwood,2017,Free Agency,2
+Collingwood,2017,National,15
+Collingwood,2017,Rookie/Post-Draft,9
+Collingwood,2017,Top-10 National,5
+Collingwood,2017,Top-20 National,3
+Collingwood,2017,Trade,11
+Collingwood,2018,Free Agency,2
+Collingwood,2018,National,15
+Collingwood,2018,Pre-Draft,1
+Collingwood,2018,Rookie/Post-Draft,7
+Collingwood,2018,Top-10 National,6
+Collingwood,2018,Top-20 National,3
+Collingwood,2018,Trade,11
+Collingwood,2019,Free Agency,2
+Collingwood,2019,Mid-Season,1
+Collingwood,2019,National,15
+Collingwood,2019,Pre-Draft,4
+Collingwood,2019,Rookie/Post-Draft,4
+Collingwood,2019,Top-10 National,6
+Collingwood,2019,Top-20 National,4
+Collingwood,2019,Trade,12
+Collingwood,2020,Free Agency,1
+Collingwood,2020,Mid-Season,1
+Collingwood,2020,National,16
+Collingwood,2020,Pre-Draft,4
+Collingwood,2020,Rookie/Post-Draft,4
+Collingwood,2020,Top-10 National,6
+Collingwood,2020,Top-20 National,4
+Collingwood,2020,Trade,11
+Collingwood,2021,Free Agency,1
+Collingwood,2021,Mid-Season,3
+Collingwood,2021,National,15
+Collingwood,2021,Pre-Draft,4
+Collingwood,2021,Rookie/Post-Draft,5
+Collingwood,2021,Top-10 National,3
+Collingwood,2021,Top-20 National,5
+Collingwood,2021,Trade,8
+Collingwood,2022,Mid-Season,4
+Collingwood,2022,National,15
+Collingwood,2022,Pre-Draft,3
+Collingwood,2022,Rookie/Post-Draft,5
+Collingwood,2022,Top-10 National,4
+Collingwood,2022,Top-20 National,5
+Collingwood,2022,Trade,9
+Collingwood,2023,Free Agency,1
+Collingwood,2023,Mid-Season,4
+Collingwood,2023,National,13
+Collingwood,2023,Pre-Draft,1
+Collingwood,2023,Rookie/Post-Draft,6
+Collingwood,2023,Top-10 National,4
+Collingwood,2023,Top-20 National,4
+Collingwood,2023,Trade,11
+Collingwood,2024,Free Agency,1
+Collingwood,2024,Mid-Season,6
+Collingwood,2024,National,10
+Collingwood,2024,Rookie/Post-Draft,8
+Collingwood,2024,Top-10 National,4
+Collingwood,2024,Top-20 National,4
+Collingwood,2024,Trade,11
+Collingwood,2025,Free Agency,3
+Collingwood,2025,Mid-Season,5
+Collingwood,2025,National,11
+Collingwood,2025,Rookie/Post-Draft,6
+Collingwood,2025,Top-10 National,4
+Collingwood,2025,Top-20 National,4
+Collingwood,2025,Trade,11
+Essendon,2012,National,19
+Essendon,2012,Pre-Draft,1
+Essendon,2012,Rookie/Post-Draft,12
+Essendon,2012,Top-10 National,7
+Essendon,2012,Top-20 National,6
+Essendon,2012,Trade,1
+Essendon,2013,Free Agency,1
+Essendon,2013,National,18
+Essendon,2013,Pre-Draft,1
+Essendon,2013,Rookie/Post-Draft,12
+Essendon,2013,Top-10 National,7
+Essendon,2013,Top-20 National,5
+Essendon,2014,Free Agency,1
+Essendon,2014,National,17
+Essendon,2014,Pre-Draft,1
+Essendon,2014,Rookie/Post-Draft,12
+Essendon,2014,Top-10 National,6
+Essendon,2014,Top-20 National,5
+Essendon,2014,Trade,3
+Essendon,2015,Free Agency,2
+Essendon,2015,National,15
+Essendon,2015,Pre-Draft,1
+Essendon,2015,Rookie/Post-Draft,11
+Essendon,2015,Top-10 National,5
+Essendon,2015,Top-20 National,6
+Essendon,2015,Trade,5
+Essendon,2016,Free Agency,3
+Essendon,2016,National,16
+Essendon,2016,Rookie/Post-Draft,23
+Essendon,2016,Top-10 National,6
+Essendon,2016,Top-20 National,4
+Essendon,2016,Trade,3
+Essendon,2017,Free Agency,3
+Essendon,2017,National,17
+Essendon,2017,Rookie/Post-Draft,13
+Essendon,2017,Top-10 National,7
+Essendon,2017,Top-20 National,3
+Essendon,2017,Trade,2
+Essendon,2018,Free Agency,3
+Essendon,2018,National,17
+Essendon,2018,Pre-Draft,1
+Essendon,2018,Rookie/Post-Draft,11
+Essendon,2018,Top-10 National,7
+Essendon,2018,Top-20 National,2
+Essendon,2018,Trade,4
+Essendon,2019,Mid-Season,1
+Essendon,2019,National,18
+Essendon,2019,Pre-Draft,1
+Essendon,2019,Rookie/Post-Draft,13
+Essendon,2019,Top-10 National,7
+Essendon,2019,Top-20 National,2
+Essendon,2019,Trade,5
+Essendon,2020,Mid-Season,1
+Essendon,2020,National,19
+Essendon,2020,Pre-Draft,2
+Essendon,2020,Rookie/Post-Draft,10
+Essendon,2020,Top-10 National,6
+Essendon,2020,Top-20 National,2
+Essendon,2020,Trade,7
+Essendon,2021,Mid-Season,2
+Essendon,2021,National,17
+Essendon,2021,Pre-Draft,2
+Essendon,2021,Rookie/Post-Draft,6
+Essendon,2021,Top-10 National,8
+Essendon,2021,Top-20 National,2
+Essendon,2021,Trade,9
+Essendon,2022,Free Agency,1
+Essendon,2022,Mid-Season,4
+Essendon,2022,National,12
+Essendon,2022,Pre-Draft,1
+Essendon,2022,Rookie/Post-Draft,8
+Essendon,2022,Top-10 National,8
+Essendon,2022,Top-20 National,3
+Essendon,2022,Trade,9
+Essendon,2023,Free Agency,1
+Essendon,2023,Mid-Season,5
+Essendon,2023,National,11
+Essendon,2023,Pre-Draft,1
+Essendon,2023,Rookie/Post-Draft,8
+Essendon,2023,Top-10 National,7
+Essendon,2023,Top-20 National,3
+Essendon,2023,Trade,9
+Essendon,2024,Free Agency,4
+Essendon,2024,Mid-Season,4
+Essendon,2024,National,11
+Essendon,2024,Rookie/Post-Draft,5
+Essendon,2024,Top-10 National,8
+Essendon,2024,Top-20 National,3
+Essendon,2024,Trade,8
+Essendon,2025,Free Agency,3
+Essendon,2025,Mid-Season,7
+Essendon,2025,National,14
+Essendon,2025,Rookie/Post-Draft,7
+Essendon,2025,Top-10 National,7
+Essendon,2025,Top-20 National,4
+Essendon,2025,Trade,5
+Fremantle,2012,National,16
+Fremantle,2012,Rookie/Post-Draft,18
+Fremantle,2012,Top-10 National,3
+Fremantle,2012,Top-20 National,5
+Fremantle,2012,Trade,4
+Fremantle,2013,Free Agency,1
+Fremantle,2013,National,16
+Fremantle,2013,Rookie/Post-Draft,15
+Fremantle,2013,Top-10 National,3
+Fremantle,2013,Top-20 National,6
+Fremantle,2013,Trade,4
+Fremantle,2014,Free Agency,2
+Fremantle,2014,National,14
+Fremantle,2014,Rookie/Post-Draft,16
+Fremantle,2014,Top-10 National,3
+Fremantle,2014,Top-20 National,6
+Fremantle,2014,Trade,4
+Fremantle,2015,Free Agency,2
+Fremantle,2015,National,16
+Fremantle,2015,Rookie/Post-Draft,16
+Fremantle,2015,Top-10 National,3
+Fremantle,2015,Top-20 National,6
+Fremantle,2015,Trade,3
+Fremantle,2016,Free Agency,1
+Fremantle,2016,National,18
+Fremantle,2016,Rookie/Post-Draft,14
+Fremantle,2016,Top-10 National,3
+Fremantle,2016,Top-20 National,6
+Fremantle,2016,Trade,3
+Fremantle,2017,Free Agency,1
+Fremantle,2017,National,19
+Fremantle,2017,Rookie/Post-Draft,10
+Fremantle,2017,Top-10 National,2
+Fremantle,2017,Top-20 National,6
+Fremantle,2017,Trade,6
+Fremantle,2018,Free Agency,1
+Fremantle,2018,National,18
+Fremantle,2018,Rookie/Post-Draft,10
+Fremantle,2018,Top-10 National,4
+Fremantle,2018,Top-20 National,4
+Fremantle,2018,Trade,7
+Fremantle,2019,Free Agency,1
+Fremantle,2019,Mid-Season,1
+Fremantle,2019,National,18
+Fremantle,2019,Rookie/Post-Draft,9
+Fremantle,2019,Top-10 National,4
+Fremantle,2019,Top-20 National,3
+Fremantle,2019,Trade,10
+Fremantle,2020,Free Agency,1
+Fremantle,2020,Mid-Season,1
+Fremantle,2020,National,16
+Fremantle,2020,Rookie/Post-Draft,10
+Fremantle,2020,Top-10 National,7
+Fremantle,2020,Top-20 National,3
+Fremantle,2020,Trade,9
+Fremantle,2021,Free Agency,1
+Fremantle,2021,National,17
+Fremantle,2021,Rookie/Post-Draft,8
+Fremantle,2021,Top-10 National,7
+Fremantle,2021,Top-20 National,4
+Fremantle,2021,Trade,6
+Fremantle,2022,Mid-Season,1
+Fremantle,2022,National,18
+Fremantle,2022,Rookie/Post-Draft,5
+Fremantle,2022,Top-10 National,7
+Fremantle,2022,Top-20 National,4
+Fremantle,2022,Trade,8
+Fremantle,2023,Mid-Season,2
+Fremantle,2023,National,16
+Fremantle,2023,Rookie/Post-Draft,8
+Fremantle,2023,Top-10 National,6
+Fremantle,2023,Top-20 National,3
+Fremantle,2023,Trade,9
+Fremantle,2024,Free Agency,1
+Fremantle,2024,Mid-Season,2
+Fremantle,2024,National,17
+Fremantle,2024,Rookie/Post-Draft,11
+Fremantle,2024,Top-10 National,5
+Fremantle,2024,Top-20 National,3
+Fremantle,2024,Trade,6
+Fremantle,2025,Free Agency,1
+Fremantle,2025,National,17
+Fremantle,2025,Rookie/Post-Draft,11
+Fremantle,2025,Top-10 National,5
+Fremantle,2025,Top-20 National,4
+Fremantle,2025,Trade,6
+GWS,2012,National,3
+GWS,2012,Pre-Draft,27
+GWS,2012,Rookie/Post-Draft,5
+GWS,2012,Top-10 National,8
+GWS,2012,Top-20 National,3
+GWS,2012,Trade,3
+GWS,2013,National,3
+GWS,2013,Pre-Draft,24
+GWS,2013,Rookie/Post-Draft,6
+GWS,2013,Top-10 National,11
+GWS,2013,Top-20 National,5
+GWS,2013,Trade,3
+GWS,2014,Free Agency,1
+GWS,2014,National,4
+GWS,2014,Pre-Draft,16
+GWS,2014,Rookie/Post-Draft,5
+GWS,2014,Top-10 National,12
+GWS,2014,Top-20 National,5
+GWS,2014,Trade,4
+GWS,2015,Free Agency,1
+GWS,2015,National,7
+GWS,2015,Pre-Draft,15
+GWS,2015,Rookie/Post-Draft,3
+GWS,2015,Top-10 National,13
+GWS,2015,Top-20 National,4
+GWS,2015,Trade,4
+GWS,2016,Free Agency,1
+GWS,2016,National,8
+GWS,2016,Pre-Draft,10
+GWS,2016,Rookie/Post-Draft,2
+GWS,2016,Top-10 National,12
+GWS,2016,Top-20 National,6
+GWS,2016,Trade,5
+GWS,2017,Free Agency,1
+GWS,2017,National,6
+GWS,2017,Pre-Draft,10
+GWS,2017,Rookie/Post-Draft,4
+GWS,2017,Top-10 National,10
+GWS,2017,Top-20 National,7
+GWS,2017,Trade,6
+GWS,2018,Free Agency,2
+GWS,2018,National,9
+GWS,2018,Pre-Draft,9
+GWS,2018,Rookie/Post-Draft,5
+GWS,2018,Top-10 National,10
+GWS,2018,Top-20 National,6
+GWS,2018,Trade,3
+GWS,2019,Free Agency,3
+GWS,2019,National,11
+GWS,2019,Pre-Draft,7
+GWS,2019,Rookie/Post-Draft,5
+GWS,2019,Top-10 National,9
+GWS,2019,Top-20 National,8
+GWS,2019,Trade,3
+GWS,2020,Free Agency,2
+GWS,2020,National,13
+GWS,2020,Pre-Draft,7
+GWS,2020,Rookie/Post-Draft,4
+GWS,2020,Top-10 National,9
+GWS,2020,Top-20 National,7
+GWS,2020,Trade,3
+GWS,2021,Free Agency,1
+GWS,2021,Mid-Season,1
+GWS,2021,National,14
+GWS,2021,Pre-Draft,6
+GWS,2021,Rookie/Post-Draft,4
+GWS,2021,Top-10 National,9
+GWS,2021,Top-20 National,7
+GWS,2021,Trade,3
+GWS,2022,Free Agency,2
+GWS,2022,Mid-Season,2
+GWS,2022,National,12
+GWS,2022,Pre-Draft,5
+GWS,2022,Rookie/Post-Draft,5
+GWS,2022,Top-10 National,9
+GWS,2022,Top-20 National,8
+GWS,2022,Trade,2
+GWS,2023,Free Agency,1
+GWS,2023,Mid-Season,2
+GWS,2023,National,13
+GWS,2023,Pre-Draft,4
+GWS,2023,Rookie/Post-Draft,5
+GWS,2023,Top-10 National,8
+GWS,2023,Top-20 National,8
+GWS,2023,Trade,3
+GWS,2024,Free Agency,1
+GWS,2024,Mid-Season,2
+GWS,2024,National,13
+GWS,2024,Pre-Draft,3
+GWS,2024,Rookie/Post-Draft,4
+GWS,2024,Top-10 National,8
+GWS,2024,Top-20 National,10
+GWS,2024,Trade,3
+GWS,2025,Free Agency,1
+GWS,2025,Mid-Season,1
+GWS,2025,National,16
+GWS,2025,Pre-Draft,2
+GWS,2025,Rookie/Post-Draft,4
+GWS,2025,Top-10 National,7
+GWS,2025,Top-20 National,10
+GWS,2025,Trade,3
+Geelong,2012,National,28
+Geelong,2012,Rookie/Post-Draft,10
+Geelong,2012,Top-10 National,4
+Geelong,2012,Top-20 National,6
+Geelong,2013,Free Agency,1
+Geelong,2013,National,24
+Geelong,2013,Rookie/Post-Draft,8
+Geelong,2013,Top-10 National,4
+Geelong,2013,Top-20 National,7
+Geelong,2013,Trade,2
+Geelong,2014,Free Agency,1
+Geelong,2014,National,23
+Geelong,2014,Rookie/Post-Draft,9
+Geelong,2014,Top-10 National,3
+Geelong,2014,Top-20 National,8
+Geelong,2014,Trade,2
+Geelong,2015,Free Agency,2
+Geelong,2015,National,22
+Geelong,2015,Rookie/Post-Draft,8
+Geelong,2015,Top-10 National,4
+Geelong,2015,Top-20 National,6
+Geelong,2015,Trade,4
+Geelong,2016,Free Agency,1
+Geelong,2016,National,20
+Geelong,2016,Rookie/Post-Draft,9
+Geelong,2016,Top-10 National,4
+Geelong,2016,Top-20 National,5
+Geelong,2016,Trade,6
+Geelong,2017,Free Agency,1
+Geelong,2017,National,23
+Geelong,2017,Pre-Draft,1
+Geelong,2017,Rookie/Post-Draft,7
+Geelong,2017,Top-10 National,3
+Geelong,2017,Top-20 National,4
+Geelong,2017,Trade,6
+Geelong,2018,Free Agency,1
+Geelong,2018,National,25
+Geelong,2018,Pre-Draft,1
+Geelong,2018,Rookie/Post-Draft,7
+Geelong,2018,Top-10 National,2
+Geelong,2018,Top-20 National,3
+Geelong,2018,Trade,6
+Geelong,2019,Free Agency,2
+Geelong,2019,National,23
+Geelong,2019,Pre-Draft,2
+Geelong,2019,Rookie/Post-Draft,8
+Geelong,2019,Top-10 National,2
+Geelong,2019,Top-20 National,2
+Geelong,2019,Trade,7
+Geelong,2020,Free Agency,1
+Geelong,2020,National,21
+Geelong,2020,Pre-Draft,2
+Geelong,2020,Rookie/Post-Draft,8
+Geelong,2020,Top-10 National,2
+Geelong,2020,Top-20 National,4
+Geelong,2020,Trade,8
+Geelong,2021,Free Agency,2
+Geelong,2021,National,19
+Geelong,2021,Pre-Draft,3
+Geelong,2021,Rookie/Post-Draft,6
+Geelong,2021,Top-10 National,1
+Geelong,2021,Top-20 National,4
+Geelong,2021,Trade,9
+Geelong,2022,Free Agency,3
+Geelong,2022,Mid-Season,1
+Geelong,2022,National,19
+Geelong,2022,Pre-Draft,3
+Geelong,2022,Rookie/Post-Draft,7
+Geelong,2022,Top-10 National,1
+Geelong,2022,Top-20 National,3
+Geelong,2022,Trade,7
+Geelong,2023,Free Agency,2
+Geelong,2023,Mid-Season,1
+Geelong,2023,National,17
+Geelong,2023,Pre-Draft,2
+Geelong,2023,Rookie/Post-Draft,10
+Geelong,2023,Top-10 National,1
+Geelong,2023,Top-20 National,2
+Geelong,2023,Trade,9
+Geelong,2024,Free Agency,1
+Geelong,2024,Mid-Season,1
+Geelong,2024,National,18
+Geelong,2024,Pre-Draft,3
+Geelong,2024,Rookie/Post-Draft,9
+Geelong,2024,Top-10 National,1
+Geelong,2024,Top-20 National,3
+Geelong,2024,Trade,8
+Geelong,2025,Free Agency,2
+Geelong,2025,National,18
+Geelong,2025,Pre-Draft,3
+Geelong,2025,Rookie/Post-Draft,10
+Geelong,2025,Top-10 National,1
+Geelong,2025,Top-20 National,3
+Geelong,2025,Trade,7
+Gold Coast,2012,National,5
+Gold Coast,2012,Pre-Draft,29
+Gold Coast,2012,Rookie/Post-Draft,7
+Gold Coast,2012,Top-10 National,7
+Gold Coast,2012,Top-20 National,2
+Gold Coast,2012,Trade,1
+Gold Coast,2013,Free Agency,1
+Gold Coast,2013,National,7
+Gold Coast,2013,Pre-Draft,20
+Gold Coast,2013,Rookie/Post-Draft,6
+Gold Coast,2013,Top-10 National,7
+Gold Coast,2013,Top-20 National,3
+Gold Coast,2013,Trade,2
+Gold Coast,2014,Free Agency,1
+Gold Coast,2014,National,7
+Gold Coast,2014,Pre-Draft,16
+Gold Coast,2014,Rookie/Post-Draft,7
+Gold Coast,2014,Top-10 National,8
+Gold Coast,2014,Top-20 National,4
+Gold Coast,2014,Trade,2
+Gold Coast,2015,Free Agency,1
+Gold Coast,2015,National,6
+Gold Coast,2015,Pre-Draft,12
+Gold Coast,2015,Rookie/Post-Draft,11
+Gold Coast,2015,Top-10 National,9
+Gold Coast,2015,Top-20 National,5
+Gold Coast,2015,Trade,2
+Gold Coast,2016,Free Agency,2
+Gold Coast,2016,National,7
+Gold Coast,2016,Pre-Draft,10
+Gold Coast,2016,Rookie/Post-Draft,9
+Gold Coast,2016,Top-10 National,8
+Gold Coast,2016,Top-20 National,6
+Gold Coast,2016,Trade,3
+Gold Coast,2017,Free Agency,2
+Gold Coast,2017,National,6
+Gold Coast,2017,Pre-Draft,9
+Gold Coast,2017,Rookie/Post-Draft,8
+Gold Coast,2017,Top-10 National,10
+Gold Coast,2017,Top-20 National,4
+Gold Coast,2017,Trade,6
+Gold Coast,2018,Free Agency,1
+Gold Coast,2018,National,9
+Gold Coast,2018,Pre-Draft,5
+Gold Coast,2018,Rookie/Post-Draft,8
+Gold Coast,2018,Top-10 National,10
+Gold Coast,2018,Top-20 National,5
+Gold Coast,2018,Trade,7
+Gold Coast,2019,Free Agency,1
+Gold Coast,2019,Mid-Season,1
+Gold Coast,2019,National,10
+Gold Coast,2019,Pre-Draft,7
+Gold Coast,2019,Rookie/Post-Draft,6
+Gold Coast,2019,Top-10 National,11
+Gold Coast,2019,Top-20 National,3
+Gold Coast,2019,Trade,9
+Gold Coast,2020,Free Agency,2
+Gold Coast,2020,Mid-Season,1
+Gold Coast,2020,National,9
+Gold Coast,2020,Pre-Draft,7
+Gold Coast,2020,Rookie/Post-Draft,10
+Gold Coast,2020,Top-10 National,11
+Gold Coast,2020,Top-20 National,3
+Gold Coast,2020,Trade,8
+Gold Coast,2021,Free Agency,3
+Gold Coast,2021,Mid-Season,1
+Gold Coast,2021,National,8
+Gold Coast,2021,Pre-Draft,8
+Gold Coast,2021,Rookie/Post-Draft,11
+Gold Coast,2021,Top-10 National,11
+Gold Coast,2021,Top-20 National,3
+Gold Coast,2021,Trade,5
+Gold Coast,2022,Free Agency,3
+Gold Coast,2022,Mid-Season,2
+Gold Coast,2022,National,9
+Gold Coast,2022,Pre-Draft,5
+Gold Coast,2022,Rookie/Post-Draft,13
+Gold Coast,2022,Top-10 National,11
+Gold Coast,2022,Top-20 National,3
+Gold Coast,2022,Trade,3
+Gold Coast,2023,Free Agency,3
+Gold Coast,2023,Mid-Season,2
+Gold Coast,2023,National,8
+Gold Coast,2023,Pre-Draft,3
+Gold Coast,2023,Rookie/Post-Draft,15
+Gold Coast,2023,Top-10 National,10
+Gold Coast,2023,Top-20 National,3
+Gold Coast,2023,Trade,4
+Gold Coast,2024,Free Agency,2
+Gold Coast,2024,Mid-Season,2
+Gold Coast,2024,National,7
+Gold Coast,2024,Pre-Draft,2
+Gold Coast,2024,Rookie/Post-Draft,14
+Gold Coast,2024,Top-10 National,11
+Gold Coast,2024,Top-20 National,4
+Gold Coast,2024,Trade,4
+Gold Coast,2025,Free Agency,1
+Gold Coast,2025,Mid-Season,3
+Gold Coast,2025,National,8
+Gold Coast,2025,Pre-Draft,2
+Gold Coast,2025,Rookie/Post-Draft,12
+Gold Coast,2025,Top-10 National,10
+Gold Coast,2025,Top-20 National,4
+Gold Coast,2025,Trade,6
+Hawthorn,2012,National,16
+Hawthorn,2012,Rookie/Post-Draft,15
+Hawthorn,2012,Top-10 National,5
+Hawthorn,2012,Top-20 National,5
+Hawthorn,2012,Trade,6
+Hawthorn,2013,Free Agency,1
+Hawthorn,2013,National,16
+Hawthorn,2013,Rookie/Post-Draft,11
+Hawthorn,2013,Top-10 National,5
+Hawthorn,2013,Top-20 National,5
+Hawthorn,2013,Trade,8
+Hawthorn,2014,Free Agency,1
+Hawthorn,2014,National,18
+Hawthorn,2014,Rookie/Post-Draft,11
+Hawthorn,2014,Top-10 National,3
+Hawthorn,2014,Top-20 National,4
+Hawthorn,2014,Trade,9
+Hawthorn,2015,Free Agency,2
+Hawthorn,2015,National,17
+Hawthorn,2015,Rookie/Post-Draft,11
+Hawthorn,2015,Top-10 National,3
+Hawthorn,2015,Top-20 National,4
+Hawthorn,2015,Trade,9
+Hawthorn,2016,Free Agency,1
+Hawthorn,2016,National,18
+Hawthorn,2016,Rookie/Post-Draft,12
+Hawthorn,2016,Top-10 National,3
+Hawthorn,2016,Top-20 National,5
+Hawthorn,2016,Trade,7
+Hawthorn,2017,Free Agency,3
+Hawthorn,2017,National,16
+Hawthorn,2017,Pre-Draft,1
+Hawthorn,2017,Rookie/Post-Draft,10
+Hawthorn,2017,Top-10 National,2
+Hawthorn,2017,Top-20 National,5
+Hawthorn,2017,Trade,8
+Hawthorn,2018,Free Agency,3
+Hawthorn,2018,National,18
+Hawthorn,2018,Pre-Draft,1
+Hawthorn,2018,Rookie/Post-Draft,11
+Hawthorn,2018,Top-10 National,1
+Hawthorn,2018,Top-20 National,5
+Hawthorn,2018,Trade,7
+Hawthorn,2019,Free Agency,3
+Hawthorn,2019,National,17
+Hawthorn,2019,Pre-Draft,1
+Hawthorn,2019,Rookie/Post-Draft,13
+Hawthorn,2019,Top-10 National,1
+Hawthorn,2019,Top-20 National,3
+Hawthorn,2019,Trade,9
+Hawthorn,2020,Free Agency,3
+Hawthorn,2020,National,16
+Hawthorn,2020,Pre-Draft,1
+Hawthorn,2020,Rookie/Post-Draft,14
+Hawthorn,2020,Top-20 National,2
+Hawthorn,2020,Trade,11
+Hawthorn,2021,Mid-Season,2
+Hawthorn,2021,National,15
+Hawthorn,2021,Pre-Draft,1
+Hawthorn,2021,Rookie/Post-Draft,12
+Hawthorn,2021,Top-10 National,1
+Hawthorn,2021,Top-20 National,1
+Hawthorn,2021,Trade,13
+Hawthorn,2022,Mid-Season,4
+Hawthorn,2022,National,17
+Hawthorn,2022,Pre-Draft,2
+Hawthorn,2022,Rookie/Post-Draft,6
+Hawthorn,2022,Top-10 National,2
+Hawthorn,2022,Top-20 National,1
+Hawthorn,2022,Trade,11
+Hawthorn,2023,Free Agency,2
+Hawthorn,2023,Mid-Season,5
+Hawthorn,2023,National,17
+Hawthorn,2023,Pre-Draft,2
+Hawthorn,2023,Rookie/Post-Draft,6
+Hawthorn,2023,Top-10 National,3
+Hawthorn,2023,Top-20 National,2
+Hawthorn,2023,Trade,7
+Hawthorn,2024,Free Agency,1
+Hawthorn,2024,Mid-Season,5
+Hawthorn,2024,National,16
+Hawthorn,2024,Pre-Draft,1
+Hawthorn,2024,Rookie/Post-Draft,5
+Hawthorn,2024,Top-10 National,4
+Hawthorn,2024,Top-20 National,3
+Hawthorn,2024,Trade,10
+Hawthorn,2025,Free Agency,2
+Hawthorn,2025,Mid-Season,4
+Hawthorn,2025,National,17
+Hawthorn,2025,Pre-Draft,3
+Hawthorn,2025,Rookie/Post-Draft,3
+Hawthorn,2025,Top-10 National,3
+Hawthorn,2025,Top-20 National,3
+Hawthorn,2025,Trade,9
+Melbourne,2012,National,15
+Melbourne,2012,Rookie/Post-Draft,14
+Melbourne,2012,Top-10 National,4
+Melbourne,2012,Top-20 National,11
+Melbourne,2012,Trade,2
+Melbourne,2013,Free Agency,2
+Melbourne,2013,National,15
+Melbourne,2013,Rookie/Post-Draft,11
+Melbourne,2013,Top-10 National,5
+Melbourne,2013,Top-20 National,7
+Melbourne,2013,Trade,5
+Melbourne,2014,Free Agency,3
+Melbourne,2014,National,13
+Melbourne,2014,Rookie/Post-Draft,9
+Melbourne,2014,Top-10 National,5
+Melbourne,2014,Top-20 National,7
+Melbourne,2014,Trade,7
+Melbourne,2015,Free Agency,3
+Melbourne,2015,National,16
+Melbourne,2015,Rookie/Post-Draft,7
+Melbourne,2015,Top-10 National,7
+Melbourne,2015,Top-20 National,3
+Melbourne,2015,Trade,8
+Melbourne,2016,Free Agency,1
+Melbourne,2016,National,15
+Melbourne,2016,Rookie/Post-Draft,7
+Melbourne,2016,Top-10 National,8
+Melbourne,2016,Top-20 National,3
+Melbourne,2016,Trade,11
+Melbourne,2017,National,15
+Melbourne,2017,Pre-Draft,1
+Melbourne,2017,Rookie/Post-Draft,9
+Melbourne,2017,Top-10 National,8
+Melbourne,2017,Top-20 National,1
+Melbourne,2017,Trade,12
+Melbourne,2018,National,17
+Melbourne,2018,Pre-Draft,1
+Melbourne,2018,Rookie/Post-Draft,7
+Melbourne,2018,Top-10 National,6
+Melbourne,2018,Top-20 National,1
+Melbourne,2018,Trade,12
+Melbourne,2019,Mid-Season,1
+Melbourne,2019,National,19
+Melbourne,2019,Pre-Draft,3
+Melbourne,2019,Rookie/Post-Draft,9
+Melbourne,2019,Top-10 National,5
+Melbourne,2019,Top-20 National,1
+Melbourne,2019,Trade,9
+Melbourne,2020,Free Agency,1
+Melbourne,2020,Mid-Season,1
+Melbourne,2020,National,18
+Melbourne,2020,Pre-Draft,1
+Melbourne,2020,Rookie/Post-Draft,9
+Melbourne,2020,Top-10 National,6
+Melbourne,2020,Top-20 National,2
+Melbourne,2020,Trade,7
+Melbourne,2021,Free Agency,1
+Melbourne,2021,Mid-Season,2
+Melbourne,2021,National,19
+Melbourne,2021,Pre-Draft,1
+Melbourne,2021,Rookie/Post-Draft,8
+Melbourne,2021,Top-10 National,6
+Melbourne,2021,Top-20 National,2
+Melbourne,2021,Trade,6
+Melbourne,2022,Free Agency,2
+Melbourne,2022,Mid-Season,1
+Melbourne,2022,National,18
+Melbourne,2022,Rookie/Post-Draft,8
+Melbourne,2022,Top-10 National,6
+Melbourne,2022,Top-20 National,2
+Melbourne,2022,Trade,6
+Melbourne,2023,Free Agency,2
+Melbourne,2023,Mid-Season,1
+Melbourne,2023,National,15
+Melbourne,2023,Pre-Draft,1
+Melbourne,2023,Rookie/Post-Draft,9
+Melbourne,2023,Top-10 National,4
+Melbourne,2023,Top-20 National,3
+Melbourne,2023,Trade,9
+Melbourne,2024,Free Agency,1
+Melbourne,2024,Mid-Season,2
+Melbourne,2024,National,15
+Melbourne,2024,Pre-Draft,1
+Melbourne,2024,Rookie/Post-Draft,7
+Melbourne,2024,Top-10 National,5
+Melbourne,2024,Top-20 National,4
+Melbourne,2024,Trade,10
+Melbourne,2025,Free Agency,1
+Melbourne,2025,Mid-Season,2
+Melbourne,2025,National,15
+Melbourne,2025,Rookie/Post-Draft,9
+Melbourne,2025,Top-10 National,5
+Melbourne,2025,Top-20 National,5
+Melbourne,2025,Trade,8
+North Melbourne,2012,National,20
+North Melbourne,2012,Rookie/Post-Draft,15
+North Melbourne,2012,Top-10 National,5
+North Melbourne,2012,Top-20 National,3
+North Melbourne,2012,Trade,3
+North Melbourne,2013,National,22
+North Melbourne,2013,Pre-Draft,1
+North Melbourne,2013,Rookie/Post-Draft,11
+North Melbourne,2013,Top-10 National,4
+North Melbourne,2013,Top-20 National,4
+North Melbourne,2013,Trade,3
+North Melbourne,2014,Free Agency,2
+North Melbourne,2014,National,22
+North Melbourne,2014,Pre-Draft,1
+North Melbourne,2014,Rookie/Post-Draft,11
+North Melbourne,2014,Top-10 National,5
+North Melbourne,2014,Top-20 National,4
+North Melbourne,2015,Free Agency,4
+North Melbourne,2015,National,18
+North Melbourne,2015,Pre-Draft,1
+North Melbourne,2015,Rookie/Post-Draft,12
+North Melbourne,2015,Top-10 National,5
+North Melbourne,2015,Top-20 National,5
+North Melbourne,2016,Free Agency,4
+North Melbourne,2016,National,20
+North Melbourne,2016,Rookie/Post-Draft,9
+North Melbourne,2016,Top-10 National,5
+North Melbourne,2016,Top-20 National,5
+North Melbourne,2016,Trade,1
+North Melbourne,2017,Free Agency,2
+North Melbourne,2017,National,20
+North Melbourne,2017,Rookie/Post-Draft,9
+North Melbourne,2017,Top-10 National,4
+North Melbourne,2017,Top-20 National,5
+North Melbourne,2017,Trade,4
+North Melbourne,2018,Free Agency,3
+North Melbourne,2018,National,21
+North Melbourne,2018,Pre-Draft,1
+North Melbourne,2018,Rookie/Post-Draft,7
+North Melbourne,2018,Top-10 National,4
+North Melbourne,2018,Top-20 National,5
+North Melbourne,2018,Trade,4
+North Melbourne,2019,Free Agency,1
+North Melbourne,2019,Mid-Season,1
+North Melbourne,2019,National,18
+North Melbourne,2019,Pre-Draft,1
+North Melbourne,2019,Rookie/Post-Draft,7
+North Melbourne,2019,Top-10 National,5
+North Melbourne,2019,Top-20 National,5
+North Melbourne,2019,Trade,8
+North Melbourne,2020,Free Agency,2
+North Melbourne,2020,Mid-Season,1
+North Melbourne,2020,National,18
+North Melbourne,2020,Rookie/Post-Draft,6
+North Melbourne,2020,Top-10 National,5
+North Melbourne,2020,Top-20 National,5
+North Melbourne,2020,Trade,8
+North Melbourne,2021,Free Agency,2
+North Melbourne,2021,Mid-Season,2
+North Melbourne,2021,National,15
+North Melbourne,2021,Rookie/Post-Draft,6
+North Melbourne,2021,Top-10 National,6
+North Melbourne,2021,Top-20 National,5
+North Melbourne,2021,Trade,8
+North Melbourne,2022,Free Agency,3
+North Melbourne,2022,Mid-Season,2
+North Melbourne,2022,National,17
+North Melbourne,2022,Rookie/Post-Draft,5
+North Melbourne,2022,Top-10 National,7
+North Melbourne,2022,Top-20 National,2
+North Melbourne,2022,Trade,8
+North Melbourne,2023,Free Agency,2
+North Melbourne,2023,Mid-Season,3
+North Melbourne,2023,National,18
+North Melbourne,2023,Rookie/Post-Draft,6
+North Melbourne,2023,Top-10 National,8
+North Melbourne,2023,Top-20 National,2
+North Melbourne,2023,Trade,7
+North Melbourne,2024,Free Agency,3
+North Melbourne,2024,Mid-Season,4
+North Melbourne,2024,National,15
+North Melbourne,2024,Rookie/Post-Draft,6
+North Melbourne,2024,Top-10 National,8
+North Melbourne,2024,Top-20 National,3
+North Melbourne,2024,Trade,7
+North Melbourne,2025,Free Agency,2
+North Melbourne,2025,Mid-Season,6
+North Melbourne,2025,National,16
+North Melbourne,2025,Rookie/Post-Draft,2
+North Melbourne,2025,Top-10 National,8
+North Melbourne,2025,Top-20 National,3
+North Melbourne,2025,Trade,9
+Port Adelaide,2012,National,16
+Port Adelaide,2012,Rookie/Post-Draft,14
+Port Adelaide,2012,Top-10 National,6
+Port Adelaide,2012,Top-20 National,5
+Port Adelaide,2012,Trade,4
+Port Adelaide,2013,National,16
+Port Adelaide,2013,Rookie/Post-Draft,11
+Port Adelaide,2013,Top-10 National,6
+Port Adelaide,2013,Top-20 National,3
+Port Adelaide,2013,Trade,8
+Port Adelaide,2014,Free Agency,1
+Port Adelaide,2014,National,18
+Port Adelaide,2014,Rookie/Post-Draft,8
+Port Adelaide,2014,Top-10 National,6
+Port Adelaide,2014,Top-20 National,3
+Port Adelaide,2014,Trade,9
+Port Adelaide,2015,Free Agency,1
+Port Adelaide,2015,National,21
+Port Adelaide,2015,Rookie/Post-Draft,8
+Port Adelaide,2015,Top-10 National,6
+Port Adelaide,2015,Top-20 National,3
+Port Adelaide,2015,Trade,7
+Port Adelaide,2016,Free Agency,1
+Port Adelaide,2016,National,20
+Port Adelaide,2016,Rookie/Post-Draft,7
+Port Adelaide,2016,Top-10 National,5
+Port Adelaide,2016,Top-20 National,2
+Port Adelaide,2016,Trade,9
+Port Adelaide,2017,Free Agency,1
+Port Adelaide,2017,National,19
+Port Adelaide,2017,Rookie/Post-Draft,9
+Port Adelaide,2017,Top-10 National,4
+Port Adelaide,2017,Top-20 National,4
+Port Adelaide,2017,Trade,8
+Port Adelaide,2018,Free Agency,4
+Port Adelaide,2018,National,17
+Port Adelaide,2018,Rookie/Post-Draft,9
+Port Adelaide,2018,Top-10 National,4
+Port Adelaide,2018,Top-20 National,3
+Port Adelaide,2018,Trade,8
+Port Adelaide,2019,Free Agency,5
+Port Adelaide,2019,Mid-Season,1
+Port Adelaide,2019,National,18
+Port Adelaide,2019,Rookie/Post-Draft,9
+Port Adelaide,2019,Top-10 National,4
+Port Adelaide,2019,Top-20 National,4
+Port Adelaide,2019,Trade,6
+Port Adelaide,2020,Free Agency,5
+Port Adelaide,2020,Mid-Season,1
+Port Adelaide,2020,National,16
+Port Adelaide,2020,Rookie/Post-Draft,8
+Port Adelaide,2020,Top-10 National,4
+Port Adelaide,2020,Top-20 National,6
+Port Adelaide,2020,Trade,5
+Port Adelaide,2021,Free Agency,4
+Port Adelaide,2021,Mid-Season,1
+Port Adelaide,2021,National,13
+Port Adelaide,2021,Rookie/Post-Draft,9
+Port Adelaide,2021,Top-10 National,4
+Port Adelaide,2021,Top-20 National,7
+Port Adelaide,2021,Trade,5
+Port Adelaide,2022,Free Agency,4
+Port Adelaide,2022,Mid-Season,2
+Port Adelaide,2022,National,14
+Port Adelaide,2022,Rookie/Post-Draft,6
+Port Adelaide,2022,Top-10 National,3
+Port Adelaide,2022,Top-20 National,8
+Port Adelaide,2022,Trade,6
+Port Adelaide,2023,Free Agency,3
+Port Adelaide,2023,Mid-Season,3
+Port Adelaide,2023,National,15
+Port Adelaide,2023,Rookie/Post-Draft,5
+Port Adelaide,2023,Top-10 National,3
+Port Adelaide,2023,Top-20 National,8
+Port Adelaide,2023,Trade,7
+Port Adelaide,2024,Free Agency,2
+Port Adelaide,2024,Mid-Season,3
+Port Adelaide,2024,National,16
+Port Adelaide,2024,Rookie/Post-Draft,2
+Port Adelaide,2024,Top-10 National,3
+Port Adelaide,2024,Top-20 National,7
+Port Adelaide,2024,Trade,10
+Port Adelaide,2025,Mid-Season,5
+Port Adelaide,2025,National,14
+Port Adelaide,2025,Pre-Draft,1
+Port Adelaide,2025,Rookie/Post-Draft,4
+Port Adelaide,2025,Top-10 National,3
+Port Adelaide,2025,Top-20 National,8
+Port Adelaide,2025,Trade,12
+Richmond,2012,National,16
+Richmond,2012,Rookie/Post-Draft,17
+Richmond,2012,Top-10 National,5
+Richmond,2012,Top-20 National,4
+Richmond,2012,Trade,3
+Richmond,2013,Free Agency,2
+Richmond,2013,National,15
+Richmond,2013,Pre-Draft,1
+Richmond,2013,Rookie/Post-Draft,13
+Richmond,2013,Top-10 National,6
+Richmond,2013,Top-20 National,4
+Richmond,2013,Trade,4
+Richmond,2014,Free Agency,2
+Richmond,2014,National,14
+Richmond,2014,Rookie/Post-Draft,12
+Richmond,2014,Top-10 National,6
+Richmond,2014,Top-20 National,5
+Richmond,2014,Trade,5
+Richmond,2015,Free Agency,3
+Richmond,2015,National,16
+Richmond,2015,Rookie/Post-Draft,10
+Richmond,2015,Top-10 National,6
+Richmond,2015,Top-20 National,6
+Richmond,2015,Trade,4
+Richmond,2016,Free Agency,3
+Richmond,2016,National,13
+Richmond,2016,Rookie/Post-Draft,10
+Richmond,2016,Top-10 National,6
+Richmond,2016,Top-20 National,7
+Richmond,2016,Trade,6
+Richmond,2017,Free Agency,1
+Richmond,2017,National,14
+Richmond,2017,Rookie/Post-Draft,10
+Richmond,2017,Top-10 National,4
+Richmond,2017,Top-20 National,7
+Richmond,2017,Trade,9
+Richmond,2018,National,15
+Richmond,2018,Rookie/Post-Draft,12
+Richmond,2018,Top-10 National,4
+Richmond,2018,Top-20 National,8
+Richmond,2018,Trade,6
+Richmond,2019,Free Agency,1
+Richmond,2019,Mid-Season,1
+Richmond,2019,National,16
+Richmond,2019,Rookie/Post-Draft,13
+Richmond,2019,Top-10 National,3
+Richmond,2019,Top-20 National,7
+Richmond,2019,Trade,5
+Richmond,2020,Free Agency,1
+Richmond,2020,Mid-Season,1
+Richmond,2020,National,19
+Richmond,2020,Rookie/Post-Draft,11
+Richmond,2020,Top-10 National,3
+Richmond,2020,Top-20 National,6
+Richmond,2020,Trade,3
+Richmond,2021,Free Agency,1
+Richmond,2021,Mid-Season,2
+Richmond,2021,National,18
+Richmond,2021,Pre-Draft,1
+Richmond,2021,Rookie/Post-Draft,12
+Richmond,2021,Top-10 National,3
+Richmond,2021,Top-20 National,4
+Richmond,2021,Trade,3
+Richmond,2022,Free Agency,1
+Richmond,2022,Mid-Season,3
+Richmond,2022,National,18
+Richmond,2022,Pre-Draft,1
+Richmond,2022,Rookie/Post-Draft,9
+Richmond,2022,Top-10 National,4
+Richmond,2022,Top-20 National,4
+Richmond,2022,Trade,4
+Richmond,2023,Free Agency,1
+Richmond,2023,Mid-Season,4
+Richmond,2023,National,18
+Richmond,2023,Pre-Draft,1
+Richmond,2023,Rookie/Post-Draft,9
+Richmond,2023,Top-10 National,4
+Richmond,2023,Top-20 National,3
+Richmond,2023,Trade,5
+Richmond,2024,Free Agency,2
+Richmond,2024,Mid-Season,6
+Richmond,2024,National,19
+Richmond,2024,Pre-Draft,2
+Richmond,2024,Rookie/Post-Draft,7
+Richmond,2024,Top-10 National,3
+Richmond,2024,Top-20 National,2
+Richmond,2024,Trade,5
+Richmond,2025,Free Agency,1
+Richmond,2025,Mid-Season,4
+Richmond,2025,National,20
+Richmond,2025,Pre-Draft,2
+Richmond,2025,Rookie/Post-Draft,5
+Richmond,2025,Top-10 National,4
+Richmond,2025,Top-20 National,3
+Richmond,2025,Trade,5
+St Kilda,2012,National,19
+St Kilda,2012,Rookie/Post-Draft,12
+St Kilda,2012,Top-10 National,6
+St Kilda,2012,Top-20 National,2
+St Kilda,2012,Trade,7
+St Kilda,2013,Free Agency,1
+St Kilda,2013,National,20
+St Kilda,2013,Rookie/Post-Draft,10
+St Kilda,2013,Top-10 National,4
+St Kilda,2013,Top-20 National,2
+St Kilda,2013,Trade,8
+St Kilda,2014,Free Agency,1
+St Kilda,2014,National,17
+St Kilda,2014,Rookie/Post-Draft,10
+St Kilda,2014,Top-10 National,3
+St Kilda,2014,Top-20 National,3
+St Kilda,2014,Trade,11
+St Kilda,2015,Free Agency,2
+St Kilda,2015,National,17
+St Kilda,2015,Rookie/Post-Draft,10
+St Kilda,2015,Top-10 National,4
+St Kilda,2015,Top-20 National,2
+St Kilda,2015,Trade,10
+St Kilda,2016,Free Agency,2
+St Kilda,2016,National,16
+St Kilda,2016,Rookie/Post-Draft,11
+St Kilda,2016,Top-10 National,4
+St Kilda,2016,Top-20 National,3
+St Kilda,2016,Trade,9
+St Kilda,2017,Free Agency,3
+St Kilda,2017,National,16
+St Kilda,2017,Pre-Draft,2
+St Kilda,2017,Rookie/Post-Draft,8
+St Kilda,2017,Top-10 National,4
+St Kilda,2017,Top-20 National,3
+St Kilda,2017,Trade,9
+St Kilda,2018,Free Agency,3
+St Kilda,2018,National,17
+St Kilda,2018,Pre-Draft,2
+St Kilda,2018,Rookie/Post-Draft,6
+St Kilda,2018,Top-10 National,5
+St Kilda,2018,Top-20 National,3
+St Kilda,2018,Trade,9
+St Kilda,2019,Free Agency,3
+St Kilda,2019,Mid-Season,1
+St Kilda,2019,National,18
+St Kilda,2019,Pre-Draft,2
+St Kilda,2019,Rookie/Post-Draft,7
+St Kilda,2019,Top-10 National,6
+St Kilda,2019,Top-20 National,3
+St Kilda,2019,Trade,8
+St Kilda,2020,Free Agency,4
+St Kilda,2020,Mid-Season,1
+St Kilda,2020,National,14
+St Kilda,2020,Pre-Draft,2
+St Kilda,2020,Rookie/Post-Draft,7
+St Kilda,2020,Top-10 National,4
+St Kilda,2020,Top-20 National,2
+St Kilda,2020,Trade,11
+St Kilda,2021,Free Agency,5
+St Kilda,2021,Mid-Season,2
+St Kilda,2021,National,13
+St Kilda,2021,Pre-Draft,2
+St Kilda,2021,Rookie/Post-Draft,6
+St Kilda,2021,Top-10 National,4
+St Kilda,2021,Top-20 National,2
+St Kilda,2021,Trade,10
+St Kilda,2022,Free Agency,3
+St Kilda,2022,Mid-Season,2
+St Kilda,2022,National,14
+St Kilda,2022,Pre-Draft,1
+St Kilda,2022,Rookie/Post-Draft,9
+St Kilda,2022,Top-10 National,4
+St Kilda,2022,Top-20 National,2
+St Kilda,2022,Trade,9
+St Kilda,2023,Free Agency,4
+St Kilda,2023,Mid-Season,2
+St Kilda,2023,National,16
+St Kilda,2023,Rookie/Post-Draft,9
+St Kilda,2023,Top-10 National,5
+St Kilda,2023,Top-20 National,2
+St Kilda,2023,Trade,6
+St Kilda,2024,Free Agency,4
+St Kilda,2024,Mid-Season,3
+St Kilda,2024,National,15
+St Kilda,2024,Pre-Draft,1
+St Kilda,2024,Rookie/Post-Draft,9
+St Kilda,2024,Top-10 National,3
+St Kilda,2024,Top-20 National,2
+St Kilda,2024,Trade,8
+St Kilda,2025,Free Agency,2
+St Kilda,2025,Mid-Season,3
+St Kilda,2025,National,13
+St Kilda,2025,Pre-Draft,2
+St Kilda,2025,Rookie/Post-Draft,8
+St Kilda,2025,Top-10 National,5
+St Kilda,2025,Top-20 National,2
+St Kilda,2025,Trade,9
+Sydney,2012,National,19
+Sydney,2012,Rookie/Post-Draft,10
+Sydney,2012,Top-10 National,3
+Sydney,2012,Top-20 National,1
+Sydney,2012,Trade,11
+Sydney,2013,National,18
+Sydney,2013,Rookie/Post-Draft,13
+Sydney,2013,Top-10 National,3
+Sydney,2013,Top-20 National,1
+Sydney,2013,Trade,10
+Sydney,2014,Free Agency,3
+Sydney,2014,National,18
+Sydney,2014,Rookie/Post-Draft,15
+Sydney,2014,Top-10 National,2
+Sydney,2014,Top-20 National,2
+Sydney,2014,Trade,5
+Sydney,2015,Free Agency,3
+Sydney,2015,National,15
+Sydney,2015,Rookie/Post-Draft,17
+Sydney,2015,Top-10 National,2
+Sydney,2015,Top-20 National,3
+Sydney,2015,Trade,4
+Sydney,2016,Free Agency,3
+Sydney,2016,National,15
+Sydney,2016,Rookie/Post-Draft,18
+Sydney,2016,Top-10 National,3
+Sydney,2016,Top-20 National,2
+Sydney,2016,Trade,5
+Sydney,2017,Free Agency,2
+Sydney,2017,National,14
+Sydney,2017,Rookie/Post-Draft,21
+Sydney,2017,Top-10 National,3
+Sydney,2017,Top-20 National,3
+Sydney,2017,Trade,3
+Sydney,2018,Free Agency,1
+Sydney,2018,National,15
+Sydney,2018,Rookie/Post-Draft,21
+Sydney,2018,Top-10 National,3
+Sydney,2018,Top-20 National,4
+Sydney,2018,Trade,2
+Sydney,2019,Free Agency,2
+Sydney,2019,Mid-Season,2
+Sydney,2019,National,14
+Sydney,2019,Rookie/Post-Draft,20
+Sydney,2019,Top-10 National,3
+Sydney,2019,Top-20 National,4
+Sydney,2019,Trade,4
+Sydney,2020,Free Agency,3
+Sydney,2020,Mid-Season,1
+Sydney,2020,National,15
+Sydney,2020,Pre-Draft,1
+Sydney,2020,Rookie/Post-Draft,15
+Sydney,2020,Top-10 National,3
+Sydney,2020,Top-20 National,3
+Sydney,2020,Trade,5
+Sydney,2021,Free Agency,3
+Sydney,2021,Mid-Season,1
+Sydney,2021,National,11
+Sydney,2021,Pre-Draft,1
+Sydney,2021,Rookie/Post-Draft,15
+Sydney,2021,Top-10 National,5
+Sydney,2021,Top-20 National,3
+Sydney,2021,Trade,5
+Sydney,2022,Free Agency,1
+Sydney,2022,Mid-Season,2
+Sydney,2022,National,12
+Sydney,2022,Pre-Draft,1
+Sydney,2022,Rookie/Post-Draft,15
+Sydney,2022,Top-10 National,5
+Sydney,2022,Top-20 National,3
+Sydney,2022,Trade,6
+Sydney,2023,Free Agency,1
+Sydney,2023,Mid-Season,4
+Sydney,2023,National,14
+Sydney,2023,Rookie/Post-Draft,14
+Sydney,2023,Top-10 National,5
+Sydney,2023,Top-20 National,4
+Sydney,2023,Trade,4
+Sydney,2024,Free Agency,2
+Sydney,2024,Mid-Season,4
+Sydney,2024,National,14
+Sydney,2024,Rookie/Post-Draft,12
+Sydney,2024,Top-10 National,4
+Sydney,2024,Top-20 National,5
+Sydney,2024,Trade,4
+Sydney,2025,Free Agency,2
+Sydney,2025,Mid-Season,2
+Sydney,2025,National,15
+Sydney,2025,Rookie/Post-Draft,13
+Sydney,2025,Top-10 National,4
+Sydney,2025,Top-20 National,4
+Sydney,2025,Trade,4
+West Coast,2012,National,15
+West Coast,2012,Rookie/Post-Draft,16
+West Coast,2012,Top-10 National,4
+West Coast,2012,Top-20 National,8
+West Coast,2012,Trade,3
+West Coast,2013,National,16
+West Coast,2013,Rookie/Post-Draft,11
+West Coast,2013,Top-10 National,4
+West Coast,2013,Top-20 National,7
+West Coast,2013,Trade,6
+West Coast,2014,Free Agency,1
+West Coast,2014,National,17
+West Coast,2014,Rookie/Post-Draft,10
+West Coast,2014,Top-10 National,4
+West Coast,2014,Top-20 National,7
+West Coast,2014,Trade,5
+West Coast,2015,Free Agency,1
+West Coast,2015,National,18
+West Coast,2015,Rookie/Post-Draft,11
+West Coast,2015,Top-10 National,4
+West Coast,2015,Top-20 National,7
+West Coast,2015,Trade,5
+West Coast,2016,Free Agency,1
+West Coast,2016,National,18
+West Coast,2016,Rookie/Post-Draft,9
+West Coast,2016,Top-10 National,4
+West Coast,2016,Top-20 National,6
+West Coast,2016,Trade,8
+West Coast,2017,National,18
+West Coast,2017,Rookie/Post-Draft,9
+West Coast,2017,Top-10 National,4
+West Coast,2017,Top-20 National,6
+West Coast,2017,Trade,10
+West Coast,2018,National,22
+West Coast,2018,Rookie/Post-Draft,6
+West Coast,2018,Top-10 National,4
+West Coast,2018,Top-20 National,6
+West Coast,2018,Trade,7
+West Coast,2019,National,21
+West Coast,2019,Pre-Draft,2
+West Coast,2019,Rookie/Post-Draft,5
+West Coast,2019,Top-10 National,4
+West Coast,2019,Top-20 National,6
+West Coast,2019,Trade,8
+West Coast,2020,National,20
+West Coast,2020,Rookie/Post-Draft,7
+West Coast,2020,Top-10 National,3
+West Coast,2020,Top-20 National,6
+West Coast,2020,Trade,9
+West Coast,2021,Mid-Season,2
+West Coast,2021,National,20
+West Coast,2021,Rookie/Post-Draft,4
+West Coast,2021,Top-10 National,3
+West Coast,2021,Top-20 National,6
+West Coast,2021,Trade,9
+West Coast,2022,Mid-Season,2
+West Coast,2022,National,20
+West Coast,2022,Rookie/Post-Draft,8
+West Coast,2022,Top-10 National,2
+West Coast,2022,Top-20 National,5
+West Coast,2022,Trade,8
+West Coast,2023,Free Agency,1
+West Coast,2023,Mid-Season,3
+West Coast,2023,National,21
+West Coast,2023,Rookie/Post-Draft,6
+West Coast,2023,Top-10 National,3
+West Coast,2023,Top-20 National,6
+West Coast,2023,Trade,5
+West Coast,2024,Free Agency,2
+West Coast,2024,Mid-Season,3
+West Coast,2024,National,20
+West Coast,2024,Rookie/Post-Draft,8
+West Coast,2024,Top-10 National,3
+West Coast,2024,Top-20 National,4
+West Coast,2024,Trade,5
+West Coast,2025,Free Agency,3
+West Coast,2025,Mid-Season,4
+West Coast,2025,National,19
+West Coast,2025,Rookie/Post-Draft,7
+West Coast,2025,Top-10 National,2
+West Coast,2025,Top-20 National,5
+West Coast,2025,Trade,6
+Western Bulldogs,2012,National,18
+Western Bulldogs,2012,Rookie/Post-Draft,15
+Western Bulldogs,2012,Top-10 National,4
+Western Bulldogs,2012,Top-20 National,6
+Western Bulldogs,2012,Trade,3
+Western Bulldogs,2013,Free Agency,1
+Western Bulldogs,2013,National,16
+Western Bulldogs,2013,Rookie/Post-Draft,12
+Western Bulldogs,2013,Top-10 National,6
+Western Bulldogs,2013,Top-20 National,6
+Western Bulldogs,2013,Trade,3
+Western Bulldogs,2014,National,15
+Western Bulldogs,2014,Rookie/Post-Draft,12
+Western Bulldogs,2014,Top-10 National,7
+Western Bulldogs,2014,Top-20 National,6
+Western Bulldogs,2014,Trade,4
+Western Bulldogs,2015,Free Agency,1
+Western Bulldogs,2015,National,18
+Western Bulldogs,2015,Rookie/Post-Draft,12
+Western Bulldogs,2015,Top-10 National,4
+Western Bulldogs,2015,Top-20 National,4
+Western Bulldogs,2015,Trade,5
+Western Bulldogs,2016,Free Agency,2
+Western Bulldogs,2016,National,19
+Western Bulldogs,2016,Rookie/Post-Draft,13
+Western Bulldogs,2016,Top-10 National,3
+Western Bulldogs,2016,Top-20 National,3
+Western Bulldogs,2016,Trade,4
+Western Bulldogs,2017,Free Agency,1
+Western Bulldogs,2017,National,21
+Western Bulldogs,2017,Rookie/Post-Draft,13
+Western Bulldogs,2017,Top-10 National,3
+Western Bulldogs,2017,Top-20 National,3
+Western Bulldogs,2017,Trade,4
+Western Bulldogs,2018,Free Agency,2
+Western Bulldogs,2018,National,20
+Western Bulldogs,2018,Rookie/Post-Draft,12
+Western Bulldogs,2018,Top-10 National,3
+Western Bulldogs,2018,Top-20 National,3
+Western Bulldogs,2018,Trade,4
+Western Bulldogs,2019,Free Agency,2
+Western Bulldogs,2019,Mid-Season,1
+Western Bulldogs,2019,National,20
+Western Bulldogs,2019,Rookie/Post-Draft,11
+Western Bulldogs,2019,Top-10 National,4
+Western Bulldogs,2019,Top-20 National,2
+Western Bulldogs,2019,Trade,5
+Western Bulldogs,2020,Free Agency,2
+Western Bulldogs,2020,Mid-Season,1
+Western Bulldogs,2020,National,21
+Western Bulldogs,2020,Rookie/Post-Draft,8
+Western Bulldogs,2020,Top-10 National,4
+Western Bulldogs,2020,Top-20 National,3
+Western Bulldogs,2020,Trade,6
+Western Bulldogs,2021,Mid-Season,1
+Western Bulldogs,2021,National,19
+Western Bulldogs,2021,Rookie/Post-Draft,7
+Western Bulldogs,2021,Top-10 National,5
+Western Bulldogs,2021,Top-20 National,3
+Western Bulldogs,2021,Trade,8
+Western Bulldogs,2022,Free Agency,1
+Western Bulldogs,2022,Mid-Season,1
+Western Bulldogs,2022,National,16
+Western Bulldogs,2022,Rookie/Post-Draft,9
+Western Bulldogs,2022,Top-10 National,6
+Western Bulldogs,2022,Top-20 National,3
+Western Bulldogs,2022,Trade,8
+Western Bulldogs,2023,Free Agency,1
+Western Bulldogs,2023,Mid-Season,2
+Western Bulldogs,2023,National,14
+Western Bulldogs,2023,Pre-Draft,1
+Western Bulldogs,2023,Rookie/Post-Draft,9
+Western Bulldogs,2023,Top-10 National,6
+Western Bulldogs,2023,Top-20 National,4
+Western Bulldogs,2023,Trade,7
+Western Bulldogs,2024,Mid-Season,3
+Western Bulldogs,2024,National,16
+Western Bulldogs,2024,Pre-Draft,1
+Western Bulldogs,2024,Rookie/Post-Draft,6
+Western Bulldogs,2024,Top-10 National,7
+Western Bulldogs,2024,Top-20 National,5
+Western Bulldogs,2024,Trade,6
+Western Bulldogs,2025,Mid-Season,4
+Western Bulldogs,2025,National,16
+Western Bulldogs,2025,Pre-Draft,1
+Western Bulldogs,2025,Rookie/Post-Draft,6
+Western Bulldogs,2025,Top-10 National,5
+Western Bulldogs,2025,Top-20 National,6
+Western Bulldogs,2025,Trade,6
