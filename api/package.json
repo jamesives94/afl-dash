@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "type": "commonjs",
   "dependencies": {
-    "@azure/storage-blob": "^12.26.0",
+    "@azure/storage-blob": "12.16.0",
     "papaparse": "^5.4.1"
   }
 }
