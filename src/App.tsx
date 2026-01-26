@@ -417,13 +417,13 @@ const DATA_API_KEY = (import.meta as any).env?.VITE_DATA_API_KEY as string | und
 
 function toTrimmedString(x: any): string {
   // Ensures we can safely call .trim() even if the API returns numbers/nulls.
-  return StringtoTrimmedString(x);
+  return toTrimmedString(x);
 }
 
 function toNumberOrNull(x: any): number | null {
   if (x === null || x === undefined) return null;
   if (typeof x === "number") return Number.isFinite(x) ? x : null;
-  const t = StringtoTrimmedString(x);
+  const t = toTrimmedString(x);
   if (t === "" || t.toLowerCase() === "na" || t.toLowerCase() === "null") return null;
   const n = Number(t);
   return Number.isFinite(n) ? n : null;
