@@ -405,79 +405,54 @@ function clamp(n: number, lo: number, hi: number) {
 }
 
 // --------------------
-// CSV parser + loader
+// Data loader (Azure SWA API -> /api/data?file=...)
 // --------------------
-function parseCSV(text: string): string[][] {
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let cell = "";
-  let inQuotes = false;
+// This replaces the old "fetch CSV from /data/*.csv" approach.
+// Your Azure Function returns JSON rows parsed from the CSV in private Blob Storage.
+//
+// If you MUST call the API from the browser, put the key in a Vite env var:
+//   VITE_DATA_API_KEY=...   (note: this is only "light protection" in-browser).
+// If a server/SharePoint process calls the API, keep the key server-side.
+const DATA_API_KEY = (import.meta as any).env?.VITE_DATA_API_KEY as string | undefined;
 
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-
-    if (c === '"') {
-      const next = text[i + 1];
-      if (inQuotes && next === '"') {
-        cell += '"';
-        i++;
-      } else {
-        inQuotes = !inQuotes;
-      }
-      continue;
-    }
-
-    if (!inQuotes && (c === "," || c === "\n" || c === "\r")) {
-      if (c === "\r" && text[i + 1] === "\n") i++;
-      row.push(cell);
-      cell = "";
-
-      if (c === "\n" || c === "\r") {
-        if (row.length === 1 && row[0] === "") {
-          row = [];
-          continue;
-        }
-        rows.push(row);
-        row = [];
-      }
-      continue;
-    }
-
-    cell += c;
-  }
-
-  row.push(cell);
-  if (!(row.length === 1 && row[0] === "")) rows.push(row);
-  return rows;
-}
-
-function toNumberOrNull(x: string): number | null {
-  const t = (x ?? "").trim();
+function toNumberOrNull(x: any): number | null {
+  if (x === null || x === undefined) return null;
+  if (typeof x === "number") return Number.isFinite(x) ? x : null;
+  const t = String(x ?? "").trim();
   if (t === "" || t.toLowerCase() === "na" || t.toLowerCase() === "null") return null;
   const n = Number(t);
   return Number.isFinite(n) ? n : null;
 }
 
-async function loadCsvAsObjects<T>(url: string, mapper: (r: Record<string, string>) => T | null): Promise<T[]> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Failed to load ${url} (${res.status})`);
-  const text = await res.text();
+async function loadApiDataAsObjects<T>(file: string, mapper: (r: Record<string, any>) => T | null): Promise<T[]> {
+  const url = `/api/data?file=${encodeURIComponent(file)}`;
 
-  const table = parseCSV(text);
-  if (table.length < 2) return [];
+  const headers: Record<string, string> = {};
+  if (DATA_API_KEY) headers["x-data-key"] = DATA_API_KEY;
 
-  const headers = table[0].map((h) => h.trim());
+  const res = await fetch(url, { headers });
+
+  // Helpful error messages (especially when the API key isn't present)
+  if (res.status === 401) {
+    throw new Error(
+      DATA_API_KEY
+        ? `Unauthorized calling ${url} (check VITE_DATA_API_KEY matches DATA_API_KEY in SWA Environment Variables)`
+        : `Unauthorized calling ${url} (no VITE_DATA_API_KEY set in the frontend)`
+    );
+  }
+  if (!res.ok) throw new Error(`Failed to load ${file} via API (${res.status})`);
+
+  const json = await res.json();
+  const rows = Array.isArray(json) ? json : [];
   const out: T[] = [];
 
-  for (let i = 1; i < table.length; i++) {
-    const r: Record<string, string> = {};
-    const row = table[i];
-    for (let j = 0; j < headers.length; j++) r[headers[j]] = row[j] ?? "";
-    const obj = mapper(r);
+  for (const r of rows) {
+    const obj = mapper((r ?? {}) as Record<string, any>);
     if (obj) out.push(obj);
   }
   return out;
 }
+
 
 // --------------------
 // UI bits
@@ -2002,7 +1977,7 @@ const [careerProjections, setCareerProjections] = useState<CareerProjectionRow[]
         setLoadErr(null);
 
         const [roster, kpis, ranks, radar, acq, proj, aflFormRows, vflFormRows, careerProj, playerStatsAggRows] = await Promise.all([
-          loadCsvAsObjects<RosterPlayerRow>("/data/roster_players.csv", (r) => {
+          loadApiDataAsObjects<RosterPlayerRow>("roster_players.csv", (r) => {
             const seasonN = toNumberOrNull(r["season"]);
             const ageN = toNumberOrNull(r["age"]);
             const gamesN = toNumberOrNull(r["games"]);
@@ -2024,7 +1999,7 @@ return {
 
           }),
 
-          loadCsvAsObjects<TeamKpiRow>("/data/team_kpis.csv", (r) => {
+          loadApiDataAsObjects<TeamKpiRow>("team_kpis.csv", (r) => {
             const club = normalizeClubName(r["Club"] ?? "");
             const seasonN = toNumberOrNull(r["season"]);
             const ageAvg = toNumberOrNull(r["squad_age_avg"]);
@@ -2043,7 +2018,7 @@ return {
             };
           }),
 
-          loadCsvAsObjects<RankRow>("/data/team_rank_timeseries.csv", (r) => {
+          loadApiDataAsObjects<RankRow>("team_rank_timeseries.csv", (r) => {
             const club = normalizeClubName(r["Club"] ?? "");
             const yearN = toNumberOrNull(r["year"]);
             if (!club || yearN === null) return null;
@@ -2065,7 +2040,7 @@ return {
             };
           }),
 
-          loadCsvAsObjects<SkillRadarRow>("/data/team_skill_radar.csv", (r) => {
+          loadApiDataAsObjects<SkillRadarRow>("team_skill_radar.csv", (r) => {
             const squad = normalizeClubName(r["squad.name"] ?? r["squad_name"] ?? "");
             const seasonStr = (r["season"] ?? r["season.id"] ?? "").toString().trim();
             const seasonFinal = r["season"] ? String(r["season"]).trim() : seasonStr;
@@ -2090,7 +2065,7 @@ return {
             };
           }),
 
-          loadCsvAsObjects<AcquisitionRow>("/data/player_acquisition_breakdown.csv", (r) => {
+          loadApiDataAsObjects<AcquisitionRow>("player_acquisition_breakdown.csv", (r) => {
             const club = normalizeClubName(r["Club"] ?? "");
             const year = toNumberOrNull(r["Year"]);
             const value = toNumberOrNull(r["value"]);
@@ -2099,7 +2074,7 @@ return {
             return { Club: club, Year: year, Draft: draft, value };
           }),
 
-          loadCsvAsObjects<PlayerProjectionRow>("/data/player_projections.csv", (r) => {
+          loadApiDataAsObjects<PlayerProjectionRow>("player_projections.csv", (r) => {
             const t = normalizeClubName(r["team"] ?? "");
             const seasonN = toNumberOrNull(r["season"]);
             const rating = toNumberOrNull(r["rating"]);
@@ -2122,7 +2097,7 @@ return {
           }),
 
           // NEW: AFL form
-          loadCsvAsObjects<AflFormRow>("/data/form_player_afl.csv", (r) => {
+          loadApiDataAsObjects<AflFormRow>("form_player_afl.csv", (r) => {
             const seasonN = toNumberOrNull(r["season"]);
             const wavg = toNumberOrNull(r["weighted_avg"]);
             const fchg = toNumberOrNull(r["form_change"]);
@@ -2144,7 +2119,7 @@ return {
           }),
 
           // NEW: VFL form
-          loadCsvAsObjects<VflFormRow>("/data/form_player_vfl.csv", (r) => {
+          loadApiDataAsObjects<VflFormRow>("form_player_vfl.csv", (r) => {
             const seasonN = toNumberOrNull(r["season"]);
             const wavg = toNumberOrNull(r["weighted_avg"]);
             const teamS = (r["team"] ?? "").trim();
@@ -2163,7 +2138,7 @@ return {
           }),
 
           // NEW: Career projections
-          loadCsvAsObjects<CareerProjectionRow>("/data/career_projections.csv", (r) => {
+          loadApiDataAsObjects<CareerProjectionRow>("career_projections.csv", (r) => {
             const seasonN = toNumberOrNull(r["Season"]);
             const horizonN = toNumberOrNull(r["Horizon"]);
             const srcSeasonN = toNumberOrNull(r["SourceSeason"]);
@@ -2222,7 +2197,7 @@ return {
             };
           }),
 
-          loadCsvAsObjects<PlayerStatsAggRow>("/data/CD_player_stats_agg.csv", (r) => {
+          loadApiDataAsObjects<PlayerStatsAggRow>("CD_player_stats_agg.csv", (r) => {
             const seasonN = toNumberOrNull(r["season"] ?? r["Season"] ?? "");
             const playerId = (r["player.id"] ?? r["player_id"] ?? r["playerId"] ?? "").toString().trim();
             const playerName = (r["player.name"] ?? r["player_name"] ?? r["playerName"] ?? "").toString().trim();
@@ -3032,15 +3007,14 @@ const kpis = useMemo(() => {
 
             {loading && (
               <div style={{ marginTop: 10, fontSize: 12, color: "rgba(0,0,0,0.55)" }}>
-                Loading CSVs from <code>/src/data</code>…
+                Loading data from <code>/api/data</code>…
               </div>
             )}
             {loadErr && (
               <div style={{ marginTop: 10, fontSize: 12, color: "rgba(200,0,0,0.75)" }}>
                 Data load error: {loadErr}
                 <div style={{ marginTop: 6, color: "rgba(0,0,0,0.55)" }}>
-                  Tip: in Vite, files under <code>/src</code> can be fetched with <code>/src/...</code> during dev.
-                  If this fails, move CSVs to <code>/public/data</code> and change paths to <code>/data/...</code>.
+                  Tip: this build is configured to load JSON from the Azure SWA API (<code>/api/data</code>) which reads private CSVs from Blob Storage. If it fails, confirm the API deployed and your SWA Environment Variables are set (AZURE_STORAGE_CONNECTION_STRING, DATA_CONTAINER, DATA_API_KEY).
                 </div>
               </div>
             )}
