@@ -3,7 +3,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   ResponsiveContainer,
   Area,
-  LineChart,
   Line,
   XAxis,
   YAxis,
@@ -386,7 +385,6 @@ function normalizeClubName(s: string) {
     "Gold Coast": "Gold Coast SUNS",
     "Gold Coast Suns": "Gold Coast SUNS",
     "GWS": "GWS GIANTS",
-    GWS: "GWS GIANTS",
     "Greater Western Sydney": "GWS GIANTS",
     "North Melbourne": "North Melbourne",
     Kangaroos: "North Melbourne",
@@ -2118,6 +2116,7 @@ return {
             const rating = toNumberOrNull(r["rating"]);
             const salary = toNumberOrNull(r["salary"]);
             const aa = toNumberOrNull(r["AA"]);
+            const games = toNumberOrNull(r["Games"] ?? r["games"] ?? "");
 
             if (!t || seasonN === null || rating === null || salary === null || aa === null) return null;
 
@@ -2129,6 +2128,7 @@ return {
               rating,
               salary,
               AA: aa,
+              Games: games ?? 0,
             };
           }),
 
@@ -2321,7 +2321,6 @@ function getRosterForClubSeason(targetClubKey: string) {
 
 
   const ageHist = useMemo(() => makeAgeHistogram(rosterForSeason.players), [rosterForSeason.players]);
-  const posCounts = useMemo(() => countByPosition(rosterForSeason.players), [rosterForSeason.players]);
 const AGE_CAT_ORDER = ["Rising Stars", "Established Youth", "Prime", "Veterans", "Old Timers"];
 
 function calcAgeCatShare(ps: RosterPlayerRow[]) {
@@ -2385,8 +2384,7 @@ const leagueAvgAge = useMemo(() => {
 }, [rosterPlayers, usedSeason]);
 
 // helper: convert numeric age to the X-axis label (your histogram uses String(age))
-const toAgeLabel = (x: number | null) =>
-  x === null ? null : String(Math.round(x));
+const toAgeLabel = (x: number) => String(Math.round(x));
 
 
 
@@ -2410,13 +2408,6 @@ const toAgeLabel = (x: number | null) =>
     // best improver by form_change
     return rows.reduce((best, r) => (r.form_change > best.form_change ? r : best), rows[0]);
   }, [aflForm, clubKey, season]);
-
-  const vflFormPick = useMemo(() => {
-    const rows = vflForm.filter((r) => r.season === season);
-    if (rows.length === 0) return null;
-    // top weighted_avg for that season
-    return rows.reduce((best, r) => (r.weighted_avg > best.weighted_avg ? r : best), rows[0]);
-  }, [vflForm, season]);
 const rankTrend = useMemo(() => {
   const clubRows = rankSeries
     .filter((r) => normalizeClubName(r.Club) === clubKey)
@@ -2722,7 +2713,7 @@ const mergedSkillRadar = useMemo(() => {
   const playerTable = useMemo<PlayerTableRow[]>(() => {
     const rows = playerProjections
       .filter((r) => normalizeClubName(r.team) === clubKey && r.season === season)
-      .map((r) => ({ name: r.player_name, rating: r.rating, salary: r.salary, AA: r.AA }))
+      .map((r) => ({ name: r.player_name, rating: r.rating, salary: r.salary, AA: r.AA, Games: r.Games }))
       .sort((a, b) => b.rating - a.rating);
 
     return rows.slice(0, 12);
