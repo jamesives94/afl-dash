@@ -91,15 +91,6 @@ const LOGOS = import.meta.glob("/src/AFL_Logos_Official/*.{png,svg,jpg,jpeg,webp
   import: "default",
 }) as Record<string, string>;
 
-// --- AFL logo (top-left nav tile) from src/data
-const AFL_LOGO = import.meta.glob("/data/AFL_logo.png", {
-  eager: true,
-  query: "?url",
-  import: "default",
-}) as Record<string, string>;
-
-const AFL_LOGO_URL = AFL_LOGO["/data/AFL_logo.png"] ?? null;
-
 function getLogoUrlByClubName(clubName: string) {
   // Try exact file names first (fast path)
   const targets = [
@@ -2891,7 +2882,7 @@ const kpis = useMemo(() => {
     <div style={{ minHeight: "100vh", background: "#f5f5f6", fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" }}>
       <style>
         {`
-          .layoutGrid { display: grid; grid-template-columns: 72px 1fr; gap: 14px; padding: 14px; min-height: 100vh; }
+          .layoutGrid { display: grid; grid-template-columns: 1fr; gap: 14px; padding: 14px; min-height: 100vh; }
           .mainWrap { display: flex; flex-direction: column; gap: 14px; max-width: 1440px; width: 100%; margin: 0 auto; }
           .kpiGrid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
           .midGrid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 14px; }
@@ -2986,54 +2977,6 @@ const kpis = useMemo(() => {
       </style>
 
       <div className="layoutGrid">
-        {/* Left Nav */}
-        <div
-          style={{
-            background: "rgba(255,255,255,0.85)",
-            border: "1px solid rgba(0,0,0,0.08)",
-            borderRadius: 22,
-            padding: 10,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 10,
-            position: "sticky",
-            top: 14,
-            height: "calc(100vh - 28px)",
-          }}
-        >
-          {AFL_LOGO_URL ? (
-            <img
-              src={AFL_LOGO_URL}
-              alt="AFL"
-              style={{ height: 44, width: 44, objectFit: "contain", marginBottom: 4, opacity: 0.9 }}
-            />
-          ) : (
-            <div style={{ height: 44, width: 44, borderRadius: 16, background: "rgba(0,0,0,0.08)", marginBottom: 4 }} />
-          )}
-          {[Home, BarChart3, Gauge, Users].map((Icon, idx) => (
-            <button
-              key={idx}
-              style={{
-                height: 44,
-                width: 44,
-                borderRadius: 16,
-                border: "1px solid rgba(0,0,0,0.08)",
-                background: "rgba(255,255,255,0.9)",
-                display: "grid",
-                placeItems: "center",
-                cursor: "pointer",
-              }}
-              title="Navigation"
-              onClick={() => {}}
-            >
-              <Icon size={18} color="rgba(0,0,0,0.7)" />
-            </button>
-          ))}
-          <div style={{ flex: 1 }} />
-          <div style={{ height: 44, width: 44, borderRadius: 999, background: "rgba(0,0,0,0.08)" }} title="Profile" />
-        </div>
-
         {/* Main */}
         <div className="mainWrap">
           {/* Header */}
