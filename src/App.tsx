@@ -91,6 +91,15 @@ const LOGOS = import.meta.glob("/src/AFL_Logos_Official/*.{png,svg,jpg,jpeg,webp
   import: "default",
 }) as Record<string, string>;
 
+// --- AFL logo (top-left nav tile) from src/data
+const AFL_LOGO = import.meta.glob("/data/AFL_logo.png", {
+  eager: true,
+  query: "?url",
+  import: "default",
+}) as Record<string, string>;
+
+const AFL_LOGO_URL = AFL_LOGO["/data/AFL_logo.png"] ?? null;
+
 function getLogoUrlByClubName(clubName: string) {
   // Try exact file names first (fast path)
   const targets = [
@@ -338,6 +347,32 @@ const TEAMS: TeamOption[] = [
   { id: "160", name: "Western Bulldogs" },
 ];
 
+
+
+const DEFAULT_TEAM_ID = "40"; // Collingwood
+
+// Back-compat: accept older abbreviation-style team codes in URLs (?team=COLL or /team/COLL) and coerce to numeric ids.
+const LEGACY_TEAM_CODE_TO_ID: Record<string, string> = {
+  ADE: "10",
+  BRI: "20",
+  CARL: "30",
+  COLL: "40",
+  ESS: "50",
+  FRE: "60",
+  GEE: "70",
+  GC: "1000",
+  GWS: "1010",
+  HAW: "80",
+  MELB: "90",
+  NM: "100",
+  PORT: "110",
+  RICH: "120",
+  STK: "130",
+  SYD: "140",
+  WCE: "150",
+  WB: "160",
+};
+
 const TEAM_PRIMARY_COLOR: Record<string, string> = {
   Adelaide: "#002B5C",
   "Brisbane Lions": "#7C003E",
@@ -388,6 +423,22 @@ function normalizeClubName(s: string) {
   };
   return map[x] ?? x;
 }
+
+function coerceTeamId(raw: string | null | undefined): string {
+  const v = String(raw ?? "").trim();
+  if (!v) return "";
+  // already a numeric id in TEAMS
+  if (TEAMS.some((t) => t.id === v)) return v;
+
+  const upper = v.toUpperCase();
+  if (LEGACY_TEAM_CODE_TO_ID[upper]) return LEGACY_TEAM_CODE_TO_ID[upper];
+
+  // allow club name in URLs (e.g. /team/Collingwood) as a last resort
+  const vNorm = normalizeClubName(v).toLowerCase();
+  const byName = TEAMS.find((t) => normalizeClubName(t.name).toLowerCase() === vNorm);
+  return byName?.id ?? v;
+}
+
 
 function formatPct(x: number) {
   return `${x.toFixed(1)}%`;
@@ -1192,9 +1243,9 @@ return [minFinal, maxFinal];
     { label: "Aerial", key: "Aerial" },
     { label: "Ground", key: "Ground" },
     { label: "Run/Carry", key: "Run_Carry" },
-    { label: "TO-Transition", key: "Turnover_Transition_Ball_Winning" },
-    { label: "Stop-Transition", key: "Stoppage_Transition_Ball_Winning" },
-    { label: "Pre clearance", key: "Pre_Clearance_Ball_Winning" },
+    { label: "TO→Trans (BW)", key: "Turnover_Transition_Ball_Winning" },
+    { label: "Stop→Trans (BW)", key: "Stoppage_Transition_Ball_Winning" },
+    { label: "Pre clearance (BW)", key: "Pre_Clearance_Ball_Winning" },
     { label: "Spoiling", key: "Spoiling" },
   ];
 
@@ -1573,7 +1624,7 @@ return [minFinal, maxFinal];
             {/* Ball Winning */}
             <div style={{ marginBottom: 22 }}>
               <div style={{ fontSize: 12, fontWeight: 950, color: "#111", marginBottom: 8 }}>Ball Winning</div>
-              {["Ball Winning", "Intercepts", "Aerial", "Ground", "Run/Carry", "TO-Transition", "Stop-Transition", "Pre clearance"].map(
+              {["Ball Winning", "Intercepts", "Aerial", "Ground", "Run/Carry", "TO→Trans (BW)", "Stop→Trans (BW)", "Pre clearance (BW)"].map(
                 (lbl) => {
                   const r = skillRows.find((x) => x.label === lbl);
                   if (!r) return null;
@@ -1741,7 +1792,7 @@ return [minFinal, maxFinal];
           </div>
 
           <div style={{ marginTop: 8, fontSize: 12, color: "rgba(0,0,0,0.55)" }}>
-            Shaded band = lower/upper confidence interval
+            Shaded band = lower/upper confidence interval (when available). Compare series is dashed.
           </div>
         </Card>
       </div>
@@ -1950,17 +2001,17 @@ function PlayerRoute() {
 }
 
 // Default export wraps the existing single-page UI in a router so deep links work:
-//   /team/COLL?season=2025
+//   /team/40?season=2025
 //   /player/CD_I1019038?season=2025
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Navigate to="/team/COLL" replace />} />
+        <Route path="/" element={<Navigate to="/team/40" replace />} />
         <Route path="/team/:teamId" element={<TeamRoute />} />
         <Route path="/player/:playerId" element={<PlayerRoute />} />
         {/* Back-compat: old query-string-only links */}
-        <Route path="*" element={<Navigate to="/team/COLL" replace />} />
+        <Route path="*" element={<Navigate to="/team/40" replace />} />
       </Routes>
     </BrowserRouter>
   );
@@ -1970,7 +2021,7 @@ function AppCore({ routeMode, routeTeamId, routePlayerId }: { routeMode: "team" 
   const location = useLocation();
   const navigate = useNavigate();
   const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
-  const [team, setTeam] = useState(() => (routeMode === "team" && routeTeamId ? routeTeamId : (searchParams.get("team") || "COLL")));
+  const [team, setTeam] = useState(() => (routeMode === "team" && routeTeamId ? coerceTeamId(routeTeamId) : (coerceTeamId(searchParams.get("team")) || DEFAULT_TEAM_ID)));
   const [season, setSeason] = useState(() => Number(searchParams.get("season") || 2025));
 const [compareTeam, setCompareTeam] = useState<string>(""); // "" = no comparison
 const [comparePanelOpen, setComparePanelOpen] = useState(false);
@@ -1986,13 +2037,13 @@ useEffect(() => {
     if (Number.isFinite(nextSeason) && nextSeason !== season) setSeason(nextSeason);
 
     if (routeMode === "team") {
-      const nextTeam = (routeTeamId || searchParams.get("team") || "COLL").toUpperCase();
+      const nextTeam = coerceTeamId(routeTeamId || searchParams.get("team") || DEFAULT_TEAM_ID);
       if (nextTeam !== team) setTeam(nextTeam);
       if (page !== "team") setPage("team");
     } else {
       // /player/:playerId route
       if (page !== "career") setPage("career");
-      const qTeam = (searchParams.get("team") || "").toUpperCase();
+      const qTeam = coerceTeamId(searchParams.get("team") || "");
       // prefer explicit ?team=, otherwise keep current team until we can infer it from data
       if (qTeam && qTeam !== team) setTeam(qTeam);
       const rid = (routePlayerId || "").trim();
@@ -2006,7 +2057,7 @@ useEffect(() => {
     const baseSeason = Number.isFinite(season) ? season : 2025;
 
     if (page === "team") {
-      const nextPath = `/team/${team || "COLL"}`;
+      const nextPath = `/team/${team || DEFAULT_TEAM_ID}`;
       const nextSearch = `?season=${encodeURIComponent(String(baseSeason))}`;
       const next = nextPath + nextSearch;
       const cur = location.pathname + location.search;
@@ -2061,7 +2112,7 @@ const [careerProjections, setCareerProjections] = useState<CareerProjectionRow[]
     );
     if (!row?.team) return;
 
-    // roster_players team is typically the club name; map it to your TEAMS id (e.g., "COLL").
+    // roster_players team is typically the club name; map it to your TEAMS id (e.g., "40").
     const key = normalizeClubName(row.team);
     const match = TEAMS.find((t) => normalizeClubName(t.name) === key) ?? null;
     if (match && match.id !== team) setTeam(match.id);
@@ -2882,7 +2933,7 @@ const kpis = useMemo(() => {
     <div style={{ minHeight: "100vh", background: "#f5f5f6", fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" }}>
       <style>
         {`
-          .layoutGrid { display: grid; grid-template-columns: 1fr; gap: 14px; padding: 14px; min-height: 100vh; }
+          .layoutGrid { display: grid; grid-template-columns: 72px 1fr; gap: 14px; padding: 14px; min-height: 100vh; }
           .mainWrap { display: flex; flex-direction: column; gap: 14px; max-width: 1440px; width: 100%; margin: 0 auto; }
           .kpiGrid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
           .midGrid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 14px; }
@@ -2977,6 +3028,54 @@ const kpis = useMemo(() => {
       </style>
 
       <div className="layoutGrid">
+        {/* Left Nav */}
+        <div
+          style={{
+            background: "rgba(255,255,255,0.85)",
+            border: "1px solid rgba(0,0,0,0.08)",
+            borderRadius: 22,
+            padding: 10,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 10,
+            position: "sticky",
+            top: 14,
+            height: "calc(100vh - 28px)",
+          }}
+        >
+          {AFL_LOGO_URL ? (
+            <img
+              src={AFL_LOGO_URL}
+              alt="AFL"
+              style={{ height: 44, width: 44, objectFit: "contain", marginBottom: 4, opacity: 0.9 }}
+            />
+          ) : (
+            <div style={{ height: 44, width: 44, borderRadius: 16, background: "rgba(0,0,0,0.08)", marginBottom: 4 }} />
+          )}
+          {[Home, BarChart3, Gauge, Users].map((Icon, idx) => (
+            <button
+              key={idx}
+              style={{
+                height: 44,
+                width: 44,
+                borderRadius: 16,
+                border: "1px solid rgba(0,0,0,0.08)",
+                background: "rgba(255,255,255,0.9)",
+                display: "grid",
+                placeItems: "center",
+                cursor: "pointer",
+              }}
+              title="Navigation"
+              onClick={() => {}}
+            >
+              <Icon size={18} color="rgba(0,0,0,0.7)" />
+            </button>
+          ))}
+          <div style={{ flex: 1 }} />
+          <div style={{ height: 44, width: 44, borderRadius: 999, background: "rgba(0,0,0,0.08)" }} title="Profile" />
+        </div>
+
         {/* Main */}
         <div className="mainWrap">
           {/* Header */}
@@ -3038,9 +3137,9 @@ const kpis = useMemo(() => {
 
                 <Pill
                   onClick={() => {
-                    setTeam("COLL");
+                    setTeam(DEFAULT_TEAM_ID);
                     setSeason(2025);
-                    setQueryParams({ team: "COLL", season: "2025" });
+                    setQueryParams({ team: DEFAULT_TEAM_ID, season: "2025" });
                   }}
                 >
 
