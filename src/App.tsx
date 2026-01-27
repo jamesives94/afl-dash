@@ -327,24 +327,24 @@ type PlayerStatsAggRow = {
 // Teams
 // --------------------
 const TEAMS: TeamOption[] = [
-  { id: "ADE", name: "Adelaide" },
-  { id: "BRI", name: "Brisbane Lions" },
-  { id: "CARL", name: "Carlton" },
-  { id: "COLL", name: "Collingwood" },
-  { id: "ESS", name: "Essendon" },
-  { id: "FRE", name: "Fremantle" },
-  { id: "GEE", name: "Geelong Cats" },
-  { id: "GC", name: "Gold Coast SUNS" },
-  { id: "GWS", name: "GWS GIANTS" },
-  { id: "HAW", name: "Hawthorn" },
-  { id: "MELB", name: "Melbourne" },
-  { id: "NM", name: "North Melbourne" },
-  { id: "PORT", name: "Port Adelaide" },
-  { id: "RICH", name: "Richmond" },
-  { id: "STK", name: "St Kilda" },
-  { id: "SYD", name: "Sydney" },
-  { id: "WCE", name: "West Coast" },
-  { id: "WB", name: "Western Bulldogs" },
+  { id: "10", name: "Adelaide" },
+  { id: "20", name: "Brisbane Lions" },
+  { id: "30", name: "Carlton" },
+  { id: "40", name: "Collingwood" },
+  { id: "50", name: "Essendon" },
+  { id: "60", name: "Fremantle" },
+  { id: "70", name: "Geelong Cats" },
+  { id: "1000", name: "Gold Coast SUNS" },
+  { id: "1010", name: "GWS GIANTS" },
+  { id: "80", name: "Hawthorn" },
+  { id: "90", name: "Melbourne" },
+  { id: "100", name: "North Melbourne" },
+  { id: "110", name: "Port Adelaide" },
+  { id: "120", name: "Richmond" },
+  { id: "130", name: "St Kilda" },
+  { id: "140", name: "Sydney" },
+  { id: "150", name: "West Coast" },
+  { id: "160", name: "Western Bulldogs" },
 ];
 
 const TEAM_PRIMARY_COLOR: Record<string, string> = {
@@ -1201,9 +1201,9 @@ return [minFinal, maxFinal];
     { label: "Aerial", key: "Aerial" },
     { label: "Ground", key: "Ground" },
     { label: "Run/Carry", key: "Run_Carry" },
-    { label: "TO→Trans (BW)", key: "Turnover_Transition_Ball_Winning" },
-    { label: "Stop→Trans (BW)", key: "Stoppage_Transition_Ball_Winning" },
-    { label: "Pre clearance (BW)", key: "Pre_Clearance_Ball_Winning" },
+    { label: "TO-Transition", key: "Turnover_Transition_Ball_Winning" },
+    { label: "Stop-Transition", key: "Stoppage_Transition_Ball_Winning" },
+    { label: "Pre clearance", key: "Pre_Clearance_Ball_Winning" },
     { label: "Spoiling", key: "Spoiling" },
   ];
 
@@ -1582,7 +1582,7 @@ return [minFinal, maxFinal];
             {/* Ball Winning */}
             <div style={{ marginBottom: 22 }}>
               <div style={{ fontSize: 12, fontWeight: 950, color: "#111", marginBottom: 8 }}>Ball Winning</div>
-              {["Ball Winning", "Intercepts", "Aerial", "Ground", "Run/Carry", "TO→Trans (BW)", "Stop→Trans (BW)", "Pre clearance (BW)"].map(
+              {["Ball Winning", "Intercepts", "Aerial", "Ground", "Run/Carry", "TO-Transition", "Stop-Transition", "Pre clearance"].map(
                 (lbl) => {
                   const r = skillRows.find((x) => x.label === lbl);
                   if (!r) return null;
@@ -1750,7 +1750,7 @@ return [minFinal, maxFinal];
           </div>
 
           <div style={{ marginTop: 8, fontSize: 12, color: "rgba(0,0,0,0.55)" }}>
-            Shaded band = lower/upper confidence interval (when available). Compare series is dashed.
+            Shaded band = lower/upper confidence interval
           </div>
         </Card>
       </div>
