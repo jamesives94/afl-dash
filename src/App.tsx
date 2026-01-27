@@ -662,15 +662,6 @@ function HorizontalBarRows({
 // --------------------
 // Query params
 // --------------------
-function useQueryParams() {
-  const [params, setParams] = useState(() => new URLSearchParams(window.location.search));
-  useEffect(() => {
-    const onPop = () => setParams(new URLSearchParams(window.location.search));
-    window.addEventListener("popstate", onPop);
-    return () => window.removeEventListener("popstate", onPop);
-  }, []);
-  return params;
-}
 function setQueryParams(next: Record<string, string>) {
   const url = new URL(window.location.href);
   Object.entries(next).forEach(([k, v]) => url.searchParams.set(k, v));
