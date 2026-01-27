@@ -2137,7 +2137,7 @@ useEffect(() => {
     const explicitTeam = (new URLSearchParams(location.search).get("team") || "").trim();
     const includeTeam = playerTeamResolved || !!explicitTeam;
     const nextSearch = includeTeam
-      ? `?season=${encodeURIComponent(String(baseSeason))}&team=${encodeURIComponent(String(team || ""))}`
+      ? `?team=${encodeURIComponent(String(team || ""))}&season=${encodeURIComponent(String(baseSeason))}`
       : `?season=${encodeURIComponent(String(baseSeason))}`;
 
     const next = nextPath + nextSearch;
@@ -2170,11 +2170,9 @@ useEffect(() => {
 const [careerProjections, setCareerProjections] = useState<CareerProjectionRow[]>([]);
   const [playerStatsAgg, setPlayerStatsAgg] = useState<PlayerStatsAggRow[]>([]);
 
-  // If someone lands on /player/:playerId without a ?team=, infer the team from roster_players (same season).
+  // Keep teamId in sync with the selected player (based on roster_players for the chosen season).
   useEffect(() => {
     if (routeMode !== "player") return;
-    const explicitTeam = (searchParams.get("team") || "").trim();
-    if (explicitTeam) return;
     if (!currentPlayerId) return;
 
     const row = rosterPlayers.find(
@@ -3692,7 +3690,21 @@ const kpis = useMemo(() => {
 
             </>
           ) : (
-            <CareerProjectionDashboard defaultTeam={team} careerProjections={careerProjections} playerStatsAgg={playerStatsAgg} initialPlayerId={currentPlayerId || undefined} onPlayerIdChange={(id) => setCurrentPlayerId(id)} />
+            <CareerProjectionDashboard defaultTeam={team} careerProjections={careerProjections} playerStatsAgg={playerStatsAgg} initialPlayerId={currentPlayerId || undefined} onPlayerIdChange={(id) => {
+                const nextId = (id || "").trim();
+                setCurrentPlayerId(nextId);
+
+                // Immediately update teamId too (so the URL becomes /player/:id?team=...&season=... without a stale team).
+                const row = rosterPlayers.find((r) => String(r.providerId) === String(nextId) && r.season === season);
+                if (row?.team) {
+                  const key = normalizeClubName(row.team);
+                  const match = TEAMS.find((t) => normalizeClubName(t.name) === key) ?? null;
+                  if (match) {
+                    if (match.id !== team) setTeam(match.id);
+                    if (!playerTeamResolved) setPlayerTeamResolved(true);
+                  }
+                }
+              }} />
           )}
 
 
