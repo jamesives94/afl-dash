@@ -91,14 +91,6 @@ const LOGOS = import.meta.glob("/src/AFL_Logos_Official/*.{png,svg,jpg,jpeg,webp
   import: "default",
 }) as Record<string, string>;
 
-// --- AFL logo (top-left nav tile) from src/data
-const AFL_LOGO = import.meta.glob("/data/AFL_logo.png", {
-  eager: true,
-  query: "?url",
-  import: "default",
-}) as Record<string, string>;
-
-const AFL_LOGO_URL = AFL_LOGO["/data/AFL_logo.png"] ?? null;
 
 function getLogoUrlByClubName(clubName: string) {
   // Try exact file names first (fast path)
