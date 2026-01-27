@@ -24,6 +24,7 @@ import {
   Cell,
 } from "recharts";
 import { RefreshCcw, RotateCcw, Home, BarChart3, Gauge, Users } from "lucide-react";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 
 function fmtAUD(n: number) {
   return n.toLocaleString("en-AU", {
@@ -768,10 +769,14 @@ function CareerProjectionDashboard({
   defaultTeam,
   careerProjections,
   playerStatsAgg,
+  initialPlayerId,
+  onPlayerIdChange,
 }: {
   defaultTeam: string;
   careerProjections: CareerProjectionRow[];
   playerStatsAgg: PlayerStatsAggRow[];
+  initialPlayerId?: string;
+  onPlayerIdChange?: (id: string) => void;
 }) {
   // Primary club context comes from the top-level team selector (query param)
   const teamName = (TEAMS.find((t) => t.id === defaultTeam)?.name ?? defaultTeam) as string;
@@ -842,11 +847,26 @@ function CareerProjectionDashboard({
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [careerProjections]);
 
-  const [playerId, setPlayerId] = useState<string>(() => clubPlayers[0]?.id ?? "");
+  const [playerId, setPlayerId] = useState<string>(() => (initialPlayerId && clubPlayers.some((p) => p.id === initialPlayerId) ? initialPlayerId : clubPlayers[0]?.id ?? ""));
   useEffect(() => {
     if (!clubPlayers.some((p) => p.id === playerId)) setPlayerId(clubPlayers[0]?.id ?? "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clubPlayers]);
+
+  // If a route provides a playerId, prefer it (when valid for this club/season context)
+  useEffect(() => {
+    if (!initialPlayerId) return;
+    if (clubPlayers.some((p) => p.id === initialPlayerId) && initialPlayerId !== playerId) {
+      setPlayerId(initialPlayerId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPlayerId, clubPlayers]);
+
+  // Bubble selection up so the URL can stay in sync (for share links / embeds)
+  useEffect(() => {
+    onPlayerIdChange?.(playerId);
+  }, [playerId, onPlayerIdChange]);
+
 
   const [comparePlayerId, setComparePlayerId] = useState<string>(""); // "" = off
   useEffect(() => {
@@ -1933,21 +1953,96 @@ return [minFinal, maxFinal];
 }
 
 
+
+// -----------------------------
+// Routing (path-based deep links)
+// -----------------------------
+function TeamRoute() {
+  const params = useParams();
+  return <AppCore routeMode="team" routeTeamId={String((params as any).teamId || "")} routePlayerId={null} />;
+}
+
+function PlayerRoute() {
+  const params = useParams();
+  return <AppCore routeMode="player" routeTeamId={null} routePlayerId={String((params as any).playerId || "")} />;
+}
+
+// Default export wraps the existing single-page UI in a router so deep links work:
+//   /team/COLL?season=2025
+//   /player/CD_I1019038?season=2025
 export default function App() {
-  const qp = useQueryParams();
-  const [team, setTeam] = useState(() => qp.get("team") || "COLL");
-  const [season, setSeason] = useState(() => Number(qp.get("season") || 2025));
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Navigate to="/team/COLL" replace />} />
+        <Route path="/team/:teamId" element={<TeamRoute />} />
+        <Route path="/player/:playerId" element={<PlayerRoute />} />
+        {/* Back-compat: old query-string-only links */}
+        <Route path="*" element={<Navigate to="/team/COLL" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+function AppCore({ routeMode, routeTeamId, routePlayerId }: { routeMode: "team" | "player"; routeTeamId: string | null; routePlayerId: string | null; }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const [team, setTeam] = useState(() => (routeMode === "team" && routeTeamId ? routeTeamId : (searchParams.get("team") || "COLL")));
+  const [season, setSeason] = useState(() => Number(searchParams.get("season") || 2025));
 const [compareTeam, setCompareTeam] = useState<string>(""); // "" = no comparison
 const [comparePanelOpen, setComparePanelOpen] = useState(false);
 const [page, setPage] = useState<"team" | "career">("team");
+const [currentPlayerId, setCurrentPlayerId] = useState<string>("");
 useEffect(() => {
   setCompareTeam("");
 }, [team]);
 
   useEffect(() => {
-    setTeam(qp.get("team") || "COLL");
-    setSeason(Number(qp.get("season") || 2025));
-  }, [qp]);
+    // season is query-string based for both routes
+    const nextSeason = Number(searchParams.get("season") || 2025);
+    if (Number.isFinite(nextSeason) && nextSeason !== season) setSeason(nextSeason);
+
+    if (routeMode === "team") {
+      const nextTeam = (routeTeamId || searchParams.get("team") || "COLL").toUpperCase();
+      if (nextTeam !== team) setTeam(nextTeam);
+      if (page !== "team") setPage("team");
+    } else {
+      // /player/:playerId route
+      if (page !== "career") setPage("career");
+      const qTeam = (searchParams.get("team") || "").toUpperCase();
+      // prefer explicit ?team=, otherwise keep current team until we can infer it from data
+      if (qTeam && qTeam !== team) setTeam(qTeam);
+      const rid = (routePlayerId || "").trim();
+      if (rid && rid !== currentPlayerId) setCurrentPlayerId(rid);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeMode, routeTeamId, routePlayerId, searchParams]);
+
+  // Keep the URL (path + query) in sync with the in-app state so SharePoint embeds can deep-link reliably.
+  useEffect(() => {
+    const baseSeason = Number.isFinite(season) ? season : 2025;
+
+    if (page === "team") {
+      const nextPath = `/team/${team || "COLL"}`;
+      const nextSearch = `?season=${encodeURIComponent(String(baseSeason))}`;
+      const next = nextPath + nextSearch;
+      const cur = location.pathname + location.search;
+      if (cur !== next) navigate(next, { replace: true });
+      return;
+    }
+
+    // career
+    const pid = (currentPlayerId || "").trim();
+    if (!pid) return; // wait until we have a selected player
+    const nextPath = `/player/${encodeURIComponent(pid)}`;
+    const nextSearch = `?season=${encodeURIComponent(String(baseSeason))}&team=${encodeURIComponent(String(team || ""))}`;
+    const next = nextPath + nextSearch;
+    const cur = location.pathname + location.search;
+    if (cur !== next) navigate(next, { replace: true });
+  }, [page, team, season, currentPlayerId, location.pathname, location.search, navigate]);
+
+
 
   const clubName = useMemo(() => TEAMS.find((t) => t.id === team)?.name ?? team, [team]);
   const clubKey = useMemo(() => normalizeClubName(clubName), [clubName]);
@@ -1971,6 +2066,26 @@ useEffect(() => {
   const [vflForm, setVflForm] = useState<VflFormRow[]>([]);
 const [careerProjections, setCareerProjections] = useState<CareerProjectionRow[]>([]);
   const [playerStatsAgg, setPlayerStatsAgg] = useState<PlayerStatsAggRow[]>([]);
+
+  // If someone lands on /player/:playerId without a ?team=, infer the team from roster_players (same season).
+  useEffect(() => {
+    if (routeMode !== "player") return;
+    const explicitTeam = (searchParams.get("team") || "").trim();
+    if (explicitTeam) return;
+    if (!currentPlayerId) return;
+
+    const row = rosterPlayers.find(
+      (r) => String(r.providerId) === String(currentPlayerId) && r.season === season
+    );
+    if (!row?.team) return;
+
+    // roster_players team is typically the club name; map it to your TEAMS id (e.g., "COLL").
+    const key = normalizeClubName(row.team);
+    const match = TEAMS.find((t) => normalizeClubName(t.name) === key) ?? null;
+    if (match && match.id !== team) setTeam(match.id);
+  }, [routeMode, currentPlayerId, rosterPlayers, season, team, searchParams]);
+
+
 
 
   useEffect(() => {
@@ -3519,7 +3634,7 @@ const kpis = useMemo(() => {
 
             </>
           ) : (
-            <CareerProjectionDashboard defaultTeam={team} careerProjections={careerProjections} playerStatsAgg={playerStatsAgg} />
+            <CareerProjectionDashboard defaultTeam={team} careerProjections={careerProjections} playerStatsAgg={playerStatsAgg} initialPlayerId={currentPlayerId || undefined} onPlayerIdChange={(id) => setCurrentPlayerId(id)} />
           )}
 
 
