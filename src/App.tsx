@@ -694,15 +694,6 @@ function HorizontalBarRows({
 }
 
 // --------------------
-// Query params
-// --------------------
-function setQueryParams(next: Record<string, string>) {
-  const url = new URL(window.location.href);
-  Object.entries(next).forEach(([k, v]) => url.searchParams.set(k, v));
-  window.history.replaceState({}, "", url.toString());
-}
-
-// --------------------
 // Derived helpers
 // --------------------
 function makeAgeHistogram(players: RosterPlayerRow[]) {
@@ -2090,32 +2081,37 @@ useEffect(() => {
   if (!explicitTeam) setPlayerTeamResolved(false);
 }, [currentPlayerId, location.search]);
 
-  useEffect(() => {
-    // season is query-string based for both routes
-    const nextSeason = Number(searchParams.get("season") || 2025);
-    if (Number.isFinite(nextSeason) && nextSeason !== season) setSeason(nextSeason);
+    useEffect(() => {
+    // Sync URL -> state (only when the URL changes)
+    const sp = new URLSearchParams(location.search);
+
+    const nextSeason = Number(sp.get("season") || 2025);
+    if (Number.isFinite(nextSeason)) {
+      setSeason((prev) => (nextSeason !== prev ? nextSeason : prev));
+    }
 
     if (routeMode === "team") {
-      const nextTeam = coerceTeamId(routeTeamId || searchParams.get("team") || DEFAULT_TEAM_ID);
-      if (nextTeam !== team) setTeam(nextTeam);
-      if (page !== "team") setPage("team");
+      const nextTeam = coerceTeamId(routeTeamId || sp.get("team") || DEFAULT_TEAM_ID);
+      setTeam((prev) => (nextTeam !== prev ? nextTeam : prev));
+      setPage((prev) => (prev !== "team" ? "team" : prev));
     } else {
       // /player/:playerId route
-      if (page !== "career") setPage("career");
-      const qTeam = coerceTeamId(searchParams.get("team") || "");
-      // prefer explicit ?team=, otherwise keep current team until we can infer it from data
+      setPage((prev) => (prev !== "career" ? "career" : prev));
+
+      const qTeam = coerceTeamId(sp.get("team") || "");
       if (qTeam) {
-        if (qTeam !== team) setTeam(qTeam);
-        if (!playerTeamResolved) setPlayerTeamResolved(true);
+        setTeam((prev) => (qTeam !== prev ? qTeam : prev));
+        setPlayerTeamResolved(true);
       }
+
       const rid = (routePlayerId || "").trim();
-      if (rid && rid !== currentPlayerId) {
-        setCurrentPlayerId(rid);
+      if (rid) {
+        setCurrentPlayerId((prev) => (rid !== prev ? rid : prev));
         if (!qTeam) setPlayerTeamResolved(false);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [routeMode, routeTeamId, routePlayerId, searchParams, team, currentPlayerId, playerTeamResolved]);
+  }, [routeMode, routeTeamId, routePlayerId, location.search]);
 
   // Keep the URL (path + query) in sync with the in-app state so SharePoint embeds can deep-link reliably.
   useEffect(() => {
@@ -3151,7 +3147,6 @@ const kpis = useMemo(() => {
                     active={y === season}
                     onClick={() => {
                       setSeason(y);
-                      setQueryParams({ team, season: String(y) });
                     }}
                   >
                     {y}
@@ -3162,7 +3157,6 @@ const kpis = useMemo(() => {
                   onClick={() => {
                     setTeam(DEFAULT_TEAM_ID);
                     setSeason(2025);
-                    setQueryParams({ team: DEFAULT_TEAM_ID, season: "2025" });
                   }}
                 >
 
