@@ -2027,9 +2027,16 @@ const [compareTeam, setCompareTeam] = useState<string>(""); // "" = no compariso
 const [comparePanelOpen, setComparePanelOpen] = useState(false);
 const [page, setPage] = useState<"team" | "career">("team");
 const [currentPlayerId, setCurrentPlayerId] = useState<string>("");
+const [playerTeamResolved, setPlayerTeamResolved] = useState(false);
 useEffect(() => {
   setCompareTeam("");
 }, [team]);
+
+useEffect(() => {
+  // When the player changes, allow team to be inferred again unless the URL explicitly provides a team.
+  const explicitTeam = (new URLSearchParams(location.search).get("team") || "").trim();
+  if (!explicitTeam) setPlayerTeamResolved(false);
+}, [currentPlayerId, location.search]);
 
   useEffect(() => {
     // season is query-string based for both routes
@@ -2045,12 +2052,18 @@ useEffect(() => {
       if (page !== "career") setPage("career");
       const qTeam = coerceTeamId(searchParams.get("team") || "");
       // prefer explicit ?team=, otherwise keep current team until we can infer it from data
-      if (qTeam && qTeam !== team) setTeam(qTeam);
+      if (qTeam) {
+        if (qTeam !== team) setTeam(qTeam);
+        if (!playerTeamResolved) setPlayerTeamResolved(true);
+      }
       const rid = (routePlayerId || "").trim();
-      if (rid && rid !== currentPlayerId) setCurrentPlayerId(rid);
+      if (rid && rid !== currentPlayerId) {
+        setCurrentPlayerId(rid);
+        if (!qTeam) setPlayerTeamResolved(false);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [routeMode, routeTeamId, routePlayerId, searchParams]);
+  }, [routeMode, routeTeamId, routePlayerId, searchParams, team, currentPlayerId, playerTeamResolved]);
 
   // Keep the URL (path + query) in sync with the in-app state so SharePoint embeds can deep-link reliably.
   useEffect(() => {
@@ -2069,11 +2082,16 @@ useEffect(() => {
     const pid = (currentPlayerId || "").trim();
     if (!pid) return; // wait until we have a selected player
     const nextPath = `/player/${encodeURIComponent(pid)}`;
-    const nextSearch = `?season=${encodeURIComponent(String(baseSeason))}&team=${encodeURIComponent(String(team || ""))}`;
+    const explicitTeam = (new URLSearchParams(location.search).get("team") || "").trim();
+    const includeTeam = playerTeamResolved || !!explicitTeam;
+    const nextSearch = includeTeam
+      ? `?season=${encodeURIComponent(String(baseSeason))}&team=${encodeURIComponent(String(team || ""))}`
+      : `?season=${encodeURIComponent(String(baseSeason))}`;
+
     const next = nextPath + nextSearch;
     const cur = location.pathname + location.search;
     if (cur !== next) navigate(next, { replace: true });
-  }, [page, team, season, currentPlayerId, location.pathname, location.search, navigate]);
+  }, [page, team, season, currentPlayerId, playerTeamResolved, location.pathname, location.search, navigate]);
 
 
 
@@ -2115,8 +2133,11 @@ const [careerProjections, setCareerProjections] = useState<CareerProjectionRow[]
     // roster_players team is typically the club name; map it to your TEAMS id (e.g., "40").
     const key = normalizeClubName(row.team);
     const match = TEAMS.find((t) => normalizeClubName(t.name) === key) ?? null;
-    if (match && match.id !== team) setTeam(match.id);
-  }, [routeMode, currentPlayerId, rosterPlayers, season, team, searchParams]);
+    if (match) {
+      if (match.id !== team) setTeam(match.id);
+      if (!playerTeamResolved) setPlayerTeamResolved(true);
+    }
+  }, [routeMode, currentPlayerId, rosterPlayers, season, team, searchParams, playerTeamResolved]);
 
 
 
