@@ -347,32 +347,6 @@ const TEAMS: TeamOption[] = [
   { id: "160", name: "Western Bulldogs" },
 ];
 
-
-
-const DEFAULT_TEAM_ID = "40"; // Collingwood
-
-// Back-compat: accept older abbreviation-style team codes in URLs (?team=COLL or /team/COLL) and coerce to numeric ids.
-const LEGACY_TEAM_CODE_TO_ID: Record<string, string> = {
-  ADE: "10",
-  BRI: "20",
-  CARL: "30",
-  COLL: "40",
-  ESS: "50",
-  FRE: "60",
-  GEE: "70",
-  GC: "1000",
-  GWS: "1010",
-  HAW: "80",
-  MELB: "90",
-  NM: "100",
-  PORT: "110",
-  RICH: "120",
-  STK: "130",
-  SYD: "140",
-  WCE: "150",
-  WB: "160",
-};
-
 const TEAM_PRIMARY_COLOR: Record<string, string> = {
   Adelaide: "#002B5C",
   "Brisbane Lions": "#7C003E",
@@ -424,22 +398,6 @@ function normalizeClubName(s: string) {
   return map[x] ?? x;
 }
 
-function coerceTeamId(raw: string | null | undefined): string {
-  const v = String(raw ?? "").trim();
-  if (!v) return "";
-  // already a numeric id in TEAMS
-  if (TEAMS.some((t) => t.id === v)) return v;
-
-  const upper = v.toUpperCase();
-  if (LEGACY_TEAM_CODE_TO_ID[upper]) return LEGACY_TEAM_CODE_TO_ID[upper];
-
-  // allow club name in URLs (e.g. /team/Collingwood) as a last resort
-  const vNorm = normalizeClubName(v).toLowerCase();
-  const byName = TEAMS.find((t) => normalizeClubName(t.name).toLowerCase() === vNorm);
-  return byName?.id ?? v;
-}
-
-
 function formatPct(x: number) {
   return `${x.toFixed(1)}%`;
 }
@@ -472,34 +430,49 @@ function toNumberOrNull(x: any): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+
+// In-memory JSON cache so navigating between routes doesn't refetch the same CSVs repeatedly.
+const API_JSON_CACHE = new Map<string, Promise<any[]>>();
+
 async function loadApiDataAsObjects<T>(file: string, mapper: (r: Record<string, any>) => T | null): Promise<T[]> {
   const url = `/api/data?file=${encodeURIComponent(file)}`;
 
   const headers: Record<string, string> = {};
   if (DATA_API_KEY) headers["x-data-key"] = DATA_API_KEY;
 
-  const res = await fetch(url, { headers });
+  // Cache the raw JSON rows per file so route changes don't refetch everything.
+  let rowsPromise = API_JSON_CACHE.get(file);
+  if (!rowsPromise) {
+    rowsPromise = (async () => {
+      const res = await fetch(url, { headers });
 
-  // Helpful error messages (especially when the API key isn't present)
-  if (res.status === 401) {
-    throw new Error(
-      DATA_API_KEY
-        ? `Unauthorized calling ${url} (check VITE_DATA_API_KEY matches DATA_API_KEY in SWA Environment Variables)`
-        : `Unauthorized calling ${url} (no VITE_DATA_API_KEY set in the frontend)`
-    );
+      // Helpful error messages (especially when the API key isn't present)
+      if (res.status === 401) {
+        throw new Error(
+          DATA_API_KEY
+            ? `Unauthorized calling ${url} (check VITE_DATA_API_KEY matches DATA_API_KEY in SWA Environment Variables)`
+            : `Unauthorized calling ${url} (no VITE_DATA_API_KEY set in the frontend)`
+        );
+      }
+      if (!res.ok) throw new Error(`Failed to load ${file} via API (${res.status})`);
+
+      const json = await res.json();
+      return Array.isArray(json) ? json : [];
+    })();
+
+    API_JSON_CACHE.set(file, rowsPromise);
   }
-  if (!res.ok) throw new Error(`Failed to load ${file} via API (${res.status})`);
 
-  const json = await res.json();
-  const rows = Array.isArray(json) ? json : [];
+  const rows = await rowsPromise;
+
   const out: T[] = [];
-
   for (const r of rows) {
     const obj = mapper((r ?? {}) as Record<string, any>);
     if (obj) out.push(obj);
   }
   return out;
 }
+
 
 
 // --------------------
@@ -864,8 +837,22 @@ function CareerProjectionDashboard({
       if (!map.has(key)) map.set(key, { name, id, team: r.team, pos: r.SourcePosition });
     }
     const out = Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+    // If we deep-linked to a player that doesn't match the current team filter yet,
+    // keep them in the list so the selection doesn't "disappear" after mount.
+    if (initialPlayerId && !out.some((p) => p.id === initialPlayerId)) {
+      const anyRow = careerProjections.find((r) => toTrimmedString(r.SourceproviderId) === initialPlayerId);
+      if (anyRow) {
+        out.unshift({
+          name: toTrimmedString(anyRow.SourcePlayer) || "Selected player",
+          id: initialPlayerId,
+          team: toTrimmedString((anyRow as any).team),
+          pos: toTrimmedString((anyRow as any).SourcePosition),
+        });
+      }
+    }
+
     return out.length ? out : [{ name: "Select a player", id: "" }];
-  }, [careerProjections, teamKey]);
+  }, [careerProjections, teamKey, initialPlayerId]);
 
   // Compare list: any player in the database
   const allPlayers = useMemo(() => {
@@ -880,20 +867,19 @@ function CareerProjectionDashboard({
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [careerProjections]);
 
-  const [playerId, setPlayerId] = useState<string>(() => (initialPlayerId && clubPlayers.some((p) => p.id === initialPlayerId) ? initialPlayerId : clubPlayers[0]?.id ?? ""));
+  const [playerId, setPlayerId] = useState<string>(() => (initialPlayerId ? initialPlayerId : clubPlayers[0]?.id ?? ""));
   useEffect(() => {
-    if (!clubPlayers.some((p) => p.id === playerId)) setPlayerId(clubPlayers[0]?.id ?? "");
+    // Only choose a default if nothing is selected yet.
+    if (!playerId) setPlayerId(clubPlayers[0]?.id ?? "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clubPlayers]);
 
   // If a route provides a playerId, prefer it (when valid for this club/season context)
   useEffect(() => {
     if (!initialPlayerId) return;
-    if (clubPlayers.some((p) => p.id === initialPlayerId) && initialPlayerId !== playerId) {
-      setPlayerId(initialPlayerId);
-    }
+    if (initialPlayerId !== playerId) setPlayerId(initialPlayerId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialPlayerId, clubPlayers]);
+  }, [initialPlayerId]);
 
   // Bubble selection up so the URL can stay in sync (for share links / embeds)
   useEffect(() => {
@@ -1243,9 +1229,9 @@ return [minFinal, maxFinal];
     { label: "Aerial", key: "Aerial" },
     { label: "Ground", key: "Ground" },
     { label: "Run/Carry", key: "Run_Carry" },
-    { label: "TO→Trans (BW)", key: "Turnover_Transition_Ball_Winning" },
-    { label: "Stop→Trans (BW)", key: "Stoppage_Transition_Ball_Winning" },
-    { label: "Pre clearance (BW)", key: "Pre_Clearance_Ball_Winning" },
+    { label: "TO-Transition", key: "Turnover_Transition_Ball_Winning" },
+    { label: "Stop-Transition", key: "Stoppage_Transition_Ball_Winning" },
+    { label: "Pre clearance", key: "Pre_Clearance_Ball_Winning" },
     { label: "Spoiling", key: "Spoiling" },
   ];
 
@@ -1624,7 +1610,7 @@ return [minFinal, maxFinal];
             {/* Ball Winning */}
             <div style={{ marginBottom: 22 }}>
               <div style={{ fontSize: 12, fontWeight: 950, color: "#111", marginBottom: 8 }}>Ball Winning</div>
-              {["Ball Winning", "Intercepts", "Aerial", "Ground", "Run/Carry", "TO→Trans (BW)", "Stop→Trans (BW)", "Pre clearance (BW)"].map(
+              {["Ball Winning", "Intercepts", "Aerial", "Ground", "Run/Carry", "TO-Transition", "Stop-Transition", "Pre clearance"].map(
                 (lbl) => {
                   const r = skillRows.find((x) => x.label === lbl);
                   if (!r) return null;
@@ -1792,7 +1778,7 @@ return [minFinal, maxFinal];
           </div>
 
           <div style={{ marginTop: 8, fontSize: 12, color: "rgba(0,0,0,0.55)" }}>
-            Shaded band = lower/upper confidence interval (when available). Compare series is dashed.
+            Shaded band = lower/upper confidence interval
           </div>
         </Card>
       </div>
@@ -2001,17 +1987,17 @@ function PlayerRoute() {
 }
 
 // Default export wraps the existing single-page UI in a router so deep links work:
-//   /team/40?season=2025
+//   /team/COLL?season=2025
 //   /player/CD_I1019038?season=2025
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Navigate to="/team/40" replace />} />
+        <Route path="/" element={<Navigate to="/team/COLL" replace />} />
         <Route path="/team/:teamId" element={<TeamRoute />} />
         <Route path="/player/:playerId" element={<PlayerRoute />} />
         {/* Back-compat: old query-string-only links */}
-        <Route path="*" element={<Navigate to="/team/40" replace />} />
+        <Route path="*" element={<Navigate to="/team/COLL" replace />} />
       </Routes>
     </BrowserRouter>
   );
@@ -2021,22 +2007,15 @@ function AppCore({ routeMode, routeTeamId, routePlayerId }: { routeMode: "team" 
   const location = useLocation();
   const navigate = useNavigate();
   const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
-  const [team, setTeam] = useState(() => (routeMode === "team" && routeTeamId ? coerceTeamId(routeTeamId) : (coerceTeamId(searchParams.get("team")) || DEFAULT_TEAM_ID)));
+  const [team, setTeam] = useState(() => (routeMode === "team" && routeTeamId ? routeTeamId : (searchParams.get("team") || "COLL")));
   const [season, setSeason] = useState(() => Number(searchParams.get("season") || 2025));
 const [compareTeam, setCompareTeam] = useState<string>(""); // "" = no comparison
 const [comparePanelOpen, setComparePanelOpen] = useState(false);
 const [page, setPage] = useState<"team" | "career">("team");
 const [currentPlayerId, setCurrentPlayerId] = useState<string>("");
-const [playerTeamResolved, setPlayerTeamResolved] = useState(false);
 useEffect(() => {
   setCompareTeam("");
 }, [team]);
-
-useEffect(() => {
-  // When the player changes, allow team to be inferred again unless the URL explicitly provides a team.
-  const explicitTeam = (new URLSearchParams(location.search).get("team") || "").trim();
-  if (!explicitTeam) setPlayerTeamResolved(false);
-}, [currentPlayerId, location.search]);
 
   useEffect(() => {
     // season is query-string based for both routes
@@ -2044,33 +2023,27 @@ useEffect(() => {
     if (Number.isFinite(nextSeason) && nextSeason !== season) setSeason(nextSeason);
 
     if (routeMode === "team") {
-      const nextTeam = coerceTeamId(routeTeamId || searchParams.get("team") || DEFAULT_TEAM_ID);
+      const nextTeam = (routeTeamId || searchParams.get("team") || "COLL").toUpperCase();
       if (nextTeam !== team) setTeam(nextTeam);
       if (page !== "team") setPage("team");
     } else {
       // /player/:playerId route
       if (page !== "career") setPage("career");
-      const qTeam = coerceTeamId(searchParams.get("team") || "");
+      const qTeam = (searchParams.get("team") || "").toUpperCase();
       // prefer explicit ?team=, otherwise keep current team until we can infer it from data
-      if (qTeam) {
-        if (qTeam !== team) setTeam(qTeam);
-        if (!playerTeamResolved) setPlayerTeamResolved(true);
-      }
+      if (qTeam && qTeam !== team) setTeam(qTeam);
       const rid = (routePlayerId || "").trim();
-      if (rid && rid !== currentPlayerId) {
-        setCurrentPlayerId(rid);
-        if (!qTeam) setPlayerTeamResolved(false);
-      }
+      if (rid && rid !== currentPlayerId) setCurrentPlayerId(rid);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [routeMode, routeTeamId, routePlayerId, searchParams, team, currentPlayerId, playerTeamResolved]);
+  }, [routeMode, routeTeamId, routePlayerId, searchParams]);
 
   // Keep the URL (path + query) in sync with the in-app state so SharePoint embeds can deep-link reliably.
   useEffect(() => {
     const baseSeason = Number.isFinite(season) ? season : 2025;
 
     if (page === "team") {
-      const nextPath = `/team/${team || DEFAULT_TEAM_ID}`;
+      const nextPath = `/team/${team || "COLL"}`;
       const nextSearch = `?season=${encodeURIComponent(String(baseSeason))}`;
       const next = nextPath + nextSearch;
       const cur = location.pathname + location.search;
@@ -2082,16 +2055,11 @@ useEffect(() => {
     const pid = (currentPlayerId || "").trim();
     if (!pid) return; // wait until we have a selected player
     const nextPath = `/player/${encodeURIComponent(pid)}`;
-    const explicitTeam = (new URLSearchParams(location.search).get("team") || "").trim();
-    const includeTeam = playerTeamResolved || !!explicitTeam;
-    const nextSearch = includeTeam
-      ? `?season=${encodeURIComponent(String(baseSeason))}&team=${encodeURIComponent(String(team || ""))}`
-      : `?season=${encodeURIComponent(String(baseSeason))}`;
-
+    const nextSearch = `?season=${encodeURIComponent(String(baseSeason))}&team=${encodeURIComponent(String(team || ""))}`;
     const next = nextPath + nextSearch;
     const cur = location.pathname + location.search;
     if (cur !== next) navigate(next, { replace: true });
-  }, [page, team, season, currentPlayerId, playerTeamResolved, location.pathname, location.search, navigate]);
+  }, [page, team, season, currentPlayerId, location.pathname, location.search, navigate]);
 
 
 
@@ -2130,14 +2098,11 @@ const [careerProjections, setCareerProjections] = useState<CareerProjectionRow[]
     );
     if (!row?.team) return;
 
-    // roster_players team is typically the club name; map it to your TEAMS id (e.g., "40").
+    // roster_players team is typically the club name; map it to your TEAMS id (e.g., "COLL").
     const key = normalizeClubName(row.team);
     const match = TEAMS.find((t) => normalizeClubName(t.name) === key) ?? null;
-    if (match) {
-      if (match.id !== team) setTeam(match.id);
-      if (!playerTeamResolved) setPlayerTeamResolved(true);
-    }
-  }, [routeMode, currentPlayerId, rosterPlayers, season, team, searchParams, playerTeamResolved]);
+    if (match && match.id !== team) setTeam(match.id);
+  }, [routeMode, currentPlayerId, rosterPlayers, season, team, searchParams]);
 
 
 
@@ -2150,7 +2115,7 @@ const [careerProjections, setCareerProjections] = useState<CareerProjectionRow[]
         setLoading(true);
         setLoadErr(null);
 
-        const [roster, kpis, ranks, radar, acq, proj, aflFormRows, vflFormRows, careerProj, playerStatsAggRows] = await Promise.all([
+        const [roster, kpis, ranks, radar, acq, proj, aflFormRows, vflFormRows] = await Promise.all([
           loadApiDataAsObjects<RosterPlayerRow>("roster_players.csv", (r) => {
             const seasonN = toNumberOrNull(r["season"]);
             const ageN = toNumberOrNull(r["age"]);
@@ -2312,7 +2277,7 @@ return {
           }),
 
           // NEW: Career projections
-          loadApiDataAsObjects<CareerProjectionRow>("career_projections.csv", (r) => {
+=> {
             const seasonN = toNumberOrNull(r["Season"]);
             const horizonN = toNumberOrNull(r["Horizon"]);
             const srcSeasonN = toNumberOrNull(r["SourceSeason"]);
@@ -2369,9 +2334,8 @@ return {
               Pre_Clearance_Ball_Winning: toNumberOrNull(r["Pre_Clearance_Ball_Winning"] ?? r["Pre Clearance Ball Winning"]),
               Spoiling: toNumberOrNull(r["Spoiling"] ?? r["Spoil"] ?? r["Spoils"] ?? r["Spoiling"]),
             };
-          }),
-
-          loadApiDataAsObjects<PlayerStatsAggRow>("CD_player_stats_agg.csv", (r) => {
+          })
+=> {
             const seasonN = toNumberOrNull(r["season"] ?? r["Season"] ?? "");
             const playerId = (r["player.id"] ?? r["player_id"] ?? r["playerId"] ?? "").toString().trim();
             const playerName = (r["player.name"] ?? r["player_name"] ?? r["playerName"] ?? "").toString().trim();
@@ -2394,8 +2358,8 @@ return {
         setPlayerProjections(proj);
         setAflForm(aflFormRows);
         setVflForm(vflFormRows);
-        setCareerProjections(careerProj);
-        setPlayerStatsAgg(playerStatsAggRows);
+        
+        
 
       } catch (e: any) {
         if (!alive) return;
@@ -2410,6 +2374,100 @@ return {
       alive = false;
     };
   }, []);
+
+
+  // Lazy-load the heavy career datasets only when the Career page is shown (or when deep-linked to a player).
+  useEffect(() => {
+    let alive = true;
+    if (page !== "career") return;
+    if (careerProjections.length && playerStatsAgg.length) return;
+
+    (async () => {
+      try {
+        const [careerProj, playerStatsAggRows] = await Promise.all([
+          loadApiDataAsObjects<CareerProjectionRow>("career_projections.csv", (r) => {
+            const Season = toNumberOrNull(r["Season"] ?? r["season"]);
+            const SourceSeason = toNumberOrNull(r["SourceSeason"] ?? r["source_season"]);
+            const Horizon = toNumberOrNull(r["Horizon"] ?? r["horizon"]);
+            const estimate = toNumberOrNull(r["estimate"]);
+            const lower = toNumberOrNull(r["lower"]);
+            const upper = toNumberOrNull(r["upper"]);
+            const salary = toNumberOrNull(r["salary"]);
+            const AA = toNumberOrNull(r["AA"]);
+            const Seasons = toNumberOrNull(r["Seasons"]);
+            const Games = toNumberOrNull(r["Games"]);
+            if (Season === null || SourceSeason === null || Horizon === null) return null;
+            return {
+              SourceproviderId: toTrimmedString(r["SourceproviderId"] ?? r["SourceproviderID"] ?? r["providerId"] ?? r["provider_id"]),
+              SourcePlayer: toTrimmedString(r["SourcePlayer"] ?? r["Sourceplayer"] ?? r["player_name"] ?? r["Player"]),
+              SourceSeason,
+              SourceRating: toNumberOrNull(r["SourceRating"] ?? r["source_rating"]) ?? 0,
+              SourcePosition: toTrimmedString(r["SourcePosition"] ?? r["Source_Position"] ?? r["position"]),
+              Horizon,
+              Season,
+              estimate,
+              lower,
+              upper,
+              salary,
+              AA,
+              Seasons,
+              Games,
+              Type: toTrimmedString(r["Type"]),
+              team: toTrimmedString(r["team"] ?? r["Team"] ?? r["SourceClub"] ?? r["Club"]),
+              rank_all: toNumberOrNull(r["rank_all"]),
+              rank_pos: toNumberOrNull(r["rank_pos"]),
+              // Advanced stats (optional)
+              Ball_Use: toNumberOrNull(r["Ball_Use"]),
+              Ball_Winning: toNumberOrNull(r["Ball_Winning"]),
+              Intercepts: toNumberOrNull(r["Intercepts"]),
+              Spoils: toNumberOrNull(r["Spoils"]),
+              Kicking: toNumberOrNull(r["Kicking"]),
+              Handballing: toNumberOrNull(r["Handballing"]),
+              Transition_Ball_Use: toNumberOrNull(r["Transition_Ball_Use"]),
+              Post_Clearance_Ball_Use: toNumberOrNull(r["Post_Clearance_Ball_Use"]),
+              Clearance_Ball_Use: toNumberOrNull(r["Clearance_Ball_Use"]),
+              Aerial: toNumberOrNull(r["Aerial"]),
+              Ground: toNumberOrNull(r["Ground"]),
+              Run_Carry: toNumberOrNull(r["Run_Carry"]),
+              Turnover_Transition_Ball_Winning: toNumberOrNull(r["Turnover_Transition_Ball_Winning"]),
+              Stoppage_Transition_Ball_Winning: toNumberOrNull(r["Stoppage_Transition_Ball_Winning"]),
+              Pre_Clearance_Ball_Winning: toNumberOrNull(r["Pre_Clearance_Ball_Winning"]),
+              Spoiling: toNumberOrNull(r["Spoiling"]),
+              Transition: toNumberOrNull(r["Transition"]),
+              Shots: toNumberOrNull(r["Shots"]),
+              Stoppage: toNumberOrNull(r["Stoppage"]),
+              Hitouts: toNumberOrNull(r["Hitouts"]),
+              Kicks: toNumberOrNull(r["Kicks"]),
+            } as CareerProjectionRow;
+          }),
+          loadApiDataAsObjects<PlayerStatsAggRow>("CD_player_stats_agg.csv", (r) => {
+            const seasonN = toNumberOrNull(r["season"] ?? r["Season"]);
+            const playerId = toTrimmedString(r["player_id"] ?? r["playerId"] ?? r["providerId"]);
+            const playerName = toTrimmedString(r["player_name"] ?? r["SourcePlayer"] ?? r["Player"]);
+            const metricName = toTrimmedString(r["metric_name"] ?? r["Metric Name"] ?? r["metric"]);
+            const category = toTrimmedString(r["category"] ?? r["Metric Category"] ?? r["cat"]);
+            const metricValue = toNumberOrNull(r["metric_value"] ?? r["Metric Value"] ?? r["value"]);
+            if (seasonN === null || !playerId || !metricName || !category || metricValue === null) return null;
+            return { season: seasonN, player_id: playerId, player_name: playerName, metric_name: metricName, category, metric_value: metricValue };
+          }),
+        ]);
+
+        if (!alive) return;
+        setCareerProjections(careerProj);
+        setPlayerStatsAgg(playerStatsAggRows);
+      } catch (e: any) {
+        // Don't block the whole app if career-only files fail; just show error on career page.
+        if (!alive) return;
+        console.error(e);
+        setLoadErr((prev) => prev ?? (e?.message ? String(e.message) : String(e)));
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [page, careerProjections.length, playerStatsAgg.length]);
+
 
   // --------
   // Years pills
@@ -3158,9 +3216,9 @@ const kpis = useMemo(() => {
 
                 <Pill
                   onClick={() => {
-                    setTeam(DEFAULT_TEAM_ID);
+                    setTeam("COLL");
                     setSeason(2025);
-                    setQueryParams({ team: DEFAULT_TEAM_ID, season: "2025" });
+                    setQueryParams({ team: "COLL", season: "2025" });
                   }}
                 >
 
