@@ -1226,9 +1226,9 @@ return [minFinal, maxFinal];
     { label: "Aerial", key: "Aerial" },
     { label: "Ground", key: "Ground" },
     { label: "Run/Carry", key: "Run_Carry" },
-    { label: "TO→Trans (BW)", key: "Turnover_Transition_Ball_Winning" },
-    { label: "Stop→Trans (BW)", key: "Stoppage_Transition_Ball_Winning" },
-    { label: "Pre clearance (BW)", key: "Pre_Clearance_Ball_Winning" },
+    { label: "TO-Transition", key: "Turnover_Transition_Ball_Winning" },
+    { label: "Stopp-Transition", key: "Stoppage_Transition_Ball_Winning" },
+    { label: "Pre clearance", key: "Pre_Clearance_Ball_Winning" },
     { label: "Spoiling", key: "Spoiling" },
   ];
 
@@ -1667,7 +1667,7 @@ return [minFinal, maxFinal];
             {/* Ball Winning */}
             <div style={{ marginBottom: 22 }}>
               <div style={{ fontSize: 12, fontWeight: 950, color: "#111", marginBottom: 8 }}>Ball Winning</div>
-              {["Ball Winning", "Intercepts", "Aerial", "Ground", "Run/Carry", "TO→Trans (BW)", "Stop→Trans (BW)", "Pre clearance (BW)"].map(
+              {["Ball Winning", "Intercepts", "Aerial", "Ground", "Run/Carry", "TO-Transition", "Stop-Trans", "Pre clearance"].map(
                 (lbl) => {
                   const r = skillRows.find((x) => x.label === lbl);
                   if (!r) return null;
