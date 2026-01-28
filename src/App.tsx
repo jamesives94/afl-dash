@@ -1485,7 +1485,7 @@ function CareerProjectionDashboard({
                 {headshotUrl ? (
                   <img
                     src={headshotUrl}
-                    alt={player?.name ?? ""}
+                    alt={""}
                     style={{ height: "100%", width: "100%", objectFit: "cover", position: "relative" }}
                     onError={(e) => {
                       // Hide broken images; fallback remains visible.
