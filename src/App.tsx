@@ -1010,83 +1010,12 @@ function CareerProjectionDashboard({
     return Array.from(bySeason.values()).sort((a, b) => a.season - b.season);
   }, [primaryTraj, compareTraj]);
 
-  // Dynamic Y-axis domain: based on point estimates (or actuals when present).
-  // - No forced 0 baseline
-  // - Pads by ±5
-  // - If compare series exists, uses min/max across BOTH players
-  const yDomain = useMemo<[number, number]>(() => {
-    const vals: number[] = [];
+    // Fixed Y-axis for Career Projection chart (both solo + comparison)
+  // Requested: keep a consistent 0–20 scale (no dynamic domain).
+  const yDomain: [number, number] = [0, 20];
+  const yTicks: number[] = [0, 5, 10, 15, 20];
 
-    for (const d of trajectory as any[]) {
-      const vA = d.actual ?? d.estimate;
-      const vB = d.c_actual ?? d.c_estimate;
-
-      if (typeof vA === "number" && Number.isFinite(vA)) vals.push(vA);
-      if (typeof vB === "number" && Number.isFinite(vB)) vals.push(vB);
-    }
-
-    // Sensible fallback
-    if (!vals.length) return [4, 20];
-
-    const minVal = Math.min(...vals);
-    const maxVal = Math.max(...vals);
-
-    let min = minVal - 5;
-    let max = maxVal + 5;
-
-    if (!Number.isFinite(min) || !Number.isFinite(max)) return [4, 20];
-    if (min === max) {
-      min -= 1;
-      max += 1;
-    }
-    if (min > max) {
-      const tmp = min;
-      min = max;
-      max = tmp;
-    }
-
-    // Round to neat integers so the axis doesn't show awkward decimals.
-    const minFinal = Math.floor(min);
-    const maxFinal = Math.ceil(max);
-
-    return [minFinal, Math.max(minFinal + 1, maxFinal)];
-  }, [trajectory]);
-
-  // Build "nice" ticks that stay within the domain (prevents Recharts from snapping to 0)
-  // Step is dynamic (1/2/5 * powers of 10) depending on the span.
-  const yTicks = useMemo(() => {
-    const [minY, maxY] = yDomain;
-    const span = Math.max(1, maxY - minY);
-
-    const targetTicks = 6; // visual density
-    const rawStep = span / Math.max(1, targetTicks - 1);
-
-    // pick a "nice" step: 1/2/5 * 10^k
-    const pow10 = Math.pow(10, Math.floor(Math.log10(rawStep)));
-    const candidates = [1, 2, 5, 10].map((m) => m * pow10);
-    let step = candidates[candidates.length - 1];
-    for (const c of candidates) {
-      if (c >= rawStep) {
-        step = c;
-        break;
-      }
-    }
-
-    const start = Math.ceil(minY / step) * step;
-    const end = Math.floor(maxY / step) * step;
-
-    const ticks: number[] = [];
-    for (let v = start; v <= end + 1e-9; v += step) ticks.push(Number(v.toFixed(10)));
-
-    // Ensure endpoints are included so the chart always uses the full domain
-    ticks.push(minY, maxY);
-
-    // de-dupe + sort
-    return Array.from(new Set(ticks)).sort((a, b) => a - b);
-  }, [yDomain]);
-
-
-  // ---------- KPI helpers ----------
+// ---------- KPI helpers ----------
   const lastActual = useMemo(() => {
     const actualRows = primaryTraj.filter((d: any) => d.actual != null);
     if (actualRows.length) return actualRows[actualRows.length - 1];
@@ -1600,12 +1529,7 @@ function CareerProjectionDashboard({
                       letterSpacing: 0.5,
                     }}
                   >
-                    {(comparePlayer?.name ?? "—")
-                      .split(" ")
-                      .filter(Boolean)
-                      .slice(0, 2)
-                      .map((s) => s[0]?.toUpperCase())
-                      .join("")}
+                    {""}
                   </div>
 
                   {compareHeadshotUrl ? (
