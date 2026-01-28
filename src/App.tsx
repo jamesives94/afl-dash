@@ -1010,60 +1010,49 @@ function CareerProjectionDashboard({
     return Array.from(bySeason.values()).sort((a, b) => a.season - b.season);
   }, [primaryTraj, compareTraj]);
 
-  // Dynamic Y-axis domain: min(lower) - 3, max(upper) + 3 (includes compare series when present)
+    // Dynamic Y-axis domain:
+  // - Primary only: [min(player estimate) - 5, max(player estimate) + 5]
+  // - With comparison: [min(both players' estimates) - 5, max(both players' estimates) + 5]
+  // Notes:
+  // - We use the point estimate (actual when present, otherwise estimate).
+  // - We round to neat integers so the axis doesn't show awkward decimals.
   const yDomain = useMemo<[number, number]>(() => {
-    const lows: number[] = [];
-    const highs: number[] = [];
-    const vals: number[] = [];
+  const vals: number[] = [];
 
+  for (const d of trajectory as any[]) {
+    const vA = d.actual ?? d.estimate;
+    const vB = d.c_actual ?? d.c_estimate;
 
-    for (const d of trajectory as any[]) {
-      const loA = typeof d.lower0 === "number" && Number.isFinite(d.lower0) ? d.lower0 : null;
-      const hiA =
-        loA != null && typeof d.band === "number" && Number.isFinite(d.band) ? loA + d.band : null;
+    if (typeof vA === "number" && Number.isFinite(vA)) vals.push(vA);
+    if (typeof vB === "number" && Number.isFinite(vB)) vals.push(vB);
+  }
 
-      const loB = typeof d.c_lower0 === "number" && Number.isFinite(d.c_lower0) ? d.c_lower0 : null;
-      const hiB =
-        loB != null && typeof d.c_band === "number" && Number.isFinite(d.c_band) ? loB + d.c_band : null;
+  if (!vals.length) return [4, 20];
 
-      if (loA != null) lows.push(loA);
-      if (hiA != null) highs.push(hiA);
-      if (loB != null) lows.push(loB);
-      if (hiB != null) highs.push(hiB);
+  const minBase = Math.min(...vals);
+  const maxBase = Math.max(...vals);
 
-      const vA = d.actual ?? d.estimate;
-      const vB = d.c_actual ?? d.c_estimate;
+  let min = minBase - 5;
+  let max = maxBase + 5;
 
-      if (typeof vA === "number" && Number.isFinite(vA)) vals.push(vA);
-      if (typeof vB === "number" && Number.isFinite(vB)) vals.push(vB);
-    }
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return [4, 20];
+  if (min === max) {
+    min -= 1;
+    max += 1;
+  }
+  if (min > max) {
+    const tmp = min;
+    min = max;
+    max = tmp;
+  }
 
-    const minBase = lows.length ? Math.min(...lows) : vals.length ? Math.min(...vals) : 4;
-    const maxBase = highs.length ? Math.max(...highs) : vals.length ? Math.max(...vals) : 20;
+  const minFinal = Math.floor(min);
+  const maxFinal = Math.ceil(max);
 
-    let min = minBase - 3;
-    let max = maxBase + 3;
-
-    if (!Number.isFinite(min) || !Number.isFinite(max)) return [4, 20];
-    if (min === max) {
-      min -= 1;
-      max += 1;
-    }
-    if (min > max) {
-      const tmp = min;
-      min = max;
-      max = tmp;
-    }
-
-// Round to neat integers so the axis doesn't show awkward decimals
-// and avoid a misleading 0 baseline when values are clearly > 0.
-const minRounded = Math.floor(min);
-const maxRounded = Math.ceil(max);
-const minFinal = Math.max(1, minRounded);
-const maxFinal = Math.max(minFinal + 1, maxRounded);
-
-return [minFinal, maxFinal];
+  return [minFinal, Math.max(minFinal + 1, maxFinal)];
   }, [trajectory]);
+
+
 
 
   // ---------- KPI helpers ----------
