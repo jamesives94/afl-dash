@@ -1010,49 +1010,80 @@ function CareerProjectionDashboard({
     return Array.from(bySeason.values()).sort((a, b) => a.season - b.season);
   }, [primaryTraj, compareTraj]);
 
-    // Dynamic Y-axis domain:
-  // - Primary only: [min(player estimate) - 5, max(player estimate) + 5]
-  // - With comparison: [min(both players' estimates) - 5, max(both players' estimates) + 5]
-  // Notes:
-  // - We use the point estimate (actual when present, otherwise estimate).
-  // - We round to neat integers so the axis doesn't show awkward decimals.
+  // Dynamic Y-axis domain: based on point estimates (or actuals when present).
+  // - No forced 0 baseline
+  // - Pads by ±5
+  // - If compare series exists, uses min/max across BOTH players
   const yDomain = useMemo<[number, number]>(() => {
-  const vals: number[] = [];
+    const vals: number[] = [];
 
-  for (const d of trajectory as any[]) {
-    const vA = d.actual ?? d.estimate;
-    const vB = d.c_actual ?? d.c_estimate;
+    for (const d of trajectory as any[]) {
+      const vA = d.actual ?? d.estimate;
+      const vB = d.c_actual ?? d.c_estimate;
 
-    if (typeof vA === "number" && Number.isFinite(vA)) vals.push(vA);
-    if (typeof vB === "number" && Number.isFinite(vB)) vals.push(vB);
-  }
+      if (typeof vA === "number" && Number.isFinite(vA)) vals.push(vA);
+      if (typeof vB === "number" && Number.isFinite(vB)) vals.push(vB);
+    }
 
-  if (!vals.length) return [4, 20];
+    // Sensible fallback
+    if (!vals.length) return [4, 20];
 
-  const minBase = Math.min(...vals);
-  const maxBase = Math.max(...vals);
+    const minVal = Math.min(...vals);
+    const maxVal = Math.max(...vals);
 
-  let min = minBase - 5;
-  let max = maxBase + 5;
+    let min = minVal - 5;
+    let max = maxVal + 5;
 
-  if (!Number.isFinite(min) || !Number.isFinite(max)) return [4, 20];
-  if (min === max) {
-    min -= 1;
-    max += 1;
-  }
-  if (min > max) {
-    const tmp = min;
-    min = max;
-    max = tmp;
-  }
+    if (!Number.isFinite(min) || !Number.isFinite(max)) return [4, 20];
+    if (min === max) {
+      min -= 1;
+      max += 1;
+    }
+    if (min > max) {
+      const tmp = min;
+      min = max;
+      max = tmp;
+    }
 
-  const minFinal = Math.floor(min);
-  const maxFinal = Math.ceil(max);
+    // Round to neat integers so the axis doesn't show awkward decimals.
+    const minFinal = Math.floor(min);
+    const maxFinal = Math.ceil(max);
 
-  return [minFinal, Math.max(minFinal + 1, maxFinal)];
+    return [minFinal, Math.max(minFinal + 1, maxFinal)];
   }, [trajectory]);
 
+  // Build "nice" ticks that stay within the domain (prevents Recharts from snapping to 0)
+  // Step is dynamic (1/2/5 * powers of 10) depending on the span.
+  const yTicks = useMemo(() => {
+    const [minY, maxY] = yDomain;
+    const span = Math.max(1, maxY - minY);
 
+    const targetTicks = 6; // visual density
+    const rawStep = span / Math.max(1, targetTicks - 1);
+
+    // pick a "nice" step: 1/2/5 * 10^k
+    const pow10 = Math.pow(10, Math.floor(Math.log10(rawStep)));
+    const candidates = [1, 2, 5, 10].map((m) => m * pow10);
+    let step = candidates[candidates.length - 1];
+    for (const c of candidates) {
+      if (c >= rawStep) {
+        step = c;
+        break;
+      }
+    }
+
+    const start = Math.ceil(minY / step) * step;
+    const end = Math.floor(maxY / step) * step;
+
+    const ticks: number[] = [];
+    for (let v = start; v <= end + 1e-9; v += step) ticks.push(Number(v.toFixed(10)));
+
+    // Ensure endpoints are included so the chart always uses the full domain
+    ticks.push(minY, maxY);
+
+    // de-dupe + sort
+    return Array.from(new Set(ticks)).sort((a, b) => a - b);
+  }, [yDomain]);
 
 
   // ---------- KPI helpers ----------
@@ -1763,7 +1794,7 @@ function CareerProjectionDashboard({
               <ComposedChart data={trajectory} margin={{ top: 10, right: 26, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.35} />
                 <XAxis dataKey="season" tick={{ fontSize: 11 }} />
-                <YAxis domain={yDomain} tick={{ fontSize: 11 }} allowDecimals={false} tickCount={6} />
+                <YAxis domain={yDomain} ticks={yTicks} tick={{ fontSize: 11 }} allowDecimals={false} />
                 <Tooltip
                   formatter={(v: any, n: any) => {
                     if (v == null) return ["—", n];
