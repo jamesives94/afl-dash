@@ -846,9 +846,24 @@ function CareerProjectionDashboard({
       const key = `${id}__${name}`;
       if (!map.has(key)) map.set(key, { name, id, team: r.team, pos: r.SourcePosition });
     }
+
+    // If the route specifies a playerId, make sure it remains selectable even while
+    // team filtering is applied (prevents falling back to the first alphabetical player).
+    const rid = toTrimmedString(initialPlayerId);
+    if (rid && !Array.from(map.values()).some((p) => p.id === rid)) {
+      const anyRow = careerProjections.find((r) => toTrimmedString(r.SourceproviderId) === rid);
+      if (anyRow) {
+        const name = toTrimmedString(anyRow.SourcePlayer);
+        if (name) {
+          const key = `${rid}__${name}`;
+          map.set(key, { name, id: rid, team: anyRow.team, pos: anyRow.SourcePosition });
+        }
+      }
+    }
+
     const out = Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
     return out.length ? out : [{ name: "Select a player", id: "" }];
-  }, [careerProjections, teamKey]);
+  }, [careerProjections, teamKey, initialPlayerId]);
 
   // Compare list: any player in the database
   const allPlayers = useMemo(() => {
@@ -863,25 +878,57 @@ function CareerProjectionDashboard({
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [careerProjections]);
 
-  const [playerId, setPlayerId] = useState<string>(() => (initialPlayerId && clubPlayers.some((p) => p.id === initialPlayerId) ? initialPlayerId : clubPlayers[0]?.id ?? ""));
-  useEffect(() => {
-    if (!clubPlayers.some((p) => p.id === playerId)) setPlayerId(clubPlayers[0]?.id ?? "");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clubPlayers]);
+  const hasCareerData = careerProjections.length > 0;
 
-  // If a route provides a playerId, prefer it (when valid for this club/season context)
+  const routePlayerExists = useMemo(() => {
+    const rid = toTrimmedString(initialPlayerId);
+    if (!rid) return false;
+    return careerProjections.some((r) => toTrimmedString(r.SourceproviderId) === rid);
+  }, [careerProjections, initialPlayerId]);
+
+  // Prefer the route-provided playerId immediately (even before CSV loads),
+  // then only fall back to the first alphabetical club player once data is available
+  // and we can confirm the route id truly doesn't exist.
+  const [playerId, setPlayerId] = useState<string>(() => {
+    const rid = toTrimmedString(initialPlayerId);
+    return rid || (clubPlayers[0]?.id ?? "");
+  });
+
+  // Keep state in sync with the URL param (deep links / manual URL edits)
   useEffect(() => {
-    if (!initialPlayerId) return;
-    if (clubPlayers.some((p) => p.id === initialPlayerId) && initialPlayerId !== playerId) {
-      setPlayerId(initialPlayerId);
-    }
+    const rid = toTrimmedString(initialPlayerId);
+    if (!rid) return;
+    if (rid !== playerId) setPlayerId(rid);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialPlayerId, clubPlayers]);
+  }, [initialPlayerId]);
+
+  // Validate selection once the CSV has loaded and the club list is known
+  useEffect(() => {
+    if (!hasCareerData) return;
+
+    // If current selection is valid for this club list, keep it
+    if (clubPlayers.some((p) => p.id === playerId)) return;
+
+    // If the route id exists anywhere in the data, honour it (even if team filtering is active)
+    const rid = toTrimmedString(initialPlayerId);
+    if (rid && routePlayerExists) {
+      if (playerId !== rid) setPlayerId(rid);
+      return;
+    }
+
+    // Otherwise fall back to first alphabetical in the club list
+    const fallback = clubPlayers[0]?.id ?? "";
+    if (fallback !== playerId) setPlayerId(fallback);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasCareerData, clubPlayers, playerId, initialPlayerId, routePlayerExists]);
 
   // Bubble selection up so the URL can stay in sync (for share links / embeds)
-  useEffect(() => {
+  const lastRoutePlayerId = useRef(initialPlayerId);
+useEffect(() => {
+  if (playerId && playerId !== lastRoutePlayerId.current) {
     onPlayerIdChange?.(playerId);
-  }, [playerId, onPlayerIdChange]);
+  }
+}, [playerId, onPlayerIdChange]);
 
 
   const [comparePlayerId, setComparePlayerId] = useState<string>(""); // "" = off
