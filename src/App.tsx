@@ -455,6 +455,14 @@ function toTrimmedString(x: any): string {
   return String(x ?? "").trim();
 }
 
+function normalizePlayerId(x: any): string {
+  // Canonicalise IDs so deep links work even if some CSVs store IDs like "CD_I1004757"
+  // while URLs (and other files) use just "1004757".
+  const s = toTrimmedString(x);
+  // Strip common provider prefixes (case-insensitive)
+  return s.replace(/^CD[_-]?I/i, "");
+}
+
 function toNumberOrNull(x: any): number | null {
   if (x === null || x === undefined) return null;
   if (typeof x === "number") return Number.isFinite(x) ? x : null;
@@ -840,7 +848,7 @@ function CareerProjectionDashboard({
 
     const map = new Map<string, { name: string; id: string; team?: string; pos?: string }>();
     for (const r of rows) {
-      const id = toTrimmedString(r.SourceproviderId);
+      const id = normalizePlayerId(r.SourceproviderId);
       const name = toTrimmedString(r.SourcePlayer);
       if (!id || !name) continue;
       const key = `${id}__${name}`;
@@ -854,7 +862,7 @@ function CareerProjectionDashboard({
   const allPlayers = useMemo(() => {
     const map = new Map<string, { name: string; id: string; team?: string; pos?: string }>();
     for (const r of careerProjections) {
-      const id = toTrimmedString(r.SourceproviderId);
+      const id = normalizePlayerId(r.SourceproviderId);
       const name = toTrimmedString(r.SourcePlayer);
       if (!id || !name) continue;
       const key = `${id}__${name}`;
@@ -863,9 +871,9 @@ function CareerProjectionDashboard({
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [careerProjections]);
 
-  const [playerId, setPlayerId] = useState<string>(() => (initialPlayerId && clubPlayers.some((p) => p.id === initialPlayerId) ? initialPlayerId : clubPlayers[0]?.id ?? ""));
+  const [playerId, setPlayerId] = useState<string>(() => (initialPlayerId && clubPlayers.some((p) => normalizePlayerId(p.id) === normalizePlayerId(initialPlayerId)) ? initialPlayerId : clubPlayers[0]?.id ?? ""));
   useEffect(() => {
-    if (!clubPlayers.some((p) => p.id === playerId)) setPlayerId(clubPlayers[0]?.id ?? "");
+    if (!clubPlayers.some((p) => normalizePlayerId(p.id) === normalizePlayerId(playerId))) setPlayerId(clubPlayers[0]?.id ?? "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clubPlayers]);
 
@@ -905,7 +913,7 @@ function CareerProjectionDashboard({
     if (!id) return [] as any[];
 
     const rows = careerProjections
-      .filter((r) => toTrimmedString(r.SourceproviderId) === id)
+      .filter((r) => normalizePlayerId(r.SourceproviderId) === normalizePlayerId(id))
       .sort((a, b) => a.Season - b.Season);
 
     return rows.map((r) => {
@@ -1124,8 +1132,8 @@ return [minFinal, maxFinal];
     const usable = hasActual ? seasonRows.filter((r) => ["actual", "hist", "history"].includes((r.Type ?? "").toLowerCase())) : seasonRows;
 
     const playerRow =
-      usable.find((r) => toTrimmedString(r.SourceproviderId) === player.id) ??
-      seasonRows.find((r) => toTrimmedString(r.SourceproviderId) === player.id) ??
+      usable.find((r) => normalizePlayerId(r.SourceproviderId) === normalizePlayerId(player.id)) ??
+      seasonRows.find((r) => normalizePlayerId(r.SourceproviderId) === normalizePlayerId(player.id)) ??
       null;
 
     const playerPos = toTrimmedString(playerRow?.SourcePosition);
@@ -1133,7 +1141,7 @@ return [minFinal, maxFinal];
     // Build a unique player list for counts (and as fallback for ranks)
     const byPlayer = new Map<string, { id: string; pos: string; rating: number }>();
     for (const r of usable) {
-      const id = toTrimmedString(r.SourceproviderId);
+      const id = normalizePlayerId(r.SourceproviderId);
       if (!id) continue;
       const rating = r.estimate ?? null;
       if (rating == null) continue;
@@ -1244,7 +1252,7 @@ return [minFinal, maxFinal];
 
     for (const r of careerProjections) {
       const season = r.Season;
-      const id = toTrimmedString(r.SourceproviderId);
+      const id = normalizePlayerId(r.SourceproviderId);
       if (!id || season == null) continue;
 
       let byPlayer = seasonPlayerRow.get(season);
@@ -2069,7 +2077,7 @@ function AppCore({ routeMode, routeTeamId, routePlayerId }: { routeMode: "team" 
 const [compareTeam, setCompareTeam] = useState<string>(""); // "" = no comparison
 const [comparePanelOpen, setComparePanelOpen] = useState(false);
 const [page, setPage] = useState<"team" | "career">(() => (routeMode === "player" ? "career" : "team"));
-const [currentPlayerId, setCurrentPlayerId] = useState<string>(() => (routeMode === "player" ? ((routePlayerId || "").trim()) : ""));
+const [currentPlayerId, setCurrentPlayerId] = useState<string>(() => (routeMode === "player" ? normalizePlayerId(routePlayerId) : ""));
 const [playerTeamResolved, setPlayerTeamResolved] = useState(false);
 useEffect(() => {
   setCompareTeam("");
@@ -2104,7 +2112,7 @@ useEffect(() => {
         setPlayerTeamResolved(true);
       }
 
-      const rid = (routePlayerId || "").trim();
+      const rid = normalizePlayerId(routePlayerId);
       if (rid) {
         setCurrentPlayerId((prev) => (rid !== prev ? rid : prev));
         if (!qTeam) setPlayerTeamResolved(false);
@@ -2127,7 +2135,7 @@ useEffect(() => {
     }
 
     // career
-    const pid = (currentPlayerId || "").trim();
+    const pid = normalizePlayerId(currentPlayerId);
     if (!pid) return; // wait until we have a selected player
     const nextPath = `/player/${encodeURIComponent(pid)}`;
     const explicitTeam = (new URLSearchParams(location.search).get("team") || "").trim();
@@ -2172,7 +2180,7 @@ const [careerProjections, setCareerProjections] = useState<CareerProjectionRow[]
     if (!currentPlayerId) return;
 
     const row = rosterPlayers.find(
-      (r) => String(r.providerId) === String(currentPlayerId) && r.season === season
+      (r) => normalizePlayerId(r.providerId) === normalizePlayerId(currentPlayerId) && r.season === season
     );
     if (!row?.team) return;
 
@@ -3685,7 +3693,7 @@ const kpis = useMemo(() => {
             </>
           ) : (
             <CareerProjectionDashboard defaultTeam={team} careerProjections={careerProjections} playerStatsAgg={playerStatsAgg} initialPlayerId={currentPlayerId || undefined} onPlayerIdChange={(id) => {
-                const nextId = (id || "").trim();
+                const nextId = normalizePlayerId(id);
                 setCurrentPlayerId(nextId);
 
                 // Immediately update teamId too (so the URL becomes /player/:id?team=...&season=... without a stale team).
