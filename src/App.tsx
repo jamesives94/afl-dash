@@ -2111,23 +2111,36 @@ const [careerProjections, setCareerProjections] = useState<CareerProjectionRow[]
   const [playerStatsAgg, setPlayerStatsAgg] = useState<PlayerStatsAggRow[]>([]);
 
   // Keep teamId in sync with the selected player (based on roster_players for the chosen season).
+  // NOTE: roster_players providerId can differ from career_projections SourceproviderId (e.g. prefixed ids),
+  // so we also fall back to career_projections when roster lookup fails.
   useEffect(() => {
     if (routeMode !== "player") return;
-    if (!currentPlayerId) return;
+    const pid = String(currentPlayerId ?? "").trim();
+    if (!pid) return;
 
-    const row = rosterPlayers.find(
-      (r) => String(r.providerId) === String(currentPlayerId) && r.season === season
-    );
-    if (!row?.team) return;
+    // 1) Try roster_players first (when ids match)
+    const rosterKey = (() => {
+      const row = rosterPlayers.find((r) => String(r.providerId).trim() === pid && r.season === season);
+      return row?.team ? normalizeClubName(row.team) : null;
+    })();
 
-    // roster_players team is typically the club name; map it to your TEAMS id (e.g., "40").
-    const key = normalizeClubName(row.team);
+    // 2) Fallback: infer from career_projections (ids match route /player/:id)
+    const careerKey = (() => {
+      const row = careerProjections.find((r) => toTrimmedString(r.SourceproviderId) === pid && toTrimmedString((r as any).team));
+      const t = row ? toTrimmedString((row as any).team) : "";
+      return t ? normalizeClubName(t) : null;
+    })();
+
+    const key = rosterKey || careerKey;
+    if (!key) return;
+
     const match = TEAMS.find((t) => normalizeClubName(t.name) === key) ?? null;
     if (match) {
       if (match.id !== team) setTeam(match.id);
       if (!playerTeamResolved) setPlayerTeamResolved(true);
     }
-  }, [routeMode, currentPlayerId, rosterPlayers, season, team, searchParams, playerTeamResolved]);
+  }, [routeMode, currentPlayerId, rosterPlayers, careerProjections, season, team, playerTeamResolved]);
+
 
 
 
@@ -3633,9 +3646,17 @@ const kpis = useMemo(() => {
                 setCurrentPlayerId(nextId);
 
                 // Immediately update teamId too (so the URL becomes /player/:id?team=...&season=... without a stale team).
-                const row = rosterPlayers.find((r) => String(r.providerId) === String(nextId) && r.season === season);
-                if (row?.team) {
-                  const key = normalizeClubName(row.team);
+                // Try roster_players first; fall back to career_projections (where ids match /player/:id).
+                const rosterRow = rosterPlayers.find((r) => String(r.providerId).trim() === String(nextId).trim() && r.season === season);
+                const rosterKey = rosterRow?.team ? normalizeClubName(rosterRow.team) : null;
+
+                const careerRow = careerProjections.find(
+                  (r) => toTrimmedString(r.SourceproviderId) === String(nextId).trim() && toTrimmedString((r as any).team)
+                );
+                const careerKey = careerRow ? normalizeClubName(toTrimmedString((careerRow as any).team)) : null;
+
+                const key = rosterKey || careerKey;
+                if (key) {
                   const match = TEAMS.find((t) => normalizeClubName(t.name) === key) ?? null;
                   if (match) {
                     if (match.id !== team) setTeam(match.id);
