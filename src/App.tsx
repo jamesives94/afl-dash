@@ -863,48 +863,25 @@ function CareerProjectionDashboard({
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [careerProjections]);
 
-  const dataReady = careerProjections.length > 0;
-  const routePlayerId = toTrimmedString(initialPlayerId);
-
-  // Prefer the route param immediately (prevents "snap to alphabetical" during initial CSV load).
-  const [playerId, setPlayerId] = useState<string>(() => (routePlayerId ? routePlayerId : clubPlayers[0]?.id ?? ""));
-
-  // Once data is loaded, ensure the selected player is valid for the current club-filtered list.
-  // Only then do we fall back to the first alphabetical club player.
+  const [playerId, setPlayerId] = useState<string>(() => (initialPlayerId && clubPlayers.some((p) => p.id === initialPlayerId) ? initialPlayerId : clubPlayers[0]?.id ?? ""));
   useEffect(() => {
-    if (!dataReady) return;
+    if (!clubPlayers.some((p) => p.id === playerId)) setPlayerId(clubPlayers[0]?.id ?? "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clubPlayers]);
 
-    if (!playerId) {
-      setPlayerId(clubPlayers[0]?.id ?? "");
-      return;
-    }
-
-    if (!clubPlayers.some((p) => p.id === playerId)) {
-      setPlayerId(clubPlayers[0]?.id ?? "");
+  // If a route provides a playerId, prefer it (when valid for this club/season context)
+  useEffect(() => {
+    if (!initialPlayerId) return;
+    if (clubPlayers.some((p) => p.id === initialPlayerId) && initialPlayerId !== playerId) {
+      setPlayerId(initialPlayerId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dataReady, clubPlayers]);
+  }, [initialPlayerId, clubPlayers]);
 
-  // If a route provides a playerId, prefer it once the data has loaded and it exists in the dataset.
+  // Bubble selection up so the URL can stay in sync (for share links / embeds)
   useEffect(() => {
-    if (!dataReady) return;
-    if (!routePlayerId) return;
-
-    const existsInClub = clubPlayers.some((p) => p.id === routePlayerId);
-    const existsGlobal = allPlayers.some((p) => p.id === routePlayerId);
-    if ((existsInClub || existsGlobal) && routePlayerId !== playerId) {
-      setPlayerId(routePlayerId);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dataReady, routePlayerId, clubPlayers, allPlayers]);
-
-  // Bubble selection up so the URL can stay in sync (for share links / embeds),
-  // but ONLY after data is loaded to avoid overwriting manual deep-links on first paint.
-  useEffect(() => {
-    if (!dataReady) return;
-    if (!playerId) return;
     onPlayerIdChange?.(playerId);
-  }, [dataReady, playerId, onPlayerIdChange]);
+  }, [playerId, onPlayerIdChange]);
 
 
   const [comparePlayerId, setComparePlayerId] = useState<string>(""); // "" = off
@@ -1033,12 +1010,63 @@ function CareerProjectionDashboard({
     return Array.from(bySeason.values()).sort((a, b) => a.season - b.season);
   }, [primaryTraj, compareTraj]);
 
-    // Fixed Y-axis for Career Projection chart (both solo + comparison)
-  // Requested: keep a consistent 0–20 scale (no dynamic domain).
-  const yDomain: [number, number] = [0, 20];
-  const yTicks: number[] = [0, 5, 10, 15, 20];
+  // Dynamic Y-axis domain: min(lower) - 3, max(upper) + 3 (includes compare series when present)
+  const yDomain = useMemo<[number, number]>(() => {
+    const lows: number[] = [];
+    const highs: number[] = [];
+    const vals: number[] = [];
 
-// ---------- KPI helpers ----------
+
+    for (const d of trajectory as any[]) {
+      const loA = typeof d.lower0 === "number" && Number.isFinite(d.lower0) ? d.lower0 : null;
+      const hiA =
+        loA != null && typeof d.band === "number" && Number.isFinite(d.band) ? loA + d.band : null;
+
+      const loB = typeof d.c_lower0 === "number" && Number.isFinite(d.c_lower0) ? d.c_lower0 : null;
+      const hiB =
+        loB != null && typeof d.c_band === "number" && Number.isFinite(d.c_band) ? loB + d.c_band : null;
+
+      if (loA != null) lows.push(loA);
+      if (hiA != null) highs.push(hiA);
+      if (loB != null) lows.push(loB);
+      if (hiB != null) highs.push(hiB);
+
+      const vA = d.actual ?? d.estimate;
+      const vB = d.c_actual ?? d.c_estimate;
+
+      if (typeof vA === "number" && Number.isFinite(vA)) vals.push(vA);
+      if (typeof vB === "number" && Number.isFinite(vB)) vals.push(vB);
+    }
+
+    const minBase = lows.length ? Math.min(...lows) : vals.length ? Math.min(...vals) : 4;
+    const maxBase = highs.length ? Math.max(...highs) : vals.length ? Math.max(...vals) : 20;
+
+    let min = minBase - 3;
+    let max = maxBase + 3;
+
+    if (!Number.isFinite(min) || !Number.isFinite(max)) return [4, 20];
+    if (min === max) {
+      min -= 1;
+      max += 1;
+    }
+    if (min > max) {
+      const tmp = min;
+      min = max;
+      max = tmp;
+    }
+
+// Round to neat integers so the axis doesn't show awkward decimals
+// and avoid a misleading 0 baseline when values are clearly > 0.
+const minRounded = Math.floor(min);
+const maxRounded = Math.ceil(max);
+const minFinal = Math.max(1, minRounded);
+const maxFinal = Math.max(minFinal + 1, maxRounded);
+
+return [minFinal, maxFinal];
+  }, [trajectory]);
+
+
+  // ---------- KPI helpers ----------
   const lastActual = useMemo(() => {
     const actualRows = primaryTraj.filter((d: any) => d.actual != null);
     if (actualRows.length) return actualRows[actualRows.length - 1];
@@ -1508,7 +1536,7 @@ function CareerProjectionDashboard({
                 {headshotUrl ? (
                   <img
                     src={headshotUrl}
-                    alt={""}
+                    alt={player?.name ?? ""}
                     style={{ height: "100%", width: "100%", objectFit: "cover", position: "relative" }}
                     onError={(e) => {
                       // Hide broken images; fallback remains visible.
@@ -1552,7 +1580,12 @@ function CareerProjectionDashboard({
                       letterSpacing: 0.5,
                     }}
                   >
-                    {""}
+                    {(comparePlayer?.name ?? "—")
+                      .split(" ")
+                      .filter(Boolean)
+                      .slice(0, 2)
+                      .map((s) => s[0]?.toUpperCase())
+                      .join("")}
                   </div>
 
                   {compareHeadshotUrl ? (
@@ -1741,7 +1774,7 @@ function CareerProjectionDashboard({
               <ComposedChart data={trajectory} margin={{ top: 10, right: 26, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.35} />
                 <XAxis dataKey="season" tick={{ fontSize: 11 }} />
-                <YAxis domain={yDomain} ticks={yTicks} tick={{ fontSize: 11 }} allowDecimals={false} />
+                <YAxis domain={yDomain} tick={{ fontSize: 11 }} allowDecimals={false} tickCount={6} />
                 <Tooltip
                   formatter={(v: any, n: any) => {
                     if (v == null) return ["—", n];
@@ -2134,36 +2167,23 @@ const [careerProjections, setCareerProjections] = useState<CareerProjectionRow[]
   const [playerStatsAgg, setPlayerStatsAgg] = useState<PlayerStatsAggRow[]>([]);
 
   // Keep teamId in sync with the selected player (based on roster_players for the chosen season).
-  // NOTE: roster_players providerId can differ from career_projections SourceproviderId (e.g. prefixed ids),
-  // so we also fall back to career_projections when roster lookup fails.
   useEffect(() => {
     if (routeMode !== "player") return;
-    const pid = String(currentPlayerId ?? "").trim();
-    if (!pid) return;
+    if (!currentPlayerId) return;
 
-    // 1) Try roster_players first (when ids match)
-    const rosterKey = (() => {
-      const row = rosterPlayers.find((r) => String(r.providerId).trim() === pid && r.season === season);
-      return row?.team ? normalizeClubName(row.team) : null;
-    })();
+    const row = rosterPlayers.find(
+      (r) => String(r.providerId) === String(currentPlayerId) && r.season === season
+    );
+    if (!row?.team) return;
 
-    // 2) Fallback: infer from career_projections (ids match route /player/:id)
-    const careerKey = (() => {
-      const row = careerProjections.find((r) => toTrimmedString(r.SourceproviderId) === pid && toTrimmedString((r as any).team));
-      const t = row ? toTrimmedString((row as any).team) : "";
-      return t ? normalizeClubName(t) : null;
-    })();
-
-    const key = rosterKey || careerKey;
-    if (!key) return;
-
+    // roster_players team is typically the club name; map it to your TEAMS id (e.g., "40").
+    const key = normalizeClubName(row.team);
     const match = TEAMS.find((t) => normalizeClubName(t.name) === key) ?? null;
     if (match) {
       if (match.id !== team) setTeam(match.id);
       if (!playerTeamResolved) setPlayerTeamResolved(true);
     }
-  }, [routeMode, currentPlayerId, rosterPlayers, careerProjections, season, team, playerTeamResolved]);
-
+  }, [routeMode, currentPlayerId, rosterPlayers, season, team, searchParams, playerTeamResolved]);
 
 
 
@@ -3669,17 +3689,9 @@ const kpis = useMemo(() => {
                 setCurrentPlayerId(nextId);
 
                 // Immediately update teamId too (so the URL becomes /player/:id?team=...&season=... without a stale team).
-                // Try roster_players first; fall back to career_projections (where ids match /player/:id).
-                const rosterRow = rosterPlayers.find((r) => String(r.providerId).trim() === String(nextId).trim() && r.season === season);
-                const rosterKey = rosterRow?.team ? normalizeClubName(rosterRow.team) : null;
-
-                const careerRow = careerProjections.find(
-                  (r) => toTrimmedString(r.SourceproviderId) === String(nextId).trim() && toTrimmedString((r as any).team)
-                );
-                const careerKey = careerRow ? normalizeClubName(toTrimmedString((careerRow as any).team)) : null;
-
-                const key = rosterKey || careerKey;
-                if (key) {
+                const row = rosterPlayers.find((r) => String(r.providerId) === String(nextId) && r.season === season);
+                if (row?.team) {
+                  const key = normalizeClubName(row.team);
                   const match = TEAMS.find((t) => normalizeClubName(t.name) === key) ?? null;
                   if (match) {
                     if (match.id !== team) setTeam(match.id);
