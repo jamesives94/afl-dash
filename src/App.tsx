@@ -843,7 +843,12 @@ function CareerProjectionDashboard({
     const rows = careerProjections.filter((r) => {
       const t = toTrimmedString(r.team);
       if (!t) return true; // if no team column, don't filter it out
-      return normalizeClubName(t) === teamKey;
+
+      // Some exports store team as a numeric id (e.g. "40") instead of a club name.
+      // Coerce to a club name before comparing.
+      const tId = coerceTeamId(t);
+      const tName = TEAMS.find((x) => x.id === tId)?.name ?? t;
+      return normalizeClubName(tName) === teamKey;
     });
 
     const map = new Map<string, { name: string; id: string; team?: string; pos?: string }>();
@@ -871,23 +876,39 @@ function CareerProjectionDashboard({
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [careerProjections]);
 
-  const [playerId, setPlayerId] = useState<string>(() => (initialPlayerId && clubPlayers.some((p) => normalizePlayerId(p.id) === normalizePlayerId(initialPlayerId)) ? initialPlayerId : clubPlayers[0]?.id ?? ""));
-  useEffect(() => {
-    if (!clubPlayers.some((p) => normalizePlayerId(p.id) === normalizePlayerId(playerId))) setPlayerId(clubPlayers[0]?.id ?? "");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clubPlayers]);
+  const [playerId, setPlayerId] = useState<string>(() => (
+    initialPlayerId && clubPlayers.some((p) => normalizePlayerId(p.id) === normalizePlayerId(initialPlayerId))
+      ? initialPlayerId
+      : clubPlayers[0]?.id ?? ""
+  ));
 
-  // If a route provides a playerId, prefer it (when valid for this club/season context)
+  // Keep the selected player stable on deep links:
+  // 1) If the URL provides a valid playerId, prefer it.
+  // 2) Otherwise (or if invalid), fall back to the first player for the selected club.
+  //
+  // This avoids a race where we briefly select the first alphabetical player and immediately
+  // rewrite the URL, even though the deep-linked player exists once data has loaded.
   useEffect(() => {
-    if (!initialPlayerId) return;
-    if (clubPlayers.some((p) => p.id === initialPlayerId) && initialPlayerId !== playerId) {
-      setPlayerId(initialPlayerId);
+    if (!clubPlayers.length) return;
+
+    const desired =
+      initialPlayerId && clubPlayers.some((p) => normalizePlayerId(p.id) === normalizePlayerId(initialPlayerId))
+        ? initialPlayerId
+        : (playerId && clubPlayers.some((p) => normalizePlayerId(p.id) === normalizePlayerId(playerId)) ? playerId : null);
+
+    if (desired && normalizePlayerId(desired) !== normalizePlayerId(playerId)) {
+      setPlayerId(desired);
+      return;
+    }
+
+    if (!desired) {
+      setPlayerId(clubPlayers[0]?.id ?? "");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialPlayerId, clubPlayers]);
-
-  // Bubble selection up so the URL can stay in sync (for share links / embeds)
+  }, [clubPlayers, initialPlayerId]);
+// Bubble selection up so the URL can stay in sync (for share links / embeds)
   useEffect(() => {
+    if (!playerId) return;
     onPlayerIdChange?.(playerId);
   }, [playerId, onPlayerIdChange]);
 
