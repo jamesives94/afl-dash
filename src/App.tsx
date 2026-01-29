@@ -1,5 +1,5 @@
 // src/App.tsx
-import React, { useEffect, useMemo, useState, useRef } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ResponsiveContainer,
   Area,
@@ -863,25 +863,48 @@ function CareerProjectionDashboard({
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [careerProjections]);
 
-  const [playerId, setPlayerId] = useState<string>(() => (initialPlayerId && clubPlayers.some((p) => p.id === initialPlayerId) ? initialPlayerId : clubPlayers[0]?.id ?? ""));
-  useEffect(() => {
-    if (!clubPlayers.some((p) => p.id === playerId)) setPlayerId(clubPlayers[0]?.id ?? "");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clubPlayers]);
+  const dataReady = careerProjections.length > 0;
+  const routePlayerId = toTrimmedString(initialPlayerId);
 
-  // If a route provides a playerId, prefer it (when valid for this club/season context)
+  // Prefer the route param immediately (prevents "snap to alphabetical" during initial CSV load).
+  const [playerId, setPlayerId] = useState<string>(() => (routePlayerId ? routePlayerId : clubPlayers[0]?.id ?? ""));
+
+  // Once data is loaded, ensure the selected player is valid for the current club-filtered list.
+  // Only then do we fall back to the first alphabetical club player.
   useEffect(() => {
-    if (!initialPlayerId) return;
-    if (clubPlayers.some((p) => p.id === initialPlayerId) && initialPlayerId !== playerId) {
-      setPlayerId(initialPlayerId);
+    if (!dataReady) return;
+
+    if (!playerId) {
+      setPlayerId(clubPlayers[0]?.id ?? "");
+      return;
+    }
+
+    if (!clubPlayers.some((p) => p.id === playerId)) {
+      setPlayerId(clubPlayers[0]?.id ?? "");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialPlayerId, clubPlayers]);
+  }, [dataReady, clubPlayers]);
 
-  // Bubble selection up so the URL can stay in sync (for share links / embeds)
+  // If a route provides a playerId, prefer it once the data has loaded and it exists in the dataset.
   useEffect(() => {
+    if (!dataReady) return;
+    if (!routePlayerId) return;
+
+    const existsInClub = clubPlayers.some((p) => p.id === routePlayerId);
+    const existsGlobal = allPlayers.some((p) => p.id === routePlayerId);
+    if ((existsInClub || existsGlobal) && routePlayerId !== playerId) {
+      setPlayerId(routePlayerId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataReady, routePlayerId, clubPlayers, allPlayers]);
+
+  // Bubble selection up so the URL can stay in sync (for share links / embeds),
+  // but ONLY after data is loaded to avoid overwriting manual deep-links on first paint.
+  useEffect(() => {
+    if (!dataReady) return;
+    if (!playerId) return;
     onPlayerIdChange?.(playerId);
-  }, [playerId, onPlayerIdChange]);
+  }, [dataReady, playerId, onPlayerIdChange]);
 
 
   const [comparePlayerId, setComparePlayerId] = useState<string>(""); // "" = off
