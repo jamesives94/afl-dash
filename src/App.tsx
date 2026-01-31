@@ -509,6 +509,22 @@ async function loadApiDataAsObjects<T>(file: string, mapper: (r: Record<string, 
   return out;
 }
 
+// Try multiple possible blob filenames (helps when you rename a CSV in Azure Blob)
+async function loadApiDataAsObjectsWithFallback<T>(
+  files: string[],
+  mapper: (r: Record<string, any>) => T | null
+): Promise<T[]> {
+  let lastErr: any = null;
+  for (const f of files) {
+    try {
+      return await loadApiDataAsObjects<T>(f, mapper);
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr ?? new Error(`Failed to load any of: ${files.join(", ")}`);
+}
+
 
 // --------------------
 // UI bits
@@ -1171,13 +1187,39 @@ return [minFinal, maxFinal];
       const n = typeof x === "number" ? x : Number(String(x).trim());
       if (!Number.isFinite(n)) return null;
       // Handle 0–100 storage (percent) if it ever occurs.
-      // If the column is accidentally a *count* (e.g., games played > 100), treat it as not-a-probability.
+      // If the value is accidentally a *count* (e.g., games played > 100), treat it as not-a-probability.
       if (n > 100) return null;
       const v = n > 1 ? n / 100 : n;
       return Math.max(0, Math.min(1, v));
     };
 
-    const pickProb = (key: "AA" | "Games") => {
+    // ✅ Source AA/Games probabilities from player_projections (Azure Blob -> API)
+    const pid = normalizePlayerId(player?.id);
+    const projRow =
+      pid
+        ? playerProjections.find(
+            (p) => normalizePlayerId(p.playerId) === pid && (p.season === season || p.season === baseSeason)
+          ) ??
+          playerProjections.find((p) => normalizePlayerId(p.playerId) === pid)
+        : null;
+
+    const pickFirst = (row: any, keys: string[]) => {
+      for (const k of keys) {
+        const v = row?.[k];
+        if (v !== undefined && v !== null && String(v).trim() !== "") return v;
+      }
+      return null;
+    };
+
+    const projAA = clamp01(
+      pickFirst(projRow, ["AA", "AA_prob", "AA_future_prob", "AA_probability", "AAProb", "AAProbability"])
+    );
+    const projGames = clamp01(
+      pickFirst(projRow, ["Games", "Games_prob", "Games_100_prob", "Games100_prob", "Games_future_prob", "G100_prob", "GAMES"])
+    );
+
+    // Fallback: derive from career_projections trajectory if projections file doesn't have them yet
+    const pickProbFromTrajectory = (key: "AA" | "Games") => {
       // Prefer Horizon = 1 when available
       const h1 = primaryTraj.find((d: any) => d.horizon === 1 && d[key] != null);
       const h1v = clamp01(h1?.[key]);
@@ -1192,10 +1234,10 @@ return [minFinal, maxFinal];
     };
 
     return {
-      AA: pickProb("AA"),
-      Games: pickProb("Games"),
+      AA: projAA ?? pickProbFromTrajectory("AA"),
+      Games: projGames ?? pickProbFromTrajectory("Games"),
     };
-  }, [primaryTraj]);
+  }, [playerProjections, player, season, baseSeason, primaryTraj]);
 
   const rankInfo = useMemo(() => {
     const snapSeason = lastActual?.season ?? null;
@@ -1509,8 +1551,32 @@ return [minFinal, maxFinal];
       return Math.max(0, Math.min(1, v));
     };
 
+    const pid = normalizePlayerId(comparePlayer.id);
+    const projRow =
+      pid
+        ? playerProjections.find(
+            (p) => normalizePlayerId(p.playerId) === pid && (p.season === season || p.season === baseSeason)
+          ) ??
+          playerProjections.find((p) => normalizePlayerId(p.playerId) === pid)
+        : null;
+
+    const pickFirst = (row: any, keys: string[]) => {
+      for (const k of keys) {
+        const v = row?.[k];
+        if (v !== undefined && v !== null && String(v).trim() !== "") return v;
+      }
+      return null;
+    };
+
+    const projAA = clamp01(
+      pickFirst(projRow, ["AA", "AA_prob", "AA_future_prob", "AA_probability", "AAProb", "AAProbability"])
+    );
+    const projGames = clamp01(
+      pickFirst(projRow, ["Games", "Games_prob", "Games_100_prob", "Games100_prob", "Games_future_prob", "G100_prob", "GAMES"])
+    );
+
     const rows = compareTraj;
-    const pickProb = (key: "AA" | "Games") => {
+    const pickProbFromTrajectory = (key: "AA" | "Games") => {
       const h1 = rows.find((d: any) => d.horizon === 1 && d[key] != null);
       const h1v = clamp01(h1?.[key]);
       if (h1v != null) return h1v;
@@ -1518,8 +1584,11 @@ return [minFinal, maxFinal];
       return anyProb ?? null;
     };
 
-    return { AA: pickProb("AA"), Games: pickProb("Games") };
-  }, [comparePlayer, compareTraj]);
+    return {
+      AA: projAA ?? pickProbFromTrajectory("AA"),
+      Games: projGames ?? pickProbFromTrajectory("Games"),
+    };
+  }, [comparePlayer, playerProjections, season, baseSeason, compareTraj]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -2430,7 +2499,7 @@ return {
             return { Club: club, Year: year, Draft: draft, value };
           }),
 
-          loadApiDataAsObjects<PlayerProjectionRow>("player_projections.csv", (r) => {
+          loadApiDataAsObjectsWithFallback<PlayerProjectionRow>(["player_projection.csv","player_projections.csv"], (r) => {
             const t = normalizeClubName(r["team"] ?? "");
             const seasonN = toNumberOrNull(r["season"]);
             const rating = toNumberOrNull(r["rating"]);
