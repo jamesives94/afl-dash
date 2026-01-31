@@ -930,6 +930,10 @@ function CareerProjectionDashboard({
     [allPlayers, comparePlayerId]
   );
 
+  type OutlookMode = "neutral" | "optimistic" | "pessimistic";
+  const [outlook, setOutlook] = useState<OutlookMode>("neutral");
+
+
   const headshotUrl = player?.id ? getPlayerImgUrl(player.id) : null;
   const compareHeadshotUrl = comparePlayer?.id ? getPlayerImgUrl(comparePlayer.id) : null;
 
@@ -1008,7 +1012,7 @@ function CareerProjectionDashboard({
   const primaryTraj = useMemo(() => (player?.id ? buildTrajectoryForId(player.id) : []), [careerProjections, player?.id, outlook]);
   const compareTraj = useMemo(
     () => (comparePlayer?.id ? buildTrajectoryForId(comparePlayer.id) : []),
-    [careerProjections, comparePlayer?.id]
+    [careerProjections, comparePlayer?.id, outlook]
   );
 
   const compareTeamKey = useMemo(() => {
@@ -1395,9 +1399,6 @@ return [minFinal, maxFinal];
 
   // ---- Player compare sidebar (similar to team compare panel)
   const [comparePanelOpen, setComparePanelOpen] = useState(false);
-
-  type OutlookMode = "neutral" | "optimistic" | "pessimistic";
-  const [outlook, setOutlook] = useState<OutlookMode>("neutral");
 
   const playerCompareRows = useMemo(() => {
     if (!comparePlayer) return [] as { category: string; rows: { metric: string; a: number; b: number; diff: number }[] }[];
@@ -2998,7 +2999,7 @@ const mergedSkillRadar = useMemo(() => {
   const playerTable = useMemo<PlayerTableRow[]>(() => {
     const rows = playerProjections
       .filter((r) => normalizeClubName(r.team) === clubKey && r.season === season)
-      .map((r) => ({ name: r.player_name, rating: r.rating, salary: isActual ? r.salary : projSalary, AA: r.AA, Games: r.Games }))
+      .map((r) => ({ name: r.player_name, rating: r.rating, salary: r.salary, AA: r.AA, Games: r.Games }))
       .sort((a, b) => b.rating - a.rating);
 
     return rows.slice(0, 12);
