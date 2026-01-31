@@ -817,12 +817,14 @@ function CareerProjectionDashboard({
   defaultTeam,
   careerProjections,
   playerStatsAgg,
+  playerProjections,
   initialPlayerId,
   onPlayerIdChange,
 }: {
   defaultTeam: string;
   careerProjections: CareerProjectionRow[];
   playerStatsAgg: PlayerStatsAggRow[];
+  playerProjections: PlayerProjectionRow[];
   initialPlayerId?: string;
   onPlayerIdChange?: (id: string) => void;
 }) {
@@ -1197,10 +1199,7 @@ return [minFinal, maxFinal];
     const pid = normalizePlayerId(player?.id);
     const projRow =
       pid
-        ? playerProjections.find(
-            (p) => normalizePlayerId(p.playerId) === pid && (p.season === season || p.season === baseSeason)
-          ) ??
-          playerProjections.find((p) => normalizePlayerId(p.playerId) === pid)
+        ? playerProjections.find((p: PlayerProjectionRow) => normalizePlayerId(p.playerId) === pid)
         : null;
 
     const pickFirst = (row: any, keys: string[]) => {
@@ -1237,7 +1236,7 @@ return [minFinal, maxFinal];
       AA: projAA ?? pickProbFromTrajectory("AA"),
       Games: projGames ?? pickProbFromTrajectory("Games"),
     };
-  }, [playerProjections, player, season, baseSeason, primaryTraj]);
+  }, [playerProjections, player, primaryTraj]);
 
   const rankInfo = useMemo(() => {
     const snapSeason = lastActual?.season ?? null;
@@ -1552,13 +1551,7 @@ return [minFinal, maxFinal];
     };
 
     const pid = normalizePlayerId(comparePlayer.id);
-    const projRow =
-      pid
-        ? playerProjections.find(
-            (p) => normalizePlayerId(p.playerId) === pid && (p.season === season || p.season === baseSeason)
-          ) ??
-          playerProjections.find((p) => normalizePlayerId(p.playerId) === pid)
-        : null;
+    const projRow = pid ? playerProjections.find((p: PlayerProjectionRow) => normalizePlayerId(p.playerId) === pid) : null;
 
     const pickFirst = (row: any, keys: string[]) => {
       for (const k of keys) {
@@ -1588,7 +1581,7 @@ return [minFinal, maxFinal];
       AA: projAA ?? pickProbFromTrajectory("AA"),
       Games: projGames ?? pickProbFromTrajectory("Games"),
     };
-  }, [comparePlayer, playerProjections, season, baseSeason, compareTraj]);
+  }, [comparePlayer, playerProjections, compareTraj]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -3896,7 +3889,7 @@ const kpis = useMemo(() => {
 
             </>
           ) : (
-            <CareerProjectionDashboard defaultTeam={team} careerProjections={careerProjections} playerStatsAgg={playerStatsAgg} initialPlayerId={currentPlayerId || undefined} onPlayerIdChange={(id) => {
+            <CareerProjectionDashboard defaultTeam={team} careerProjections={careerProjections} playerStatsAgg={playerStatsAgg} playerProjections={playerProjections} initialPlayerId={currentPlayerId || undefined} onPlayerIdChange={(id) => {
                 const nextId = normalizePlayerId(id);
                 setCurrentPlayerId(nextId);
 
@@ -3919,5 +3912,4 @@ const kpis = useMemo(() => {
     </div>
   );
 }
-
 
