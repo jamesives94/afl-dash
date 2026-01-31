@@ -266,6 +266,10 @@ type CareerProjectionRow = {
   lower: number | null;
   upper: number | null;
   salary: number | null;
+  Optimistic?: number | null;
+  Pessimistic?: number | null;
+  salary_opt?: number | null;
+  salary_pes?: number | null;
   AA: number | null;
   Seasons: number | null;
   Games: number | null;
@@ -941,16 +945,36 @@ function CareerProjectionDashboard({
       const type = (r.Type ?? "").toLowerCase();
       const isActual = type === "actual" || type === "hist" || type === "history";
 
+      // Scenario selection applies to projections only; actuals stay as-is.
+      const asNumOrNull = (v: any) => {
+        if (v == null) return null;
+        const n = typeof v === "number" ? v : Number(v);
+        return Number.isFinite(n) ? n : null;
+      };
+      const projEstimate =
+        outlook === "optimistic"
+          ? asNumOrNull((r as any).Optimistic ?? r.estimate)
+          : outlook === "pessimistic"
+          ? asNumOrNull((r as any).Pessimistic ?? r.estimate)
+          : asNumOrNull(r.estimate);
+
+      const projSalary =
+        outlook === "optimistic"
+          ? asNumOrNull((r as any).salary_opt ?? r.salary)
+          : outlook === "pessimistic"
+          ? asNumOrNull((r as any).salary_pes ?? r.salary)
+          : asNumOrNull(r.salary);
+
       const lower = r.lower;
       const upper = r.upper;
 
       return {
         season: r.Season,
         actual: isActual ? r.estimate : null,
-        estimate: isActual ? null : r.estimate,
+        estimate: isActual ? null : projEstimate,
         lower0: lower,
         band: lower != null && upper != null ? Math.max(0, upper - lower) : null,
-        salary: r.salary,
+        salary: isActual ? r.salary : projSalary,
         AA: r.AA,
         Games: r.Games,
         Seasons: r.Seasons,
@@ -981,7 +1005,7 @@ function CareerProjectionDashboard({
     });
   }
 
-  const primaryTraj = useMemo(() => (player?.id ? buildTrajectoryForId(player.id) : []), [careerProjections, player?.id]);
+  const primaryTraj = useMemo(() => (player?.id ? buildTrajectoryForId(player.id) : []), [careerProjections, player?.id, outlook]);
   const compareTraj = useMemo(
     () => (comparePlayer?.id ? buildTrajectoryForId(comparePlayer.id) : []),
     [careerProjections, comparePlayer?.id]
@@ -1036,7 +1060,17 @@ function CareerProjectionDashboard({
       });
     }
 
-    return Array.from(bySeason.values()).sort((a, b) => a.season - b.season);
+    
+    // Bridge (dashed) between last actual and first projection so the line reads continuously.
+    const lastA = [...primaryTraj].filter((d: any) => d.actual != null).slice(-1)[0] ?? null;
+    const firstP = primaryTraj.find((d: any) => d.estimate != null) ?? null;
+    if (lastA && firstP && lastA.season !== firstP.season) {
+      const ra = bySeason.get(lastA.season) ?? { season: lastA.season };
+      const rp = bySeason.get(firstP.season) ?? { season: firstP.season };
+      bySeason.set(lastA.season, { ...ra, bridge: lastA.actual });
+      bySeason.set(firstP.season, { ...rp, bridge: firstP.estimate });
+    }
+return Array.from(bySeason.values()).sort((a, b) => a.season - b.season);
   }, [primaryTraj, compareTraj]);
 
   // Dynamic Y-axis domain: min(lower) - 3, max(upper) + 3 (includes compare series when present)
@@ -1235,7 +1269,7 @@ return [minFinal, maxFinal];
         sub: `Age ${vitals.age} • Draft ${vitals.draftYear}`,
       },
     ];
-  }, [lastActual, nextProj, rankInfo, primaryTraj]);
+  }, [lastActual, nextProj, rankInfo, primaryTraj, outlook]);
 
   // ----------------------------------------
   // Advanced stats (left panel)
@@ -1361,6 +1395,9 @@ return [minFinal, maxFinal];
 
   // ---- Player compare sidebar (similar to team compare panel)
   const [comparePanelOpen, setComparePanelOpen] = useState(false);
+
+  type OutlookMode = "neutral" | "optimistic" | "pessimistic";
+  const [outlook, setOutlook] = useState<OutlookMode>("neutral");
 
   const playerCompareRows = useMemo(() => {
     if (!comparePlayer) return [] as { category: string; rows: { metric: string; a: number; b: number; diff: number }[] }[];
@@ -1494,6 +1531,30 @@ return [minFinal, maxFinal];
               ))}
             </select>
           </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ fontSize: 12, color: "rgba(0,0,0,0.55)" }}>Outlook</div>
+            <select
+              value={outlook}
+              onChange={(e) => setOutlook(e.target.value as OutlookMode)}
+              style={{
+                fontSize: 12,
+                padding: "8px 10px",
+                borderRadius: 12,
+                border: "1px solid rgba(0,0,0,0.14)",
+                background: "rgba(255,255,255,0.9)",
+                color: "rgba(0,0,0,0.82)",
+                cursor: "pointer",
+                fontWeight: 700,
+                minWidth: 170,
+              }}
+            >
+              <option value="neutral">Neutral</option>
+              <option value="optimistic">Optimistic</option>
+              <option value="pessimistic">Pessimistic</option>
+            </select>
+          </div>
+
 
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ fontSize: 12, color: "rgba(0,0,0,0.55)" }}>Compare</div>
@@ -1827,6 +1888,17 @@ return [minFinal, maxFinal];
                 ) : null}
 
                 <Line type="monotone" dataKey="actual" stroke="#111" strokeWidth={2.5} dot={false} connectNulls isAnimationActive={false} />
+<Line
+                  type="monotone"
+                  dataKey="bridge"
+                  stroke={teamColor}
+                  strokeDasharray="6 4"
+                  strokeWidth={2.5}
+                  dot={false}
+                  connectNulls
+                  isAnimationActive={false}
+                />
+
 
                 <Line
                   type="monotone"
@@ -2926,7 +2998,7 @@ const mergedSkillRadar = useMemo(() => {
   const playerTable = useMemo<PlayerTableRow[]>(() => {
     const rows = playerProjections
       .filter((r) => normalizeClubName(r.team) === clubKey && r.season === season)
-      .map((r) => ({ name: r.player_name, rating: r.rating, salary: r.salary, AA: r.AA, Games: r.Games }))
+      .map((r) => ({ name: r.player_name, rating: r.rating, salary: isActual ? r.salary : projSalary, AA: r.AA, Games: r.Games }))
       .sort((a, b) => b.rating - a.rating);
 
     return rows.slice(0, 12);
