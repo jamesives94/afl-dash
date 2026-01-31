@@ -274,6 +274,10 @@ type CareerProjectionRow = {
   Seasons: number | null;
   Games: number | null;
 
+  Height?: string | null;
+  Age?: string | null;
+  Drafted?: string | null;
+
   // Optional columns that may exist in your CSV (safe to ignore if missing)
   Type?: string;
   team?: string;
@@ -918,6 +922,18 @@ function CareerProjectionDashboard({
 
 
   const [comparePlayerId, setComparePlayerId] = useState<string>(""); // "" = off
+  const [compareQuery, setCompareQuery] = useState<string>("");
+
+  // keep the text box in sync when compare id changes (e.g. from URL updates)
+  useEffect(() => {
+    if (!comparePlayerId) {
+      setCompareQuery("");
+      return;
+    }
+    const p = allPlayers.find((x) => x.id === comparePlayerId);
+    if (p) setCompareQuery(p.name);
+  }, [comparePlayerId, allPlayers]);
+
   useEffect(() => {
     // if compare player is the same as primary, clear it
     if (comparePlayerId && comparePlayerId === playerId) setComparePlayerId("");
@@ -1248,8 +1264,18 @@ return [minFinal, maxFinal];
     const totalAll = rankInfo?.totalAll ?? null;
     const totalPos = rankInfo?.totalPos ?? null;
 
-    // Fixed dummy vitals for now (until you add a player vitals file)
-    const vitals = { heightCm: 187, age: 23, draftYear: 2019 };
+    // Player vitals come from career_projections.csv (Height / Age / Drafted columns)
+    const vitals = (() => {
+      const pid = player?.id ?? null;
+      if (!pid) return { height: null as string | null, age: null as string | null, drafted: null as string | null };
+      const rows = careerProjections.filter((r) => r.SourceproviderId === pid);
+      const pick = rows.find((r) => r.Height || r.Age || r.Drafted) ?? rows[0];
+      return {
+        height: (pick?.Height ?? null) as string | null,
+        age: (pick?.Age ?? null) as string | null,
+        drafted: (pick?.Drafted ?? null) as string | null,
+      };
+    })();
 
     return [
       {
@@ -1269,8 +1295,8 @@ return [minFinal, maxFinal];
       },
       {
         label: "Vitals",
-        value: `${vitals.heightCm}cm`,
-        sub: `Age ${vitals.age} • Draft ${vitals.draftYear}`,
+        value: vitals.height ?? "—",
+        sub: `${vitals.age ? `Age ${vitals.age}` : "Age —"} • ${vitals.drafted ?? "Draft —"}`,
       },
     ];
   }, [lastActual, nextProj, rankInfo, primaryTraj, outlook]);
@@ -1559,9 +1585,20 @@ return [minFinal, maxFinal];
 
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ fontSize: 12, color: "rgba(0,0,0,0.55)" }}>Compare</div>
-            <select
-              value={comparePlayerId}
-              onChange={(e) => setComparePlayerId(e.target.value)}
+            <input
+              list="compare-player-list"
+              value={compareQuery}
+              onChange={(e) => {
+                const v = e.target.value;
+                setCompareQuery(v);
+                if (!v) {
+                  setComparePlayerId("");
+                  return;
+                }
+                const match = allPlayers.find((p) => p.name.toLowerCase() === v.toLowerCase());
+                if (match) setComparePlayerId(match.id);
+              }}
+              placeholder="Type a player…"
               style={{
                 fontSize: 12,
                 padding: "8px 10px",
@@ -1569,18 +1606,15 @@ return [minFinal, maxFinal];
                 border: "1px solid rgba(0,0,0,0.14)",
                 background: "rgba(255,255,255,0.9)",
                 color: "rgba(0,0,0,0.82)",
-                cursor: "pointer",
                 fontWeight: 700,
                 minWidth: 260,
               }}
-            >
-              <option value="">None</option>
+            />
+            <datalist id="compare-player-list">
               {allPlayers.map((p) => (
-                <option key={`c-${p.id}-${p.name}`} value={p.id}>
-                  {p.name}
-                </option>
+                <option key={`copt-${p.id}-${p.name}`} value={p.name} />
               ))}
-            </select>
+            </datalist>
           </div>
         </div>
       </div>
@@ -2486,6 +2520,9 @@ return {
               AA: toNumberOrNull(r["AA"] ?? r["AA "] ?? r["All Australian"] ?? r["AllAustralian"] ?? r["AA_prob"] ?? r["AAProb"] ?? r["AA Probability"] ?? r["AA_Prob"]),
               Seasons: toNumberOrNull(r["Seasons"]),
               Games: toNumberOrNull(r["Games"] ?? r["Games100"] ?? r["Games_100"] ?? r["Games100+"] ?? r["Games100Plus"] ?? r["Games Probability"] ?? r["Games_prob"] ?? r["GamesProb"]),
+              Height: toTrimmedString(r[\"Height\"] ?? r[\"height\"]) || null,
+              Age: toTrimmedString(r[\"Age\"] ?? r[\"age\"]) || null,
+              Drafted: toTrimmedString(r[\"Drafted\"] ?? r[\"drafted\"]) || null,
                             Type: toTrimmedString(r["Type"]) || undefined,
               team: toTrimmedString(r["team"]) || undefined,
               rank_all: toNumberOrNull(r["rank_all"] ?? r["Rank_all"] ?? r["rankAll"] ?? r["rank_all "]),
