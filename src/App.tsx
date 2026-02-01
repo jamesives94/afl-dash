@@ -272,6 +272,7 @@ type CareerProjectionRow = {
   salary_pes?: number | null;
   AA: number | null;
   Seasons: number | null;
+  Season_90: number | null;
   Games: number | null;
 
   Height?: string | null;
@@ -979,7 +980,28 @@ function CareerProjectionDashboard({
       .filter((r) => normalizePlayerId(r.SourceproviderId) === normalizePlayerId(id))
       .sort((a, b) => a.Season - b.Season);
 
-    return rows.map((r) => {
+    const pickFirstPositive = (vals: Array<number | null | undefined>) => {
+      for (const v of vals) {
+        if (v == null) continue;
+        const n = typeof v === "number" ? v : Number(v);
+        if (Number.isFinite(n) && n > 0) return n;
+      }
+      return null;
+    };
+
+    const seasonsNeutral = pickFirstPositive(rows.map((r) => (r as any).Seasons));
+    const seasonsOpt = pickFirstPositive(rows.map((r) => (r as any).Season_90));
+    const yearsToProject = outlook === "optimistic" ? seasonsOpt ?? seasonsNeutral : seasonsNeutral;
+
+    const filteredRows = yearsToProject
+      ? rows.filter((r) => {
+          const type = (r.Type ?? "").toLowerCase();
+          const isActual = type === "actual" || type === "hist" || type === "history";
+          return isActual || (r.Horizon != null && r.Horizon <= yearsToProject);
+        })
+      : rows;
+
+    return filteredRows.map((r) => {
       const type = (r.Type ?? "").toLowerCase();
       const isActual = type === "actual" || type === "hist" || type === "history";
 
@@ -1016,6 +1038,7 @@ function CareerProjectionDashboard({
         AA: r.AA,
         Games: r.Games,
         Seasons: r.Seasons,
+        Season_90: (r as any).Season_90 ?? null,
         position: toTrimmedString(r.SourcePosition),
         team: toTrimmedString(r.team),
         rank_all: r.rank_all ?? null,
@@ -2581,6 +2604,14 @@ return {
               salary_pes: toNumberOrNull(r["salary_pes"] ?? r["salaryPes"] ?? r["Salary_Pes"] ?? r["SalaryPes"]),
               AA: toNumberOrNull(r["AA"] ?? r["AA "] ?? r["All Australian"] ?? r["AllAustralian"] ?? r["AA_prob"] ?? r["AAProb"] ?? r["AA Probability"] ?? r["AA_Prob"]),
               Seasons: toNumberOrNull(r["Seasons"]),
+              Season_90: toNumberOrNull(
+                r["Season_90"] ??
+                  r["season_90"] ??
+                  r["Season90"] ??
+                  r["season90"] ??
+                  r["Season_90 "] ??
+                  r["Season 90"]
+              ),
               Games: toNumberOrNull(r["Games"] ?? r["Games100"] ?? r["Games_100"] ?? r["Games100+"] ?? r["Games100Plus"] ?? r["Games Probability"] ?? r["Games_prob"] ?? r["GamesProb"]),
               Height: toTrimmedString(r["Height"] ?? r["height"]) || null,
               Age: toTrimmedString(r["Age"] ?? r["age"]) || null,
