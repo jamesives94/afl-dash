@@ -3374,11 +3374,21 @@ const kpis = useMemo(() => {
               </div>
             </div>
 
-            <div className="kpiGrid" style={{ marginTop: 14 }}>
-              {kpis.map((k) => (
-                <Kpi key={k.label} label={k.label} value={k.value} sub={k.sub} Icon={k.icon} imgSrc={(k as any).imgSrc} />
-              ))}
-            </div>
+            {/* Team-only KPI tiles (hide on player/career view) */}
+            {page === "team" ? (
+              <div className="kpiGrid" style={{ marginTop: 14 }}>
+                {kpis.map((k) => (
+                  <Kpi
+                    key={k.label}
+                    label={k.label}
+                    value={k.value}
+                    sub={k.sub}
+                    Icon={k.icon}
+                    imgSrc={(k as any).imgSrc}
+                  />
+                ))}
+              </div>
+            ) : null}
 
             {loading && (
               <div style={{ marginTop: 10, fontSize: 12, color: "rgba(0,0,0,0.55)" }}>
