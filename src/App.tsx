@@ -314,6 +314,28 @@ type CareerProjectionRow = {
   Spoiling?: number | null;
 };
 
+type ComparablePlayerRow = {
+  SourceproviderId: string;
+  SourcePlayer: string;
+  SourceSeason: number;
+  SourcePosition: string;
+  SourceClub: string;
+  SimilarPlayer: string;
+  SimilarSeason: number;
+  similarity: number;
+  rank?: number | null;
+  adj_1?: number | null;
+  adj_2?: number | null;
+  adj_3?: number | null;
+  adj_4?: number | null;
+  adj_5?: number | null;
+  adj_6?: number | null;
+  adj_7?: number | null;
+  adj_8?: number | null;
+  adj_9?: number | null;
+  adj_10?: number | null;
+};
+
 type PlayerStatsAggRow = {
   season: number;
   player_id: string; // keep as string for safe joins
@@ -817,6 +839,7 @@ function PlayerProjectionTable({ rows }: { rows: PlayerTableRow[] }) {
 function CareerProjectionDashboard({
   defaultTeam,
   careerProjections,
+  comparablePlayers,
   playerStatsAgg,
   playerProjections,
   initialPlayerId,
@@ -824,6 +847,7 @@ function CareerProjectionDashboard({
 }: {
   defaultTeam: string;
   careerProjections: CareerProjectionRow[];
+  comparablePlayers: ComparablePlayerRow[];
   playerStatsAgg: PlayerStatsAggRow[];
   playerProjections: PlayerProjectionRow[];
   initialPlayerId?: string;
@@ -942,6 +966,7 @@ function CareerProjectionDashboard({
 
   const [comparePlayerId, setComparePlayerId] = useState<string>(""); // "" = off
   const [compareQuery, setCompareQuery] = useState<string>("");
+  const [showComparablePlayers, setShowComparablePlayers] = useState<boolean>(false);
 
   // keep the text box in sync when compare id changes (e.g. from URL updates)
   useEffect(() => {
@@ -1205,6 +1230,36 @@ return [minFinal, maxFinal];
     const p = primaryTraj.find((d: any) => d.estimate != null);
     return p ?? null;
   }, [primaryTraj]);
+
+  const seasonFixed = useMemo(() => {
+    const fromSource = primaryTraj.find((d: any) => d.sourceSeason != null)?.sourceSeason ?? null;
+    if (fromSource != null) return fromSource;
+    return lastActual?.season ?? primaryTraj[0]?.season ?? null;
+  }, [primaryTraj, lastActual]);
+
+  const comparableTop10 = useMemo(() => {
+    if (!showComparablePlayers) return [];
+    // Match on providerId + source season (career projection season fixed / selected)
+    const sourceProviderId = normalizePlayerId(playerId);
+    const sourceSeason = seasonFixed;
+
+    const rows = (comparablePlayers ?? []).filter(
+      (r) => normalizePlayerId(r.SourceproviderId) === sourceProviderId && r.SourceSeason === sourceSeason
+    );
+
+    const sorted = [...rows].sort((a, b) => {
+      // prefer explicit rank if present
+      const ra = a.rank ?? null;
+      const rb = b.rank ?? null;
+      if (ra != null && rb != null) return ra - rb;
+      if (ra != null) return -1;
+      if (rb != null) return 1;
+      // otherwise higher similarity first
+      return (b.similarity ?? 0) - (a.similarity ?? 0);
+    });
+
+    return sorted.slice(0, 10);
+  }, [comparablePlayers, playerId, seasonFixed, showComparablePlayers]);
 
   const outcomeProbs = useMemo(() => {
     const clamp01 = (x: any): number | null => {
@@ -1703,6 +1758,179 @@ return [minFinal, maxFinal];
           </div>
         </div>
       </div>
+
+      <button
+        onClick={() => setShowComparablePlayers(true)}
+        style={{
+          fontSize: 12,
+          padding: "9px 12px",
+          borderRadius: 12,
+          border: "1px solid rgba(0,0,0,0.14)",
+          background: "rgba(255,255,255,0.95)",
+          color: "rgba(0,0,0,0.82)",
+          fontWeight: 800,
+          cursor: "pointer",
+        }}
+        title="Show the 10 most comparable players (with their next-10-year adjusted performance trend)"
+      >
+        Comparable Players
+      </button>
+
+      {showComparablePlayers && (
+        <div
+          onClick={() => setShowComparablePlayers(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.45)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 18,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "min(1100px, 96vw)",
+              maxHeight: "90vh",
+              overflow: "auto",
+              borderRadius: 18,
+              background: "rgba(255,255,255,0.98)",
+              boxShadow: "0 18px 60px rgba(0,0,0,0.25)",
+              border: "1px solid rgba(0,0,0,0.1)",
+              padding: 16,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+              <div>
+                <div style={{ fontSize: 12, letterSpacing: 0.12, fontWeight: 900, color: "rgba(0,0,0,0.55)" }}>
+                  PERFORMANCE OF THE 10 MOST COMPARABLE PLAYERS
+                </div>
+                <div style={{ marginTop: 2, fontSize: 18, fontWeight: 950, letterSpacing: -0.2, color: "#111" }}>
+                  {player?.name ?? "Player"} • {seasonFixed}
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowComparablePlayers(false)}
+                style={{
+                  fontSize: 12,
+                  padding: "8px 10px",
+                  borderRadius: 12,
+                  border: "1px solid rgba(0,0,0,0.14)",
+                  background: "rgba(255,255,255,0.95)",
+                  color: "rgba(0,0,0,0.82)",
+                  fontWeight: 900,
+                  cursor: "pointer",
+                }}
+              >
+                Close
+              </button>
+            </div>
+
+            <div style={{ height: 12 }} />
+
+            {comparableTop10.length === 0 ? (
+              <div
+                style={{
+                  padding: 14,
+                  borderRadius: 14,
+                  border: "1px dashed rgba(0,0,0,0.2)",
+                  background: "rgba(0,0,0,0.02)",
+                  color: "rgba(0,0,0,0.65)",
+                  fontSize: 13,
+                }}
+              >
+                No comparable-player rows found for this player/season.
+                <div style={{ marginTop: 6, fontSize: 12, color: "rgba(0,0,0,0.55)" }}>
+                  Expected join keys: SourceproviderId + SourceSeason (matching the currently selected player + season).
+                  File name expected: <b>comparable_players.csv</b> in <b>src/data/</b> (local) or your API (prod).
+                </div>
+              </div>
+            ) : (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 10,
+                }}
+              >
+                {comparableTop10.map((r, i) => {
+                  const series = Array.from({ length: 10 }, (_, k) => {
+                    const idx = k + 1;
+                    const key = `adj_${idx}` as keyof ComparablePlayerRow;
+                    const v = r[key] as number | null | undefined;
+                    return v == null || !Number.isFinite(v) ? null : { x: idx, y: v };
+                  }).filter(Boolean) as { x: number; y: number }[];
+
+                  return (
+                    <div
+                      key={`comp-${i}-${r.SimilarPlayer}-${r.SimilarSeason}`}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 12,
+                        padding: 12,
+                        borderRadius: 14,
+                        border: "1px solid rgba(0,0,0,0.1)",
+                        background: "rgba(255,255,255,0.85)",
+                      }}
+                    >
+                      <div style={{ minWidth: 210 }}>
+                        <div style={{ fontSize: 16, fontWeight: 950, color: "#111", lineHeight: 1.05 }}>
+                          {i + 1}. {r.SimilarPlayer}
+                        </div>
+                        <div style={{ marginTop: 6, fontSize: 12, color: "rgba(0,0,0,0.6)", fontWeight: 800 }}>
+                          YEAR: {r.SimilarSeason}
+                        </div>
+                        <div style={{ marginTop: 4, fontSize: 12, color: "rgba(0,0,0,0.6)", fontWeight: 800 }}>
+                          SIMILARITY: {Number.isFinite(r.similarity) ? r.similarity.toFixed(2) : "—"}
+                        </div>
+                      </div>
+
+                      <div style={{ flex: 1, height: 70 }}>
+                        {series.length === 0 ? (
+                          <div
+                            style={{
+                              height: "100%",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              color: "rgba(0,0,0,0.45)",
+                              fontSize: 12,
+                            }}
+                          >
+                            No adj_1…adj_10
+                          </div>
+                        ) : (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <ComposedChart data={series} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.08)" />
+                              <XAxis dataKey="x" hide />
+                              <YAxis hide domain={["auto", "auto"]} />
+                              <Line
+                                type="monotone"
+                                dataKey="y"
+                                stroke="rgba(0,0,0,0.75)"
+                                strokeWidth={3}
+                                dot={false}
+                                isAnimationActive={false}
+                              />
+                            </ComposedChart>
+                          </ResponsiveContainer>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* KPI strip */}
       <Card style={{ overflow: "hidden" }}>
@@ -2386,6 +2614,7 @@ useEffect(() => {
   const [vflForm, setVflForm] = useState<VflFormRow[]>([]);
 const [careerProjections, setCareerProjections] = useState<CareerProjectionRow[]>([]);
   const [playerStatsAgg, setPlayerStatsAgg] = useState<PlayerStatsAggRow[]>([]);
+  const [comparablePlayers, setComparablePlayers] = useState<ComparablePlayerRow[]>([]);
 
   // Keep teamId in sync with the selected player (based on roster_players for the chosen season).
   useEffect(() => {
@@ -2417,7 +2646,7 @@ const [careerProjections, setCareerProjections] = useState<CareerProjectionRow[]
         setLoading(true);
         setLoadErr(null);
 
-        const [roster, kpis, ranks, radar, acq, proj, aflFormRows, vflFormRows, careerProj, playerStatsAggRows] = await Promise.all([
+        const [roster, kpis, ranks, radar, acq, proj, aflFormRows, vflFormRows, careerProj, playerStatsAggRows, comparableRows] = await Promise.all([
           loadApiDataAsObjects<RosterPlayerRow>("roster_players.csv", (r) => {
             const seasonN = toNumberOrNull(r["season"]);
             const ageN = toNumberOrNull(r["age"]);
@@ -2664,6 +2893,37 @@ return {
             return { season: seasonN, player_id: playerId, player_name: playerName, metric_name: metricName, category: cat, metric_value: valN };
           }),
 
+          loadApiDataAsObjects<ComparablePlayerRow>("comparable_players.csv", (r) => {
+            const spid = normalizePlayerId(r["SourceproviderId"]);
+            const srcSeason = toNumberOrNull(r["SourceSeason"]);
+            const simSeason = toNumberOrNull(r["SimilarSeason"]);
+            const simScore = toNumberOrNull(r["similarity"]);
+            if (!spid || srcSeason === null || !toTrimmedString(r["SimilarPlayer"]) || simSeason === null || simScore === null) return null;
+
+            const n = (k: string) => toNumberOrNull(r[k]);
+            return {
+              SourceproviderId: spid,
+              SourcePlayer: toTrimmedString(r["SourcePlayer"]),
+              SourceSeason: srcSeason,
+              SourcePosition: toTrimmedString(r["SourcePosition"]),
+              SourceClub: normalizeClubName(r["SourceClub"] ?? ""),
+              SimilarPlayer: toTrimmedString(r["SimilarPlayer"]),
+              SimilarSeason: simSeason,
+              similarity: simScore,
+              rank: toNumberOrNull(r["rank"]),
+              adj_1: n("adj_1"),
+              adj_2: n("adj_2"),
+              adj_3: n("adj_3"),
+              adj_4: n("adj_4"),
+              adj_5: n("adj_5"),
+              adj_6: n("adj_6"),
+              adj_7: n("adj_7"),
+              adj_8: n("adj_8"),
+              adj_9: n("adj_9"),
+              adj_10: n("adj_10"),
+            };
+          }),
+
         ]);
 
         if (!alive) return;
@@ -2678,6 +2938,7 @@ return {
         setVflForm(vflFormRows);
         setCareerProjections(careerProj);
         setPlayerStatsAgg(playerStatsAggRows);
+        setComparablePlayers(comparableRows);
 
       } catch (e: any) {
         if (!alive) return;
@@ -3930,7 +4191,7 @@ const kpis = useMemo(() => {
 
             </>
           ) : (
-            <CareerProjectionDashboard defaultTeam={team} careerProjections={careerProjections} playerStatsAgg={playerStatsAgg} playerProjections={playerProjections} initialPlayerId={currentPlayerId || undefined} onPlayerIdChange={(id) => {
+            <CareerProjectionDashboard defaultTeam={team} careerProjections={careerProjections} comparablePlayers={comparablePlayers} playerStatsAgg={playerStatsAgg} playerProjections={playerProjections} initialPlayerId={currentPlayerId || undefined} onPlayerIdChange={(id) => {
                 const nextId = normalizePlayerId(id);
                 setCurrentPlayerId(nextId);
 
@@ -3953,4 +4214,3 @@ const kpis = useMemo(() => {
     </div>
   );
 }
-
