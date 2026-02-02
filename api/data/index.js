@@ -11,7 +11,8 @@ const ALLOWED_FILES = new Set([
   "form_player_afl.csv",
   "form_player_vfl.csv",
   "career_projections.csv",
-  "CD_player_stats_agg.csv"
+  "CD_player_stats_agg.csv",
+  "comparable_players.csv"
 ]);
 
 module.exports = async function (context, req) {
