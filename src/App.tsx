@@ -34,6 +34,17 @@ function fmtAUD(n: number) {
   });
 }
 
+function fmtAUDShort(n: number) {
+  if (!Number.isFinite(n)) return "—";
+  const abs = Math.abs(n);
+  if (abs >= 1_000_000) {
+    const v = n / 1_000_000;
+    const decimals = abs >= 10_000_000 ? 0 : 1;
+    return `$${v.toFixed(decimals)}m`;
+  }
+  return `$${Math.round(n / 1000)}k`;
+}
+
 function fmtSigned(n: number, decimals = 2) {
   const s = n >= 0 ? "+" : "";
   return `${s}${n.toFixed(decimals)}`;
@@ -619,17 +630,29 @@ function Kpi({
   );
 }
 
-function Pill({ active, children, onClick }: { active?: boolean; children: React.ReactNode; onClick?: () => void }) {
+function Pill({
+  active,
+  children,
+  onClick,
+  size = "md",
+}: {
+  active?: boolean;
+  children: React.ReactNode;
+  onClick?: () => void;
+  size?: "xs" | "sm" | "md";
+}) {
+  const isSmall = size === "sm";
+  const isXs = size === "xs";
   return (
     <button
       onClick={onClick}
       style={{
         borderRadius: 999,
-        padding: "8px 12px",
+        padding: isXs ? "4px 8px" : isSmall ? "5px 9px" : "8px 12px",
         border: "1px solid rgba(0,0,0,0.14)",
         background: active ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.8)",
         color: "rgba(0,0,0,0.8)",
-        fontSize: 12,
+        fontSize: isXs ? 10 : isSmall ? 11 : 12,
         cursor: "pointer",
       }}
     >
@@ -992,6 +1015,8 @@ function CareerProjectionDashboard({
 
   type OutlookMode = "neutral" | "optimistic" | "pessimistic";
   const [outlook, setOutlook] = useState<OutlookMode>("neutral");
+  type ProjectionMetric = "rating" | "salary";
+  const [projectionMetric, setProjectionMetric] = useState<ProjectionMetric>("rating");
 
 
   const headshotUrl = player?.id ? getPlayerImgUrl(player.id) : null;
@@ -1117,10 +1142,12 @@ function CareerProjectionDashboard({
       const r = bySeason.get(d.season) ?? { season: d.season };
       bySeason.set(d.season, {
         ...r,
-        actual: d.actual,
-        estimate: d.estimate,
-        lower0: d.lower0,
-        band: d.band,
+        actual_rating: d.actual,
+        estimate_rating: d.estimate,
+        lower0_rating: d.lower0,
+        band_rating: d.band,
+        salary_actual: d.actual != null ? d.salary : null,
+        salary_estimate: d.estimate != null ? d.salary : null,
         salary: d.salary,
         AA: d.AA,
         Games: d.Games,
@@ -1138,10 +1165,12 @@ function CareerProjectionDashboard({
       const r = bySeason.get(d.season) ?? { season: d.season };
       bySeason.set(d.season, {
         ...r,
-        c_actual: d.actual,
-        c_estimate: d.estimate,
-        c_lower0: d.lower0,
-        c_band: d.band,
+        c_actual_rating: d.actual,
+        c_estimate_rating: d.estimate,
+        c_lower0_rating: d.lower0,
+        c_band_rating: d.band,
+        c_salary_actual: d.actual != null ? d.salary : null,
+        c_salary_estimate: d.estimate != null ? d.salary : null,
         c_salary: d.salary,
       });
     }
@@ -1153,11 +1182,26 @@ function CareerProjectionDashboard({
     if (lastA && firstP && lastA.season !== firstP.season) {
       const ra = bySeason.get(lastA.season) ?? { season: lastA.season };
       const rp = bySeason.get(firstP.season) ?? { season: firstP.season };
-      bySeason.set(lastA.season, { ...ra, bridge: lastA.actual });
-      bySeason.set(firstP.season, { ...rp, bridge: firstP.estimate });
+      bySeason.set(lastA.season, { ...ra, bridge_rating: lastA.actual, bridge_salary: lastA.salary });
+      bySeason.set(firstP.season, { ...rp, bridge_rating: firstP.estimate, bridge_salary: firstP.salary });
     }
-return Array.from(bySeason.values()).sort((a, b) => a.season - b.season);
+    return Array.from(bySeason.values()).sort((a, b) => a.season - b.season);
   }, [primaryTraj, compareTraj]);
+
+  const chartTrajectory = useMemo(() => {
+    return (trajectory as any[]).map((d) => ({
+      ...d,
+      actual: d.actual_rating,
+      estimate: d.estimate_rating,
+      lower0: d.lower0_rating,
+      band: d.band_rating,
+      c_actual: d.c_actual_rating,
+      c_estimate: d.c_estimate_rating,
+      c_lower0: d.c_lower0_rating,
+      c_band: d.c_band_rating,
+      bridge: d.bridge_rating,
+    }));
+  }, [trajectory]);
 
   // Dynamic Y-axis domain: min(lower) - 3, max(upper) + 3 (includes compare series when present)
   const yDomain = useMemo<[number, number]>(() => {
@@ -1165,8 +1209,7 @@ return Array.from(bySeason.values()).sort((a, b) => a.season - b.season);
     const highs: number[] = [];
     const vals: number[] = [];
 
-
-    for (const d of trajectory as any[]) {
+    for (const d of chartTrajectory as any[]) {
       const loA = typeof d.lower0 === "number" && Number.isFinite(d.lower0) ? d.lower0 : null;
       const hiA =
         loA != null && typeof d.band === "number" && Number.isFinite(d.band) ? loA + d.band : null;
@@ -1212,7 +1255,35 @@ const minFinal = Math.max(1, minRounded);
 const maxFinal = Math.max(minFinal + 1, maxRounded);
 
 return [minFinal, maxFinal];
-  }, [trajectory]);
+  }, [chartTrajectory]);
+
+  const ratingBenchmarks = useMemo(() => {
+    const seasonSet = new Set((trajectory as any[]).map((d) => d.season));
+    if (!seasonSet.size) return { leagueAvg: null as number | null, top10Avg: null as number | null };
+
+    const isActualType = (t: any) => {
+      const x = String(t ?? "").toLowerCase();
+      return x === "actual" || x === "hist" || x === "history";
+    };
+
+    const values: number[] = [];
+    for (const r of careerProjections) {
+      if (!seasonSet.has(r.Season)) continue;
+      if (isActualType((r as any).Type)) continue;
+      const v = typeof r.estimate === "number" ? r.estimate : Number(String(r.estimate ?? "").trim());
+      if (Number.isFinite(v)) values.push(v);
+    }
+
+    if (!values.length) return { leagueAvg: null as number | null, top10Avg: null as number | null };
+
+    const leagueAvg = values.reduce((a, b) => a + b, 0) / values.length;
+    const sorted = [...values].sort((a, b) => a - b);
+    const startIdx = Math.max(0, Math.floor(0.9 * sorted.length));
+    const topSlice = sorted.slice(startIdx);
+    const top10Avg = topSlice.reduce((a, b) => a + b, 0) / topSlice.length;
+
+    return { leagueAvg, top10Avg };
+  }, [careerProjections, trajectory]);
 
 
   // ---------- KPI helpers ----------
@@ -2207,21 +2278,93 @@ return [minFinal, maxFinal];
             }
           />
 
-          <div style={{ marginTop: 8, height: 460 }}>
+          <div style={{ marginTop: 8, height: 460, position: "relative" }}>
+            <div
+              style={{
+                position: "absolute",
+                left: "50%",
+                top: 6,
+                transform: "translateX(-50%)",
+                zIndex: 3,
+                display: "flex",
+                gap: 3,
+                padding: "3px 4px",
+                borderRadius: 999,
+                background: "rgba(255,255,255,0.92)",
+                border: "1px solid rgba(0,0,0,0.08)",
+                boxShadow: "0 3px 8px rgba(0,0,0,0.06)",
+              }}
+            >
+              <Pill size="xs" active={projectionMetric === "rating"} onClick={() => setProjectionMetric("rating")}>
+                Rating
+              </Pill>
+              <Pill size="xs" active={projectionMetric === "salary"} onClick={() => setProjectionMetric("salary")}>
+                Salary
+              </Pill>
+            </div>
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={trajectory} margin={{ top: 10, right: 26, left: 0, bottom: 0 }}>
+              <ComposedChart data={chartTrajectory} margin={{ top: 10, right: 26, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.35} />
                 <XAxis dataKey="season" tick={{ fontSize: 11 }} />
                 <YAxis domain={yDomain} tick={{ fontSize: 11 }} allowDecimals={false} tickCount={6} />
                 <Tooltip
-                  formatter={(v: any, n: any) => {
+                  formatter={(v: any, n: any, props: any) => {
                     if (v == null) return ["—", n];
-                    if (n === "salary") return [`$${Math.round(Number(v) / 1000)}k`, "Salary"];
-                    if (n === "c_salary") return [`$${Math.round(Number(v) / 1000)}k`, "Salary (Compare)"];
-                    return [Number(v).toFixed(1), n];
+                    if (projectionMetric === "salary") {
+                      const payload = props?.payload ?? {};
+                      let salaryVal: any = null;
+                      switch (props?.dataKey) {
+                        case "actual":
+                          salaryVal = payload.salary_actual ?? payload.salary;
+                          break;
+                        case "estimate":
+                          salaryVal = payload.salary_estimate ?? payload.salary;
+                          break;
+                        case "c_actual":
+                          salaryVal = payload.c_salary_actual ?? payload.c_salary;
+                          break;
+                        case "c_estimate":
+                          salaryVal = payload.c_salary_estimate ?? payload.c_salary;
+                          break;
+                        case "bridge":
+                          salaryVal = payload.salary_estimate ?? payload.salary_actual ?? payload.salary;
+                          break;
+                        default:
+                          salaryVal = payload.salary ?? null;
+                          break;
+                      }
+                      const sval = typeof salaryVal === "number" ? salaryVal : Number(salaryVal);
+                      if (!Number.isFinite(sval)) return ["—", n];
+                      return [fmtAUDShort(sval), n];
+                    }
+                    const val = typeof v === "number" ? v : Number(v);
+                    if (!Number.isFinite(val)) return ["—", n];
+                    return [val.toFixed(1), n];
                   }}
                   labelFormatter={(l) => `Season ${l}`}
                 />
+
+                {ratingBenchmarks.leagueAvg != null ? (
+                  <ReferenceLine
+                    y={ratingBenchmarks.leagueAvg}
+                    stroke="#9CA3AF"
+                    strokeDasharray="6 4"
+                    strokeWidth={2}
+                    ifOverflow="extendDomain"
+                    label={{ value: "League avg", position: "insideLeft", fill: "#F59E0B", fontSize: 11, dy: -6 }}
+                  />
+                ) : null}
+
+                {ratingBenchmarks.top10Avg != null ? (
+                  <ReferenceLine
+                    y={ratingBenchmarks.top10Avg}
+                    stroke="#9CA3AF"
+                    strokeDasharray="6 4"
+                    strokeWidth={2}
+                    ifOverflow="extendDomain"
+                    label={{ value: "Top 10%", position: "insideLeft", fill: "#10B981", fontSize: 11, dy: -6 }}
+                  />
+                ) : null}
 
                 {/* Primary CI band */}
                 <Area type="monotone" dataKey="lower0" stackId="ci1" stroke="none" fill="transparent" isAnimationActive={false} />
@@ -2235,10 +2378,20 @@ return [minFinal, maxFinal];
                   </>
                 ) : null}
 
-                <Line type="monotone" dataKey="actual" stroke="#111" strokeWidth={2.5} dot={false} connectNulls isAnimationActive={false} />
-<Line
+                <Line
+                  type="monotone"
+                  dataKey="actual"
+                  name="Actual"
+                  stroke="#111"
+                  strokeWidth={2.5}
+                  dot={false}
+                  connectNulls
+                  isAnimationActive={false}
+                />
+                <Line
                   type="monotone"
                   dataKey="bridge"
+                  name="Bridge"
                   stroke={teamColor}
                   strokeDasharray="6 4"
                   strokeWidth={2.5}
@@ -2251,6 +2404,7 @@ return [minFinal, maxFinal];
                 <Line
                   type="monotone"
                   dataKey="estimate"
+                  name="Projection"
                   stroke={teamColor}
                   strokeWidth={3.5}
                   dot={{ r: 4 }}
@@ -2258,10 +2412,15 @@ return [minFinal, maxFinal];
                   isAnimationActive={false}
                 >
                   <LabelList
-                    dataKey="salary"
+                    dataKey={projectionMetric === "salary" ? "salary_estimate" : "estimate"}
                     position="top"
                     offset={14}
-                    formatter={(v: any) => (v != null ? `$${Math.round(Number(v) / 1000)}k` : "")}
+                    formatter={(v: any) => {
+                      if (v == null) return "";
+                      const val = typeof v === "number" ? v : Number(v);
+                      if (!Number.isFinite(val)) return "";
+                      return projectionMetric === "salary" ? fmtAUDShort(val) : val.toFixed(1);
+                    }}
                     fontSize={11}
                     fill="rgba(0,0,0,0.55)"
                   />
@@ -2271,6 +2430,7 @@ return [minFinal, maxFinal];
                   <Line
                     type="monotone"
                     dataKey="c_estimate"
+                    name="Compare Projection"
                     stroke={compareColor}
                     strokeDasharray="6 4"
                     strokeWidth={3}
@@ -2284,7 +2444,7 @@ return [minFinal, maxFinal];
           </div>
 
           <div style={{ marginTop: 8, fontSize: 12, color: "rgba(0,0,0,0.55)" }}>
-            Shaded band = lower/upper confidence interval (when available). Compare series is dashed.
+            Shaded band = lower/upper confidence interval (when available). Dashed lines = league avg + top 10% avg rating. Compare series is dashed.
           </div>
         </Card>
       </div>
