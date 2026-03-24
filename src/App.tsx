@@ -376,9 +376,9 @@ const TEAMS: TeamOption[] = [
   { id: "110", name: "Port Adelaide" },
   { id: "120", name: "Richmond" },
   { id: "130", name: "St Kilda" },
-  { id: "140", name: "Sydney" },
+  { id: "160", name: "Sydney" },
   { id: "150", name: "West Coast" },
-  { id: "160", name: "Western Bulldogs" },
+  { id: "140", name: "Western Bulldogs" },
 ];
 
 
