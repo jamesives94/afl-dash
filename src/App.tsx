@@ -2120,10 +2120,10 @@ return [minFinal, maxFinal];
               title={careerProjectionsLastUpdated ? `Last updated: ${careerProjectionsLastUpdated}` : undefined}
               style={{
                 borderRadius: 16,
-                padding: "10px 12px",
+                padding: "8px 12px",
                 background: "rgba(245,245,246,0.7)",
                 border: "1px solid rgba(0,0,0,0.08)",
-                minHeight: 104,
+                minHeight: 80,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -2133,7 +2133,7 @@ return [minFinal, maxFinal];
                 <img
                   src={headshotUrl}
                   alt={player?.name ?? ""}
-                  style={{ height: 88, width: 88, objectFit: "contain", display: "block" }}
+                  style={{ height: 72, width: 72, objectFit: "contain", display: "block" }}
                   onError={(e) => {
                     (e.currentTarget as HTMLImageElement).style.display = "none";
                   }}
@@ -2162,10 +2162,10 @@ return [minFinal, maxFinal];
                 key={k.label}
                 style={{
                   borderRadius: 16,
-                  padding: "10px 12px",
+                  padding: "8px 12px",
                   background: "rgba(245,245,246,0.7)",
                   border: "1px solid rgba(0,0,0,0.08)",
-                  minHeight: 104,
+                  minHeight: 80,
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "center",
@@ -3909,7 +3909,7 @@ const kpis = useMemo(() => {
           <div
             style={{
               borderRadius: 26,
-              padding: 16,
+              padding: "12px 16px",
               background: "linear-gradient(90deg, #f1f2f4 0%, #e5e7eb 55%, #f1f2f4 100%)",
               border: "1px solid rgba(0,0,0,0.08)",
               boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
@@ -3936,7 +3936,9 @@ const kpis = useMemo(() => {
                       />
                     ) : null}
                   </div>
-                  <div style={{ fontSize: 12, color: "rgba(0,0,0,0.55)" }}>{page === "team" ? `Team Profile | Season ${season}` : "Player Career Trajectory (demo)"}</div>
+                  {page === "team" ? (
+                    <div style={{ fontSize: 12, color: "rgba(0,0,0,0.55)" }}>{`Team Profile | Season ${season}`}</div>
+                  ) : null}
                 </div>
               </div>
 
