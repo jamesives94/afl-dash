@@ -446,6 +446,7 @@ const DEFAULT_TEAM_ID = "40"; // Collingwood
 const DEFAULT_SEASON = 2026;
 const CAREER_TILES_EXPORT_ID = "career-tiles-export-target";
 const CAREER_PDF_EXPORT_ID = "career-pdf-export-target";
+const CAREER_EXPORT_CAPTURE_WIDTH = 1120;
 
 // Back-compat: accept older abbreviation-style team codes in URLs (?team=COLL or /team/COLL) and coerce to numeric ids.
 const LEGACY_TEAM_CODE_TO_ID: Record<string, string> = {
@@ -2110,7 +2111,7 @@ return [minFinal, maxFinal];
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(10, minmax(0, 1fr))",
+              gridTemplateColumns: "minmax(122px, 0.72fr) repeat(4, minmax(0, 1fr))",
               gap: 10,
               alignItems: "stretch",
             }}
@@ -2118,12 +2119,11 @@ return [minFinal, maxFinal];
             <div
               title={careerProjectionsLastUpdated ? `Last updated: ${careerProjectionsLastUpdated}` : undefined}
               style={{
-                gridColumn: "span 2",
                 borderRadius: 16,
                 padding: "12px 12px",
                 background: "rgba(245,245,246,0.7)",
                 border: "1px solid rgba(0,0,0,0.08)",
-                minHeight: 112,
+                minHeight: 120,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -2132,9 +2132,9 @@ return [minFinal, maxFinal];
               <div style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
                 <div
                   style={{
-                    height: 78,
-                    width: 78,
-                    borderRadius: 22,
+                    height: 96,
+                    width: 96,
+                    borderRadius: 24,
                     overflow: "hidden",
                     position: "relative",
                     border: "1px solid rgba(0,0,0,0.10)",
@@ -2180,12 +2180,11 @@ return [minFinal, maxFinal];
               <div
                 key={k.label}
                 style={{
-                  gridColumn: "span 2",
                   borderRadius: 16,
                   padding: "12px 12px",
                   background: "rgba(245,245,246,0.7)",
                   border: "1px solid rgba(0,0,0,0.08)",
-                  minHeight: 112,
+                  minHeight: 120,
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "center",
@@ -2841,6 +2840,29 @@ useEffect(() => {
     });
   };
 
+  const captureCareerCanvas = async (target: HTMLElement, scale = 2) => {
+    const prevWidth = target.style.width;
+    const prevMaxWidth = target.style.maxWidth;
+    const prevMargin = target.style.margin;
+    const prevGap = target.style.gap;
+
+    target.style.width = `${CAREER_EXPORT_CAPTURE_WIDTH}px`;
+    target.style.maxWidth = `${CAREER_EXPORT_CAPTURE_WIDTH}px`;
+    target.style.margin = "0 auto";
+    target.style.gap = "10px";
+
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+    try {
+      return await captureElementCanvas(target, scale);
+    } finally {
+      target.style.width = prevWidth;
+      target.style.maxWidth = prevMaxWidth;
+      target.style.margin = prevMargin;
+      target.style.gap = prevGap;
+    }
+  };
+
   const onExportPng = async () => {
     if (exporting) return;
     if (page !== "career") {
@@ -2851,7 +2873,7 @@ useEffect(() => {
     try {
       const target = document.getElementById(CAREER_PDF_EXPORT_ID);
       if (!target) throw new Error("Career export target not found.");
-      const canvas = await captureElementCanvas(target, 2);
+      const canvas = await captureCareerCanvas(target, 2);
       const url = canvas.toDataURL("image/png");
       const link = document.createElement("a");
       link.href = url;
@@ -2875,15 +2897,15 @@ useEffect(() => {
     try {
       const target = document.getElementById(CAREER_PDF_EXPORT_ID);
       if (!target) throw new Error("Career PDF export target not found.");
-      const [canvas, { jsPDF }] = await Promise.all([captureElementCanvas(target, 2), import("jspdf")]);
+      const [canvas, { jsPDF }] = await Promise.all([captureCareerCanvas(target, 2), import("jspdf")]);
 
-      // Export onto landscape A4 with generous margins so the chart block fits template "custom image" spaces better.
+      // Export onto landscape A4 with tighter margins for better fit in report image placeholders.
       const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const sideMargin = 130;
-      const topMargin = 110;
-      const bottomMargin = 110;
+      const sideMargin = 44;
+      const topMargin = 34;
+      const bottomMargin = 34;
       const maxWidth = pageWidth - sideMargin * 2;
       const maxHeight = pageHeight - topMargin - bottomMargin;
       const ratio = Math.min(maxWidth / canvas.width, maxHeight / canvas.height);
