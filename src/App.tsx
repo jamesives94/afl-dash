@@ -177,17 +177,52 @@ function getLogoUrlByClubName(clubName: string) {
   return bestUrl;
 }
 
-// --- Player images from src/players (playerId.png)
-const PLAYER_IMAGES = import.meta.glob("/src/players/*.png", {
+// --- Player images from src/players (supports id/name + common image extensions)
+const PLAYER_IMAGES = import.meta.glob("/src/players/*.{png,jpg,jpeg,webp}", {
   eager: true,
   query: "?url",
   import: "default",
 }) as Record<string, string>;
 
-function getPlayerImgUrl(playerId: string | number | null | undefined) {
-  const id = toTrimmedString(playerId);
-  const key = `/src/players/${id}.png`;
-  return PLAYER_IMAGES[key] ?? null;
+const PLAYER_IMAGE_LOOKUP = (() => {
+  const map = new Map<string, string>();
+  const keyify = (v: string) => v.toLowerCase().replace(/[^a-z0-9]+/g, "");
+  for (const [path, url] of Object.entries(PLAYER_IMAGES)) {
+    const base = path.split("/").pop() ?? "";
+    const stem = base.replace(/\.(png|jpg|jpeg|webp)$/i, "");
+    const trimmed = stem.trim();
+    if (!trimmed) continue;
+    map.set(trimmed.toLowerCase(), url);
+    map.set(keyify(trimmed), url);
+    map.set(normalizePlayerId(trimmed).toLowerCase(), url);
+  }
+  return map;
+})();
+
+function getPlayerImgUrl(playerId: string | number | null | undefined, playerName?: string | null) {
+  const rawId = toTrimmedString(playerId);
+  const id = normalizePlayerId(rawId);
+  const rawName = toTrimmedString(playerName);
+  const keyify = (v: string) => v.toLowerCase().replace(/[^a-z0-9]+/g, "");
+
+  const candidates = [
+    rawId,
+    id,
+    `CD_I${id}`,
+    `CD-${id}`,
+    rawName,
+    keyify(rawName),
+  ]
+    .filter(Boolean)
+    .map((x) => String(x));
+
+  for (const c of candidates) {
+    const direct = PLAYER_IMAGE_LOOKUP.get(c.toLowerCase());
+    if (direct) return direct;
+    const normalized = PLAYER_IMAGE_LOOKUP.get(keyify(c));
+    if (normalized) return normalized;
+  }
+  return null;
 }
 
 // --------------------
@@ -1086,8 +1121,8 @@ function CareerProjectionDashboard({
   const [projectionMetric, setProjectionMetric] = useState<ProjectionMetric>("rating");
 
 
-  const headshotUrl = player?.id ? getPlayerImgUrl(player.id) : null;
-  const compareHeadshotUrl = comparePlayer?.id ? getPlayerImgUrl(comparePlayer.id) : null;
+  const headshotUrl = player?.id ? getPlayerImgUrl(player.id, player.name) : null;
+  const compareHeadshotUrl = comparePlayer?.id ? getPlayerImgUrl(comparePlayer.id, comparePlayer.name) : null;
 
   // ---------- Build trajectories ----------
   function buildTrajectoryForId(id: string) {
@@ -2073,66 +2108,28 @@ return [minFinal, maxFinal];
       {/* KPI strip */}
       <div id={CAREER_TILES_EXPORT_ID}>
         <Card style={{ overflow: "hidden" }}>
-          <div style={{ position: "relative" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div
-                style={{
-                  height: 78,
-                  width: 78,
-                  borderRadius: 22,
-                  overflow: "hidden",
-                  position: "relative",
-                  border: "1px solid rgba(0,0,0,0.10)",
-                  background: "rgba(255,255,255,0.8)",
-                }}
-              >
-                {/* Fallback underlay so missing/broken images don't leave a blank tile */}
-                <div
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    background: "rgba(0,0,0,0.06)",
-                    color: "rgba(0,0,0,0.55)",
-                    fontSize: 12,
-                    fontWeight: 700,
-                    letterSpacing: 0.5,
-                  }}
-                >
-                  {(player?.name ?? "—")
-                    .split(" ")
-                    .filter(Boolean)
-                    .slice(0, 2)
-                    .map((s) => s[0]?.toUpperCase())
-                    .join("")}
-                </div>
-
-                {headshotUrl ? (
-                  <img
-                    src={headshotUrl}
-                    alt={player?.name ?? ""}
-                    style={{ height: "100%", width: "100%", objectFit: "cover", position: "relative" }}
-                    onError={(e) => {
-                      // Hide broken images; fallback remains visible.
-                      (e.currentTarget as HTMLImageElement).style.display = "none";
-                    }}
-                  />
-                ) : null}
-              </div>
-
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 950, color: "#111" }}>Overview</div>
-                {(comparePlayer || careerProjectionsLastUpdated) ? (
-                  <div style={{ fontSize: 12, color: "rgba(0,0,0,0.55)" }}>
-                    {comparePlayer ? `Comparing to ${comparePlayer.name}` : `Last updated: ${careerProjectionsLastUpdated}`}
-                  </div>
-                ) : null}
-              </div>
-
-              {comparePlayer ? (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(12, minmax(0, 1fr))",
+              gap: 10,
+              alignItems: "stretch",
+            }}
+          >
+            <div
+              style={{
+                gridColumn: "span 4",
+                borderRadius: 16,
+                padding: "12px 12px",
+                background: "rgba(245,245,246,0.7)",
+                border: "1px solid rgba(0,0,0,0.08)",
+                minHeight: 112,
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                 <div
                   style={{
                     height: 78,
@@ -2142,7 +2139,6 @@ return [minFinal, maxFinal];
                     position: "relative",
                     border: "1px solid rgba(0,0,0,0.10)",
                     background: "rgba(255,255,255,0.8)",
-                    marginLeft: 6,
                   }}
                 >
                   <div
@@ -2159,18 +2155,17 @@ return [minFinal, maxFinal];
                       letterSpacing: 0.5,
                     }}
                   >
-                    {(comparePlayer?.name ?? "—")
+                    {(player?.name ?? "—")
                       .split(" ")
                       .filter(Boolean)
                       .slice(0, 2)
                       .map((s) => s[0]?.toUpperCase())
                       .join("")}
                   </div>
-
-                  {compareHeadshotUrl ? (
+                  {headshotUrl ? (
                     <img
-                      src={compareHeadshotUrl}
-                      alt={comparePlayer?.name ?? ""}
+                      src={headshotUrl}
+                      alt={player?.name ?? ""}
                       style={{ height: "100%", width: "100%", objectFit: "cover", position: "relative" }}
                       onError={(e) => {
                         (e.currentTarget as HTMLImageElement).style.display = "none";
@@ -2178,38 +2173,86 @@ return [minFinal, maxFinal];
                     />
                   ) : null}
                 </div>
-              ) : null}
+
+                {comparePlayer ? (
+                  <div
+                    style={{
+                      height: 78,
+                      width: 78,
+                      borderRadius: 22,
+                      overflow: "hidden",
+                      position: "relative",
+                      border: "1px solid rgba(0,0,0,0.10)",
+                      background: "rgba(255,255,255,0.8)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        background: "rgba(0,0,0,0.06)",
+                        color: "rgba(0,0,0,0.55)",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        letterSpacing: 0.5,
+                      }}
+                    >
+                      {(comparePlayer?.name ?? "—")
+                        .split(" ")
+                        .filter(Boolean)
+                        .slice(0, 2)
+                        .map((s) => s[0]?.toUpperCase())
+                        .join("")}
+                    </div>
+                    {compareHeadshotUrl ? (
+                      <img
+                        src={compareHeadshotUrl}
+                        alt={comparePlayer?.name ?? ""}
+                        style={{ height: "100%", width: "100%", objectFit: "cover", position: "relative" }}
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).style.display = "none";
+                        }}
+                      />
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 950, color: "#111" }}>Overview</div>
+                {(comparePlayer || careerProjectionsLastUpdated) ? (
+                  <div style={{ fontSize: 12, color: "rgba(0,0,0,0.55)", marginTop: 2 }}>
+                    {comparePlayer ? `Comparing to ${comparePlayer.name}` : `Last updated: ${careerProjectionsLastUpdated}`}
+                  </div>
+                ) : null}
+              </div>
             </div>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-                gap: 10,
-                minWidth: 0,
-                width: "100%",
-                maxWidth: "100%",
-              }}
-            >
-              {kpis.map((k) => (
-                <div
-                  key={k.label}
-                  style={{
-                    borderRadius: 16,
-                    padding: "12px 12px",
-                    background: "rgba(245,245,246,0.7)",
-                    border: "1px solid rgba(0,0,0,0.08)",
-                  }}
-                >
-                  <div style={{ fontSize: 11, fontWeight: 900, color: "rgba(0,0,0,0.55)" }}>{k.label}</div>
-                  <div style={{ fontSize: 18, fontWeight: 950, letterSpacing: -0.2, marginTop: 6, color: "#111" }}>{k.value}</div>
-                  {k.sub ? (
-                    <div style={{ fontSize: 11, color: "rgba(0,0,0,0.50)", marginTop: 4, lineHeight: 1.2 }}>{k.sub}</div>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-            </div>
+            {kpis.map((k) => (
+              <div
+                key={k.label}
+                style={{
+                  gridColumn: "span 2",
+                  borderRadius: 16,
+                  padding: "12px 12px",
+                  background: "rgba(245,245,246,0.7)",
+                  border: "1px solid rgba(0,0,0,0.08)",
+                  minHeight: 112,
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
+                }}
+              >
+                <div style={{ fontSize: 11, fontWeight: 900, color: "rgba(0,0,0,0.55)" }}>{k.label}</div>
+                <div style={{ fontSize: 18, fontWeight: 950, letterSpacing: -0.2, marginTop: 6, color: "#111" }}>{k.value}</div>
+                {k.sub ? (
+                  <div style={{ fontSize: 11, color: "rgba(0,0,0,0.50)", marginTop: 4, lineHeight: 1.2 }}>{k.sub}</div>
+                ) : null}
+              </div>
+            ))}
           </div>
         </Card>
       </div>
