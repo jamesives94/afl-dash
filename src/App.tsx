@@ -542,6 +542,27 @@ function toNumberOrNull(x: any): number | null {
 }
 
 async function loadApiDataAsObjects<T>(file: string, mapper: (r: Record<string, any>) => T | null): Promise<T[]> {
+  const { rows } = await fetchApiRows(file);
+  const out: T[] = [];
+
+  for (const r of rows) {
+    const obj = mapper((r ?? {}) as Record<string, any>);
+    if (obj) out.push(obj);
+  }
+  return out;
+}
+
+function parseLastUpdatedLabel(value: string | null): string {
+  const raw = toTrimmedString(value);
+  if (!raw) return "";
+  const d = new Date(raw);
+  if (Number.isFinite(d.getTime())) {
+    return d.toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "numeric" });
+  }
+  return "";
+}
+
+async function fetchApiRows(file: string): Promise<{ rows: Record<string, any>[]; lastUpdatedLabel: string }> {
   const url = `/api/data?file=${encodeURIComponent(file)}`;
 
   const headers: Record<string, string> = {};
@@ -561,13 +582,26 @@ async function loadApiDataAsObjects<T>(file: string, mapper: (r: Record<string, 
 
   const json = await res.json();
   const rows = Array.isArray(json) ? json : [];
-  const out: T[] = [];
+  const lastUpdatedLabel = parseLastUpdatedLabel(
+    res.headers.get("x-file-last-modified") ??
+      res.headers.get("x-last-modified") ??
+      res.headers.get("last-modified")
+  );
 
+  return { rows, lastUpdatedLabel };
+}
+
+async function loadApiDataAsObjectsWithMeta<T>(
+  file: string,
+  mapper: (r: Record<string, any>) => T | null
+): Promise<{ rows: T[]; lastUpdatedLabel: string }> {
+  const { rows, lastUpdatedLabel } = await fetchApiRows(file);
+  const out: T[] = [];
   for (const r of rows) {
     const obj = mapper((r ?? {}) as Record<string, any>);
     if (obj) out.push(obj);
   }
-  return out;
+  return { rows: out, lastUpdatedLabel };
 }
 
 // Try multiple possible blob filenames (helps when you rename a CSV in Azure Blob)
@@ -893,6 +927,7 @@ function PlayerProjectionTable({ rows }: { rows: PlayerTableRow[] }) {
 function CareerProjectionDashboard({
   defaultTeam,
   careerProjections,
+  careerProjectionsLastUpdated,
   comparablePlayers,
   playerStatsAgg,
   playerProjections,
@@ -901,6 +936,7 @@ function CareerProjectionDashboard({
 }: {
   defaultTeam: string;
   careerProjections: CareerProjectionRow[];
+  careerProjectionsLastUpdated?: string;
   comparablePlayers: ComparablePlayerRow[];
   playerStatsAgg: PlayerStatsAggRow[];
   playerProjections: PlayerProjectionRow[];
@@ -2088,10 +2124,12 @@ return [minFinal, maxFinal];
               </div>
 
               <div>
-                <div style={{ fontSize: 14, fontWeight: 950, color: "#111" }}>Snapshot ({lastActual?.season ?? "—"})</div>
-                <div style={{ fontSize: 12, color: "rgba(0,0,0,0.55)" }}>
-                  {comparePlayer ? `Comparing to ${comparePlayer.name}` : "* Projections are currently in the build phase and will be updated from March 1 with the new ratings system"}
-                </div>
+                <div style={{ fontSize: 14, fontWeight: 950, color: "#111" }}>Overview</div>
+                {(comparePlayer || careerProjectionsLastUpdated) ? (
+                  <div style={{ fontSize: 12, color: "rgba(0,0,0,0.55)" }}>
+                    {comparePlayer ? `Comparing to ${comparePlayer.name}` : `Last updated: ${careerProjectionsLastUpdated}`}
+                  </div>
+                ) : null}
               </div>
 
               {comparePlayer ? (
@@ -2442,7 +2480,7 @@ return [minFinal, maxFinal];
                   name="Projection"
                   stroke={teamColor}
                   strokeWidth={3.5}
-                  dot={{ r: 4 }}
+                  dot={false}
                   activeDot={false}
                   connectNulls
                   isAnimationActive={false}
@@ -2818,18 +2856,18 @@ useEffect(() => {
   const onExportPng = async () => {
     if (exporting) return;
     if (page !== "career") {
-      window.alert("Switch to Career view to export the snapshot tiles image.");
+      window.alert("Switch to Career view to export the Career image.");
       return;
     }
     setExporting("png");
     try {
-      const target = document.getElementById(CAREER_TILES_EXPORT_ID);
-      if (!target) throw new Error("Career tiles export target not found.");
+      const target = document.getElementById(CAREER_PDF_EXPORT_ID);
+      if (!target) throw new Error("Career export target not found.");
       const canvas = await captureElementCanvas(target, 2);
       const url = canvas.toDataURL("image/png");
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${exportFileBase}-tiles.png`;
+      link.download = `${exportFileBase}-career-projection.png`;
       link.click();
     } catch (err) {
       console.error("PNG export failed:", err);
@@ -2855,9 +2893,9 @@ useEffect(() => {
       const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const sideMargin = 90;
-      const topMargin = 105;
-      const bottomMargin = 105;
+      const sideMargin = 130;
+      const topMargin = 110;
+      const bottomMargin = 110;
       const maxWidth = pageWidth - sideMargin * 2;
       const maxHeight = pageHeight - topMargin - bottomMargin;
       const ratio = Math.min(maxWidth / canvas.width, maxHeight / canvas.height);
@@ -2890,7 +2928,8 @@ useEffect(() => {
   const [playerProjections, setPlayerProjections] = useState<PlayerProjectionRow[]>([]);
   const [aflForm, setAflForm] = useState<AflFormRow[]>([]);
   const [vflForm, setVflForm] = useState<VflFormRow[]>([]);
-const [careerProjections, setCareerProjections] = useState<CareerProjectionRow[]>([]);
+  const [careerProjections, setCareerProjections] = useState<CareerProjectionRow[]>([]);
+  const [careerProjectionsLastUpdated, setCareerProjectionsLastUpdated] = useState<string>("");
   const [playerStatsAgg, setPlayerStatsAgg] = useState<PlayerStatsAggRow[]>([]);
   const [comparablePlayers, setComparablePlayers] = useState<ComparablePlayerRow[]>([]);
 
@@ -2924,7 +2963,7 @@ const [careerProjections, setCareerProjections] = useState<CareerProjectionRow[]
         setLoading(true);
         setLoadErr(null);
 
-        const [roster, kpis, ranks, radar, acq, proj, aflFormRows, vflFormRows, careerProj, playerStatsAggRows, comparableRows] = await Promise.all([
+        const [roster, kpis, ranks, radar, acq, proj, aflFormRows, vflFormRows, careerProjResult, playerStatsAggRows, comparableRows] = await Promise.all([
           loadApiDataAsObjects<RosterPlayerRow>("roster_players.csv", (r) => {
             const seasonN = toNumberOrNull(r["season"]);
             const ageN = toNumberOrNull(r["age"]);
@@ -3086,7 +3125,7 @@ return {
           }),
 
           // NEW: Career projections
-          loadApiDataAsObjects<CareerProjectionRow>("career_projections.csv", (r) => {
+          loadApiDataAsObjectsWithMeta<CareerProjectionRow>("career_projections.csv", (r) => {
             const seasonN = toNumberOrNull(r["Season"]);
             const horizonN = toNumberOrNull(r["Horizon"]);
             const srcSeasonN = toNumberOrNull(r["SourceSeason"]);
@@ -3214,7 +3253,8 @@ return {
         setPlayerProjections(proj);
         setAflForm(aflFormRows);
         setVflForm(vflFormRows);
-        setCareerProjections(careerProj);
+        setCareerProjections(careerProjResult.rows);
+        setCareerProjectionsLastUpdated(careerProjResult.lastUpdatedLabel);
         setPlayerStatsAgg(playerStatsAggRows);
         setComparablePlayers(comparableRows);
 
@@ -4479,7 +4519,7 @@ const kpis = useMemo(() => {
 
             </>
           ) : (
-            <CareerProjectionDashboard defaultTeam={team} careerProjections={careerProjections} comparablePlayers={comparablePlayers} playerStatsAgg={playerStatsAgg} playerProjections={playerProjections} initialPlayerId={currentPlayerId || undefined} onPlayerIdChange={(id) => {
+            <CareerProjectionDashboard defaultTeam={team} careerProjections={careerProjections} careerProjectionsLastUpdated={careerProjectionsLastUpdated} comparablePlayers={comparablePlayers} playerStatsAgg={playerStatsAgg} playerProjections={playerProjections} initialPlayerId={currentPlayerId || undefined} onPlayerIdChange={(id) => {
                 const nextId = normalizePlayerId(id);
                 setCurrentPlayerId(nextId);
 
