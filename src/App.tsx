@@ -2120,10 +2120,10 @@ return [minFinal, maxFinal];
               title={careerProjectionsLastUpdated ? `Last updated: ${careerProjectionsLastUpdated}` : undefined}
               style={{
                 borderRadius: 16,
-                padding: "12px 12px",
+                padding: "10px 12px",
                 background: "rgba(245,245,246,0.7)",
                 border: "1px solid rgba(0,0,0,0.08)",
-                minHeight: 120,
+                minHeight: 104,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -2133,7 +2133,7 @@ return [minFinal, maxFinal];
                 <img
                   src={headshotUrl}
                   alt={player?.name ?? ""}
-                  style={{ height: 108, width: 108, objectFit: "contain", display: "block" }}
+                  style={{ height: 88, width: 88, objectFit: "contain", display: "block" }}
                   onError={(e) => {
                     (e.currentTarget as HTMLImageElement).style.display = "none";
                   }}
@@ -2162,10 +2162,10 @@ return [minFinal, maxFinal];
                 key={k.label}
                 style={{
                   borderRadius: 16,
-                  padding: "12px 12px",
+                  padding: "10px 12px",
                   background: "rgba(245,245,246,0.7)",
                   border: "1px solid rgba(0,0,0,0.08)",
-                  minHeight: 120,
+                  minHeight: 104,
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "center",
