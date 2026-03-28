@@ -1,5 +1,5 @@
 // src/App.tsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ResponsiveContainer,
   Area,
@@ -403,9 +403,9 @@ const LEGACY_TEAM_CODE_TO_ID: Record<string, string> = {
   PORT: "110",
   RICH: "120",
   STK: "130",
-  SYD: "140",
+  SYD: "160",
   WCE: "150",
-  WB: "160",
+  WB: "140",
 };
 
 const TEAM_PRIMARY_COLOR: Record<string, string> = {
@@ -635,11 +635,13 @@ function Pill({
   active,
   children,
   onClick,
+  disabled,
   size = "md",
 }: {
   active?: boolean;
   children: React.ReactNode;
   onClick?: () => void;
+  disabled?: boolean;
   size?: "xs" | "sm" | "md";
 }) {
   const isSmall = size === "sm";
@@ -647,6 +649,7 @@ function Pill({
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       style={{
         borderRadius: 999,
         padding: isXs ? "4px 8px" : isSmall ? "5px 9px" : "8px 12px",
@@ -654,7 +657,8 @@ function Pill({
         background: active ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.8)",
         color: "rgba(0,0,0,0.8)",
         fontSize: isXs ? 10 : isSmall ? 11 : 12,
-        cursor: "pointer",
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.55 : 1,
       }}
     >
       {children}
@@ -2673,11 +2677,13 @@ export default function App() {
 function AppCore({ routeMode, routeTeamId, routePlayerId }: { routeMode: "team" | "player"; routeTeamId: string | null; routePlayerId: string | null; }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const exportRef = useRef<HTMLDivElement | null>(null);
   const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const [team, setTeam] = useState(() => (routeMode === "team" && routeTeamId ? coerceTeamId(routeTeamId) : (coerceTeamId(searchParams.get("team")) || DEFAULT_TEAM_ID)));
   const [season, setSeason] = useState(() => Number(searchParams.get("season") || DEFAULT_SEASON));
 const [compareTeam, setCompareTeam] = useState<string>(""); // "" = no comparison
 const [comparePanelOpen, setComparePanelOpen] = useState(false);
+const [exporting, setExporting] = useState<"png" | "pdf" | null>(null);
 const [page, setPage] = useState<"team" | "career">(() => (routeMode === "player" ? "career" : "team"));
 const [currentPlayerId, setCurrentPlayerId] = useState<string>(() => (routeMode === "player" ? normalizePlayerId(routePlayerId) : ""));
 const [playerTeamResolved, setPlayerTeamResolved] = useState(false);
@@ -2758,6 +2764,97 @@ useEffect(() => {
   const teamColor = useMemo(() => TEAM_PRIMARY_COLOR[clubKey] ?? "#111111", [clubKey]);
 
   const logoSrc = useMemo(() => getLogoUrlByClubName(clubName), [clubName]);
+  const exportFileBase = useMemo(() => {
+    const clubSlug = clubName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "") || "club";
+    return `afl-dash-${clubSlug}-${page}-${season}`;
+  }, [clubName, page, season]);
+
+  const captureDashboardCanvas = async () => {
+    const node = exportRef.current;
+    if (!node) throw new Error("Dashboard export target not ready.");
+
+    const { default: html2canvas } = await import("html2canvas");
+    return html2canvas(node, {
+      backgroundColor: "#f5f5f6",
+      useCORS: true,
+      logging: false,
+      scale: Math.max(2, Math.min(3, window.devicePixelRatio || 1)),
+      windowWidth: node.scrollWidth,
+      windowHeight: node.scrollHeight,
+    });
+  };
+
+  const onExportPng = async () => {
+    if (exporting) return;
+    setExporting("png");
+    try {
+      const canvas = await captureDashboardCanvas();
+      const url = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${exportFileBase}.png`;
+      link.click();
+    } catch (err) {
+      console.error("PNG export failed:", err);
+      window.alert("Could not export PNG. Please try again.");
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  const onExportPdf = async () => {
+    if (exporting) return;
+    setExporting("pdf");
+    try {
+      const [canvas, { jsPDF }] = await Promise.all([captureDashboardCanvas(), import("jspdf")]);
+      const orientation = canvas.width > canvas.height ? "landscape" : "portrait";
+      const pdf = new jsPDF({ orientation, unit: "pt", format: "a4" });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const sliceHeightPx = Math.max(1, Math.floor((pageHeight * canvas.width) / pageWidth));
+
+      let offsetY = 0;
+      let pageIndex = 0;
+      while (offsetY < canvas.height) {
+        const currentSliceHeight = Math.min(sliceHeightPx, canvas.height - offsetY);
+        const pageCanvas = document.createElement("canvas");
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = currentSliceHeight;
+        const ctx = pageCanvas.getContext("2d");
+        if (!ctx) throw new Error("Could not create canvas context for PDF export.");
+
+        ctx.fillStyle = "#f5f5f6";
+        ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+        ctx.drawImage(
+          canvas,
+          0,
+          offsetY,
+          canvas.width,
+          currentSliceHeight,
+          0,
+          0,
+          pageCanvas.width,
+          pageCanvas.height
+        );
+
+        if (pageIndex > 0) pdf.addPage();
+        const renderHeight = (currentSliceHeight * pageWidth) / canvas.width;
+        pdf.addImage(pageCanvas.toDataURL("image/png"), "PNG", 0, 0, pageWidth, renderHeight, undefined, "FAST");
+        offsetY += currentSliceHeight;
+        pageIndex += 1;
+      }
+
+      pdf.save(`${exportFileBase}.pdf`);
+    } catch (err) {
+      console.error("PDF export failed:", err);
+      window.alert("Could not export PDF. Please try again.");
+    } finally {
+      setExporting(null);
+    }
+  };
 
   // --------
   // Data state
@@ -3756,7 +3853,7 @@ const kpis = useMemo(() => {
 
       <div className="layoutGrid">
 
-        <div className="mainWrap">
+        <div className="mainWrap" ref={exportRef}>
           {/* Header */}
           <div
             style={{
@@ -3825,6 +3922,14 @@ const kpis = useMemo(() => {
 
                 <Pill onClick={() => navigator.clipboard.writeText(window.location.href)}>
                   <RefreshCcw size={14} style={{ verticalAlign: "-2px", marginRight: 6 }} /> Copy link
+                </Pill>
+
+                <Pill onClick={onExportPng} disabled={exporting !== null}>
+                  {exporting === "png" ? "Exporting PNG..." : "Export PNG"}
+                </Pill>
+
+                <Pill onClick={onExportPdf} disabled={exporting !== null}>
+                  {exporting === "pdf" ? "Exporting PDF..." : "Export PDF"}
                 </Pill>
               </div>
             </div>
