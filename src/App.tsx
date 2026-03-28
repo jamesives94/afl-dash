@@ -2129,51 +2129,32 @@ return [minFinal, maxFinal];
                 justifyContent: "center",
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
+              {headshotUrl ? (
+                <img
+                  src={headshotUrl}
+                  alt={player?.name ?? ""}
+                  style={{ height: 108, width: 108, objectFit: "contain", display: "block" }}
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).style.display = "none";
+                  }}
+                />
+              ) : (
                 <div
                   style={{
-                    height: 96,
-                    width: 96,
-                    borderRadius: 24,
-                    overflow: "hidden",
-                    position: "relative",
-                    border: "1px solid rgba(0,0,0,0.10)",
-                    background: "rgba(255,255,255,0.8)",
+                    fontSize: 22,
+                    fontWeight: 900,
+                    color: "rgba(0,0,0,0.45)",
+                    letterSpacing: 0.5,
                   }}
                 >
-                  <div
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      background: "rgba(0,0,0,0.06)",
-                      color: "rgba(0,0,0,0.55)",
-                      fontSize: 12,
-                      fontWeight: 700,
-                      letterSpacing: 0.5,
-                    }}
-                  >
-                    {(player?.name ?? "—")
-                      .split(" ")
-                      .filter(Boolean)
-                      .slice(0, 2)
-                      .map((s) => s[0]?.toUpperCase())
-                      .join("")}
-                  </div>
-                  {headshotUrl ? (
-                    <img
-                      src={headshotUrl}
-                      alt={player?.name ?? ""}
-                      style={{ height: "100%", width: "100%", objectFit: "cover", position: "relative" }}
-                      onError={(e) => {
-                        (e.currentTarget as HTMLImageElement).style.display = "none";
-                      }}
-                      />
-                    ) : null}
+                  {(player?.name ?? "—")
+                    .split(" ")
+                    .filter(Boolean)
+                    .slice(0, 2)
+                    .map((s) => s[0]?.toUpperCase())
+                    .join("")}
                 </div>
-              </div>
+              )}
             </div>
 
             {kpis.map((k) => (
