@@ -384,6 +384,7 @@ const TEAMS: TeamOption[] = [
 
 
 const DEFAULT_TEAM_ID = "40"; // Collingwood
+const DEFAULT_SEASON = 2026;
 
 // Back-compat: accept older abbreviation-style team codes in URLs (?team=COLL or /team/COLL) and coerce to numeric ids.
 const LEGACY_TEAM_CODE_TO_ID: Record<string, string> = {
@@ -2674,7 +2675,7 @@ function AppCore({ routeMode, routeTeamId, routePlayerId }: { routeMode: "team" 
   const navigate = useNavigate();
   const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const [team, setTeam] = useState(() => (routeMode === "team" && routeTeamId ? coerceTeamId(routeTeamId) : (coerceTeamId(searchParams.get("team")) || DEFAULT_TEAM_ID)));
-  const [season, setSeason] = useState(() => Number(searchParams.get("season") || 2026));
+  const [season, setSeason] = useState(() => Number(searchParams.get("season") || DEFAULT_SEASON));
 const [compareTeam, setCompareTeam] = useState<string>(""); // "" = no comparison
 const [comparePanelOpen, setComparePanelOpen] = useState(false);
 const [page, setPage] = useState<"team" | "career">(() => (routeMode === "player" ? "career" : "team"));
@@ -2694,7 +2695,7 @@ useEffect(() => {
     // Sync URL -> state (only when the URL changes)
     const sp = new URLSearchParams(location.search);
 
-    const nextSeason = Number(sp.get("season") || 2026);
+    const nextSeason = Number(sp.get("season") || DEFAULT_SEASON);
     if (Number.isFinite(nextSeason)) {
       setSeason((prev) => (nextSeason !== prev ? nextSeason : prev));
     }
@@ -2724,7 +2725,7 @@ useEffect(() => {
 
   // Keep the URL (path + query) in sync with the in-app state so SharePoint embeds can deep-link reliably.
   useEffect(() => {
-    const baseSeason = Number.isFinite(season) ? season : 2026;
+    const baseSeason = Number.isFinite(season) ? season : DEFAULT_SEASON;
 
     if (page === "team") {
       const nextPath = `/team/${team || DEFAULT_TEAM_ID}`;
@@ -3123,8 +3124,10 @@ return {
       .map((r) => r.season)
       .sort((a, b) => a - b);
     const uniq = Array.from(new Set(ys));
-    return uniq.length > 0 ? uniq.slice(-4) : [2023, 2024, 2025, 2026];
-  }, [teamKpis, clubKey]);
+    const seeded = uniq.length > 0 ? uniq : [DEFAULT_SEASON - 3, DEFAULT_SEASON - 2, DEFAULT_SEASON - 1, DEFAULT_SEASON];
+    const withDefault = Array.from(new Set([...seeded, DEFAULT_SEASON, season])).sort((a, b) => a - b);
+    return withDefault.slice(-4);
+  }, [teamKpis, clubKey, season]);
 
 
 
@@ -3813,7 +3816,7 @@ const kpis = useMemo(() => {
                 <Pill
                   onClick={() => {
                     setTeam(DEFAULT_TEAM_ID);
-                    setSeason(2026);
+                    setSeason(DEFAULT_SEASON);
                   }}
                 >
 
