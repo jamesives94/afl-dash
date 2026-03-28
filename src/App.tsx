@@ -2418,6 +2418,7 @@ return [minFinal, maxFinal];
                   stroke="#111"
                   strokeWidth={2.5}
                   dot={false}
+                  activeDot={false}
                   connectNulls
                   isAnimationActive={false}
                 />
@@ -2429,6 +2430,7 @@ return [minFinal, maxFinal];
                   strokeDasharray="6 4"
                   strokeWidth={2.5}
                   dot={false}
+                  activeDot={false}
                   connectNulls
                   isAnimationActive={false}
                 />
@@ -2441,6 +2443,7 @@ return [minFinal, maxFinal];
                   stroke={teamColor}
                   strokeWidth={3.5}
                   dot={{ r: 4 }}
+                  activeDot={false}
                   connectNulls
                   isAnimationActive={false}
                 >
@@ -2467,7 +2470,8 @@ return [minFinal, maxFinal];
                     stroke={compareColor}
                     strokeDasharray="6 4"
                     strokeWidth={3}
-                    dot={{ r: 3 }}
+                    dot={false}
+                    activeDot={false}
                     connectNulls
                     isAnimationActive={false}
                   />
@@ -2847,22 +2851,20 @@ useEffect(() => {
       if (!target) throw new Error("Career PDF export target not found.");
       const [canvas, { jsPDF }] = await Promise.all([captureElementCanvas(target, 2), import("jspdf")]);
 
-      // Use a tighter custom page to avoid excessive whitespace/frame around the captured row.
-      const margin = 10;
-      const maxPageWidth = 860;
-      const maxPageHeight = 620;
-      const ratio = Math.min(
-        (maxPageWidth - margin * 2) / canvas.width,
-        (maxPageHeight - margin * 2) / canvas.height
-      );
+      // Export onto landscape A4 with generous margins so the chart block fits template "custom image" spaces better.
+      const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const sideMargin = 90;
+      const topMargin = 105;
+      const bottomMargin = 105;
+      const maxWidth = pageWidth - sideMargin * 2;
+      const maxHeight = pageHeight - topMargin - bottomMargin;
+      const ratio = Math.min(maxWidth / canvas.width, maxHeight / canvas.height);
       const renderWidth = canvas.width * ratio;
       const renderHeight = canvas.height * ratio;
-      const pageWidth = renderWidth + margin * 2;
-      const pageHeight = renderHeight + margin * 2;
-      const orientation = pageWidth > pageHeight ? "landscape" : "portrait";
-      const pdf = new jsPDF({ orientation, unit: "pt", format: [pageWidth, pageHeight] });
-      const x = margin;
-      const y = margin;
+      const x = (pageWidth - renderWidth) / 2;
+      const y = topMargin + (maxHeight - renderHeight) / 2;
 
       pdf.addImage(canvas.toDataURL("image/png"), "PNG", x, y, renderWidth, renderHeight, undefined, "FAST");
       pdf.save(`${exportFileBase}-career-projection.pdf`);
