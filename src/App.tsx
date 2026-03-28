@@ -410,7 +410,7 @@ const TEAMS: TeamOption[] = [
 const DEFAULT_TEAM_ID = "40"; // Collingwood
 const DEFAULT_SEASON = 2026;
 const CAREER_TILES_EXPORT_ID = "career-tiles-export-target";
-const CAREER_PROJECTION_EXPORT_ID = "career-projection-export-target";
+const CAREER_PDF_EXPORT_ID = "career-pdf-export-target";
 
 // Back-compat: accept older abbreviation-style team codes in URLs (?team=COLL or /team/COLL) and coerce to numeric ids.
 const LEGACY_TEAM_CODE_TO_ID: Record<string, string> = {
@@ -2177,7 +2177,7 @@ return [minFinal, maxFinal];
       </div>
 
       {/* Main row */}
-      <div style={{ display: "grid", gridTemplateColumns: "0.36fr 0.64fr", gap: 14 }}>
+      <div id={CAREER_PDF_EXPORT_ID} style={{ display: "grid", gridTemplateColumns: "0.36fr 0.64fr", gap: 14 }}>
         {/* Left panel */}
         <Card>
           <SectionTitle title="Advanced Stats" right={<span style={{ fontSize: 11, color: "rgba(0,0,0,0.55)" }}>Percentiles</span>} />
@@ -2283,8 +2283,7 @@ return [minFinal, maxFinal];
         </Card>
 
         {/* Right plot */}
-        <div id={CAREER_PROJECTION_EXPORT_ID}>
-          <Card style={{ minHeight: 520, display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
+        <Card style={{ minHeight: 520, display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
           {logoSrc ? (
             <img
               src={logoSrc}
@@ -2480,8 +2479,7 @@ return [minFinal, maxFinal];
             <div style={{ marginTop: 8, fontSize: 12, color: "rgba(0,0,0,0.55)" }}>
               Shaded band = lower/upper confidence interval (when available). Dashed lines = league avg + top 10% avg rating. Compare series is dashed.
             </div>
-          </Card>
-        </div>
+        </Card>
       </div>
 
       {/* Right compare sidebar (player-level) */}
@@ -2840,25 +2838,30 @@ useEffect(() => {
   const onExportPdf = async () => {
     if (exporting) return;
     if (page !== "career") {
-      window.alert("Switch to Career view to export the Career Projection PDF.");
+      window.alert("Switch to Career view to export the Career PDF.");
       return;
     }
     setExporting("pdf");
     try {
-      const target = document.getElementById(CAREER_PROJECTION_EXPORT_ID);
-      if (!target) throw new Error("Career projection export target not found.");
+      const target = document.getElementById(CAREER_PDF_EXPORT_ID);
+      if (!target) throw new Error("Career PDF export target not found.");
       const [canvas, { jsPDF }] = await Promise.all([captureElementCanvas(target, 2), import("jspdf")]);
-      const orientation = canvas.width > canvas.height ? "landscape" : "portrait";
-      const pdf = new jsPDF({ orientation, unit: "pt", format: "a4" });
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 20;
-      const maxWidth = pageWidth - margin * 2;
-      const maxHeight = pageHeight - margin * 2;
-      const ratio = Math.min(maxWidth / canvas.width, maxHeight / canvas.height);
+
+      // Use a tighter custom page to avoid excessive whitespace/frame around the captured row.
+      const margin = 10;
+      const maxPageWidth = 860;
+      const maxPageHeight = 620;
+      const ratio = Math.min(
+        (maxPageWidth - margin * 2) / canvas.width,
+        (maxPageHeight - margin * 2) / canvas.height
+      );
       const renderWidth = canvas.width * ratio;
       const renderHeight = canvas.height * ratio;
-      const x = (pageWidth - renderWidth) / 2;
+      const pageWidth = renderWidth + margin * 2;
+      const pageHeight = renderHeight + margin * 2;
+      const orientation = pageWidth > pageHeight ? "landscape" : "portrait";
+      const pdf = new jsPDF({ orientation, unit: "pt", format: [pageWidth, pageHeight] });
+      const x = margin;
       const y = margin;
 
       pdf.addImage(canvas.toDataURL("image/png"), "PNG", x, y, renderWidth, renderHeight, undefined, "FAST");
