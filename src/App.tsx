@@ -1,5 +1,5 @@
 // src/App.tsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ResponsiveContainer,
   Area,
@@ -121,6 +121,11 @@ function getLogoUrlByClubName(clubName: string) {
       .replace(/&/g, "and")
       .replace(/[^a-z0-9]+/g, " ")
       .trim();
+  const compact = (s: string) =>
+    (s ?? "")
+      .toLowerCase()
+      .replace(/&/g, "and")
+      .replace(/[^a-z0-9]+/g, "");
 
   const stripSuffix = (s: string) =>
     (s ?? "").replace(/\s+(Lions|Cats|SUNS|Suns|GIANTS|Giants|Swans|Eagles|Bulldogs|Saints|Kangaroos)\s*$/i, "").trim();
@@ -133,24 +138,43 @@ function getLogoUrlByClubName(clubName: string) {
       stripSuffix(normalizeClubName(clubName)),
     ].filter(Boolean))
   ).map(norm);
+  const candidateCompacts = candidates.map(compact);
 
-  // Compare against each imported logo filename (without extension)
+  // Score all possible matches and pick the strongest to avoid false positives
+  // like "Melbourne" winning over "NorthMelbourne".
+  let bestUrl: string | null = null;
+  let bestScore = -1;
+
   for (const [path, url] of Object.entries(LOGOS)) {
     const base = path.split("/").pop() ?? "";
     const stem = base.replace(/\.(png|svg|jpg|jpeg|webp)$/i, "");
     const stemN = norm(stem);
+    const stemCompact = compact(stem);
 
-    // exact normalized match
-    if (candidates.includes(stemN)) return url;
-
-    // token containment match (e.g., "geelong" within "geelong cats")
-    for (const c of candidates) {
+    let score = 0;
+    for (let i = 0; i < candidates.length; i++) {
+      const c = candidates[i];
+      const cCompact = candidateCompacts[i];
       if (!c) continue;
-      if (stemN.includes(c) || c.includes(stemN)) return url;
+
+      // exact normalized text match
+      if (c === stemN) score = Math.max(score, 120);
+      // exact compact match (handles "North Melbourne" vs "NorthMelbourne")
+      if (cCompact && cCompact === stemCompact) score = Math.max(score, 110);
+      // filename contains the candidate phrase/token
+      if (c.length >= 4 && stemN.includes(c)) score = Math.max(score, 80);
+      if (cCompact.length >= 4 && stemCompact.includes(cCompact)) score = Math.max(score, 75);
+      // reverse containment is weaker and only a fallback
+      if (stemN.length >= 6 && c.includes(stemN)) score = Math.max(score, 40);
+    }
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestUrl = url;
     }
   }
 
-  return null;
+  return bestUrl;
 }
 
 // --- Player images from src/players (playerId.png)
@@ -385,6 +409,8 @@ const TEAMS: TeamOption[] = [
 
 const DEFAULT_TEAM_ID = "40"; // Collingwood
 const DEFAULT_SEASON = 2026;
+const CAREER_TILES_EXPORT_ID = "career-tiles-export-target";
+const CAREER_PROJECTION_EXPORT_ID = "career-projection-export-target";
 
 // Back-compat: accept older abbreviation-style team codes in URLs (?team=COLL or /team/COLL) and coerce to numeric ids.
 const LEGACY_TEAM_CODE_TO_ID: Record<string, string> = {
@@ -2009,9 +2035,10 @@ return [minFinal, maxFinal];
       )}
 
       {/* KPI strip */}
-      <Card style={{ overflow: "hidden" }}>
-        <div style={{ position: "relative" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+      <div id={CAREER_TILES_EXPORT_ID}>
+        <Card style={{ overflow: "hidden" }}>
+          <div style={{ position: "relative" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div
                 style={{
@@ -2144,9 +2171,10 @@ return [minFinal, maxFinal];
                 </div>
               ))}
             </div>
+            </div>
           </div>
-        </div>
-      </Card>
+        </Card>
+      </div>
 
       {/* Main row */}
       <div style={{ display: "grid", gridTemplateColumns: "0.36fr 0.64fr", gap: 14 }}>
@@ -2255,7 +2283,8 @@ return [minFinal, maxFinal];
         </Card>
 
         {/* Right plot */}
-        <Card style={{ minHeight: 520, display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
+        <div id={CAREER_PROJECTION_EXPORT_ID}>
+          <Card style={{ minHeight: 520, display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
           {logoSrc ? (
             <img
               src={logoSrc}
@@ -2448,10 +2477,11 @@ return [minFinal, maxFinal];
             </ResponsiveContainer>
           </div>
 
-          <div style={{ marginTop: 8, fontSize: 12, color: "rgba(0,0,0,0.55)" }}>
-            Shaded band = lower/upper confidence interval (when available). Dashed lines = league avg + top 10% avg rating. Compare series is dashed.
-          </div>
-        </Card>
+            <div style={{ marginTop: 8, fontSize: 12, color: "rgba(0,0,0,0.55)" }}>
+              Shaded band = lower/upper confidence interval (when available). Dashed lines = league avg + top 10% avg rating. Compare series is dashed.
+            </div>
+          </Card>
+        </div>
       </div>
 
       {/* Right compare sidebar (player-level) */}
@@ -2677,7 +2707,6 @@ export default function App() {
 function AppCore({ routeMode, routeTeamId, routePlayerId }: { routeMode: "team" | "player"; routeTeamId: string | null; routePlayerId: string | null; }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const exportRef = useRef<HTMLDivElement | null>(null);
   const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const [team, setTeam] = useState(() => (routeMode === "team" && routeTeamId ? coerceTeamId(routeTeamId) : (coerceTeamId(searchParams.get("team")) || DEFAULT_TEAM_ID)));
   const [season, setSeason] = useState(() => Number(searchParams.get("season") || DEFAULT_SEASON));
@@ -2772,16 +2801,13 @@ useEffect(() => {
     return `afl-dash-${clubSlug}-${page}-${season}`;
   }, [clubName, page, season]);
 
-  const captureDashboardCanvas = async () => {
-    const node = exportRef.current;
-    if (!node) throw new Error("Dashboard export target not ready.");
-
+  const captureElementCanvas = async (node: HTMLElement, scale = 2) => {
     const { default: html2canvas } = await import("html2canvas");
     return html2canvas(node, {
       backgroundColor: "#f5f5f6",
       useCORS: true,
       logging: false,
-      scale: Math.max(2, Math.min(3, window.devicePixelRatio || 1)),
+      scale: Math.max(1.5, Math.min(scale, window.devicePixelRatio || 2)),
       windowWidth: node.scrollWidth,
       windowHeight: node.scrollHeight,
     });
@@ -2789,13 +2815,19 @@ useEffect(() => {
 
   const onExportPng = async () => {
     if (exporting) return;
+    if (page !== "career") {
+      window.alert("Switch to Career view to export the snapshot tiles image.");
+      return;
+    }
     setExporting("png");
     try {
-      const canvas = await captureDashboardCanvas();
+      const target = document.getElementById(CAREER_TILES_EXPORT_ID);
+      if (!target) throw new Error("Career tiles export target not found.");
+      const canvas = await captureElementCanvas(target, 2);
       const url = canvas.toDataURL("image/png");
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${exportFileBase}.png`;
+      link.download = `${exportFileBase}-tiles.png`;
       link.click();
     } catch (err) {
       console.error("PNG export failed:", err);
@@ -2807,47 +2839,30 @@ useEffect(() => {
 
   const onExportPdf = async () => {
     if (exporting) return;
+    if (page !== "career") {
+      window.alert("Switch to Career view to export the Career Projection PDF.");
+      return;
+    }
     setExporting("pdf");
     try {
-      const [canvas, { jsPDF }] = await Promise.all([captureDashboardCanvas(), import("jspdf")]);
+      const target = document.getElementById(CAREER_PROJECTION_EXPORT_ID);
+      if (!target) throw new Error("Career projection export target not found.");
+      const [canvas, { jsPDF }] = await Promise.all([captureElementCanvas(target, 2), import("jspdf")]);
       const orientation = canvas.width > canvas.height ? "landscape" : "portrait";
       const pdf = new jsPDF({ orientation, unit: "pt", format: "a4" });
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const sliceHeightPx = Math.max(1, Math.floor((pageHeight * canvas.width) / pageWidth));
+      const margin = 20;
+      const maxWidth = pageWidth - margin * 2;
+      const maxHeight = pageHeight - margin * 2;
+      const ratio = Math.min(maxWidth / canvas.width, maxHeight / canvas.height);
+      const renderWidth = canvas.width * ratio;
+      const renderHeight = canvas.height * ratio;
+      const x = (pageWidth - renderWidth) / 2;
+      const y = margin;
 
-      let offsetY = 0;
-      let pageIndex = 0;
-      while (offsetY < canvas.height) {
-        const currentSliceHeight = Math.min(sliceHeightPx, canvas.height - offsetY);
-        const pageCanvas = document.createElement("canvas");
-        pageCanvas.width = canvas.width;
-        pageCanvas.height = currentSliceHeight;
-        const ctx = pageCanvas.getContext("2d");
-        if (!ctx) throw new Error("Could not create canvas context for PDF export.");
-
-        ctx.fillStyle = "#f5f5f6";
-        ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-        ctx.drawImage(
-          canvas,
-          0,
-          offsetY,
-          canvas.width,
-          currentSliceHeight,
-          0,
-          0,
-          pageCanvas.width,
-          pageCanvas.height
-        );
-
-        if (pageIndex > 0) pdf.addPage();
-        const renderHeight = (currentSliceHeight * pageWidth) / canvas.width;
-        pdf.addImage(pageCanvas.toDataURL("image/png"), "PNG", 0, 0, pageWidth, renderHeight, undefined, "FAST");
-        offsetY += currentSliceHeight;
-        pageIndex += 1;
-      }
-
-      pdf.save(`${exportFileBase}.pdf`);
+      pdf.addImage(canvas.toDataURL("image/png"), "PNG", x, y, renderWidth, renderHeight, undefined, "FAST");
+      pdf.save(`${exportFileBase}-career-projection.pdf`);
     } catch (err) {
       console.error("PDF export failed:", err);
       window.alert("Could not export PDF. Please try again.");
@@ -3853,7 +3868,7 @@ const kpis = useMemo(() => {
 
       <div className="layoutGrid">
 
-        <div className="mainWrap" ref={exportRef}>
+        <div className="mainWrap">
           {/* Header */}
           <div
             style={{
