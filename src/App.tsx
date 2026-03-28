@@ -2653,8 +2653,8 @@ function PlayerRoute() {
 }
 
 // Default export wraps the existing single-page UI in a router so deep links work:
-//   /team/40?season=2025
-//   /player/CD_I1019038?season=2025
+//   /team/40?season=2026
+//   /player/CD_I1019038?season=2026
 export default function App() {
   return (
     <BrowserRouter>
@@ -2674,7 +2674,7 @@ function AppCore({ routeMode, routeTeamId, routePlayerId }: { routeMode: "team" 
   const navigate = useNavigate();
   const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const [team, setTeam] = useState(() => (routeMode === "team" && routeTeamId ? coerceTeamId(routeTeamId) : (coerceTeamId(searchParams.get("team")) || DEFAULT_TEAM_ID)));
-  const [season, setSeason] = useState(() => Number(searchParams.get("season") || 2025));
+  const [season, setSeason] = useState(() => Number(searchParams.get("season") || 2026));
 const [compareTeam, setCompareTeam] = useState<string>(""); // "" = no comparison
 const [comparePanelOpen, setComparePanelOpen] = useState(false);
 const [page, setPage] = useState<"team" | "career">(() => (routeMode === "player" ? "career" : "team"));
@@ -2694,7 +2694,7 @@ useEffect(() => {
     // Sync URL -> state (only when the URL changes)
     const sp = new URLSearchParams(location.search);
 
-    const nextSeason = Number(sp.get("season") || 2025);
+    const nextSeason = Number(sp.get("season") || 2026);
     if (Number.isFinite(nextSeason)) {
       setSeason((prev) => (nextSeason !== prev ? nextSeason : prev));
     }
@@ -2724,7 +2724,7 @@ useEffect(() => {
 
   // Keep the URL (path + query) in sync with the in-app state so SharePoint embeds can deep-link reliably.
   useEffect(() => {
-    const baseSeason = Number.isFinite(season) ? season : 2025;
+    const baseSeason = Number.isFinite(season) ? season : 2026;
 
     if (page === "team") {
       const nextPath = `/team/${team || DEFAULT_TEAM_ID}`;
@@ -3813,7 +3813,7 @@ const kpis = useMemo(() => {
                 <Pill
                   onClick={() => {
                     setTeam(DEFAULT_TEAM_ID);
-                    setSeason(2025);
+                    setSeason(2026);
                   }}
                 >
 
