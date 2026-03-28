@@ -1122,7 +1122,6 @@ function CareerProjectionDashboard({
 
 
   const headshotUrl = player?.id ? getPlayerImgUrl(player.id, player.name) : null;
-  const compareHeadshotUrl = comparePlayer?.id ? getPlayerImgUrl(comparePlayer.id, comparePlayer.name) : null;
 
   // ---------- Build trajectories ----------
   function buildTrajectoryForId(id: string) {
@@ -2111,14 +2110,15 @@ return [minFinal, maxFinal];
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(12, minmax(0, 1fr))",
+              gridTemplateColumns: "repeat(10, minmax(0, 1fr))",
               gap: 10,
               alignItems: "stretch",
             }}
           >
             <div
+              title={careerProjectionsLastUpdated ? `Last updated: ${careerProjectionsLastUpdated}` : undefined}
               style={{
-                gridColumn: "span 4",
+                gridColumn: "span 2",
                 borderRadius: 16,
                 padding: "12px 12px",
                 background: "rgba(245,245,246,0.7)",
@@ -2126,10 +2126,10 @@ return [minFinal, maxFinal];
                 minHeight: 112,
                 display: "flex",
                 alignItems: "center",
-                gap: 12,
+                justifyContent: "center",
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
                 <div
                   style={{
                     height: 78,
@@ -2170,64 +2170,9 @@ return [minFinal, maxFinal];
                       onError={(e) => {
                         (e.currentTarget as HTMLImageElement).style.display = "none";
                       }}
-                    />
-                  ) : null}
-                </div>
-
-                {comparePlayer ? (
-                  <div
-                    style={{
-                      height: 78,
-                      width: 78,
-                      borderRadius: 22,
-                      overflow: "hidden",
-                      position: "relative",
-                      border: "1px solid rgba(0,0,0,0.10)",
-                      background: "rgba(255,255,255,0.8)",
-                    }}
-                  >
-                    <div
-                      style={{
-                        position: "absolute",
-                        inset: 0,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        background: "rgba(0,0,0,0.06)",
-                        color: "rgba(0,0,0,0.55)",
-                        fontSize: 12,
-                        fontWeight: 700,
-                        letterSpacing: 0.5,
-                      }}
-                    >
-                      {(comparePlayer?.name ?? "—")
-                        .split(" ")
-                        .filter(Boolean)
-                        .slice(0, 2)
-                        .map((s) => s[0]?.toUpperCase())
-                        .join("")}
-                    </div>
-                    {compareHeadshotUrl ? (
-                      <img
-                        src={compareHeadshotUrl}
-                        alt={comparePlayer?.name ?? ""}
-                        style={{ height: "100%", width: "100%", objectFit: "cover", position: "relative" }}
-                        onError={(e) => {
-                          (e.currentTarget as HTMLImageElement).style.display = "none";
-                        }}
                       />
                     ) : null}
-                  </div>
-                ) : null}
-              </div>
-
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 950, color: "#111" }}>Overview</div>
-                {(comparePlayer || careerProjectionsLastUpdated) ? (
-                  <div style={{ fontSize: 12, color: "rgba(0,0,0,0.55)", marginTop: 2 }}>
-                    {comparePlayer ? `Comparing to ${comparePlayer.name}` : `Last updated: ${careerProjectionsLastUpdated}`}
-                  </div>
-                ) : null}
+                </div>
               </div>
             </div>
 
