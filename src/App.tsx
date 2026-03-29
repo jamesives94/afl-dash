@@ -1308,6 +1308,34 @@ function CareerProjectionDashboard({
     }));
   }, [trajectory]);
 
+  const ratingBenchmarks = useMemo(() => {
+    const seasonSet = new Set((trajectory as any[]).map((d) => d.season));
+    if (!seasonSet.size) return { leagueAvg: null as number | null, top10Avg: null as number | null };
+
+    const isActualType = (t: any) => {
+      const x = String(t ?? "").toLowerCase();
+      return x === "actual" || x === "hist" || x === "history";
+    };
+
+    const values: number[] = [];
+    for (const r of careerProjections) {
+      if (!seasonSet.has(r.Season)) continue;
+      if (isActualType((r as any).Type)) continue;
+      const v = typeof r.estimate === "number" ? r.estimate : Number(String(r.estimate ?? "").trim());
+      if (Number.isFinite(v)) values.push(v);
+    }
+
+    if (!values.length) return { leagueAvg: null as number | null, top10Avg: null as number | null };
+
+    const leagueAvg = values.reduce((a, b) => a + b, 0) / values.length;
+    const sorted = [...values].sort((a, b) => a - b);
+    const startIdx = Math.max(0, Math.floor(0.9 * sorted.length));
+    const topSlice = sorted.slice(startIdx);
+    const top10Avg = topSlice.reduce((a, b) => a + b, 0) / topSlice.length;
+
+    return { leagueAvg, top10Avg };
+  }, [careerProjections, trajectory]);
+
   // Dynamic Y-axis domain: min(lower) - 3, max(upper) + 3 (includes compare series when present)
   const yDomain = useMemo<[number, number]>(() => {
     const lows: number[] = [];
@@ -1341,6 +1369,16 @@ function CareerProjectionDashboard({
     let min = minBase - 3;
     let max = maxBase + 3;
 
+    const top10 = ratingBenchmarks.top10Avg;
+    if (typeof top10 === "number" && Number.isFinite(top10)) {
+      // Always include the Top 10% benchmark in-range.
+      max = Math.max(max, top10);
+      // If Top 10% is the upper bound driver, ensure +1 rating point headroom.
+      if (top10 >= maxBase - 1e-6) {
+        max = Math.max(max, top10 + 1);
+      }
+    }
+
     if (!Number.isFinite(min) || !Number.isFinite(max)) return [4, 20];
     if (min === max) {
       min -= 1;
@@ -1360,35 +1398,7 @@ const minFinal = Math.max(1, minRounded);
 const maxFinal = Math.max(minFinal + 1, maxRounded);
 
 return [minFinal, maxFinal];
-  }, [chartTrajectory]);
-
-  const ratingBenchmarks = useMemo(() => {
-    const seasonSet = new Set((trajectory as any[]).map((d) => d.season));
-    if (!seasonSet.size) return { leagueAvg: null as number | null, top10Avg: null as number | null };
-
-    const isActualType = (t: any) => {
-      const x = String(t ?? "").toLowerCase();
-      return x === "actual" || x === "hist" || x === "history";
-    };
-
-    const values: number[] = [];
-    for (const r of careerProjections) {
-      if (!seasonSet.has(r.Season)) continue;
-      if (isActualType((r as any).Type)) continue;
-      const v = typeof r.estimate === "number" ? r.estimate : Number(String(r.estimate ?? "").trim());
-      if (Number.isFinite(v)) values.push(v);
-    }
-
-    if (!values.length) return { leagueAvg: null as number | null, top10Avg: null as number | null };
-
-    const leagueAvg = values.reduce((a, b) => a + b, 0) / values.length;
-    const sorted = [...values].sort((a, b) => a - b);
-    const startIdx = Math.max(0, Math.floor(0.9 * sorted.length));
-    const topSlice = sorted.slice(startIdx);
-    const top10Avg = topSlice.reduce((a, b) => a + b, 0) / topSlice.length;
-
-    return { leagueAvg, top10Avg };
-  }, [careerProjections, trajectory]);
+  }, [chartTrajectory, ratingBenchmarks.top10Avg]);
 
 
   // ---------- KPI helpers ----------
