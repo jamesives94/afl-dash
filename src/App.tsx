@@ -2076,7 +2076,7 @@ return [minFinal, maxFinal];
                               fontSize: 12,
                             }}
                           >
-                            No adj_1…adj_10
+                            *No future seasons
                           </div>
                         ) : (
                           <ResponsiveContainer width="100%" height="100%">
