@@ -446,7 +446,10 @@ const DEFAULT_TEAM_ID = "40"; // Collingwood
 const DEFAULT_SEASON = 2026;
 const CAREER_TILES_EXPORT_ID = "career-tiles-export-target";
 const CAREER_PDF_EXPORT_ID = "career-pdf-export-target";
-const CAREER_EXPORT_CAPTURE_WIDTH = 1120;
+const CAREER_EXPORT_CAPTURE_WIDTH = 1088;
+const CAREER_EXPORT_CAPTURE_MIN_HEIGHT = 1288;
+const CAREER_EXPORT_CAPTURE_SPLIT = "0.30fr 0.70fr";
+const CAREER_EXPORT_CAPTURE_ZOOM = 0.94;
 
 // Back-compat: accept older abbreviation-style team codes in URLs (?team=COLL or /team/COLL) and coerce to numeric ids.
 const LEGACY_TEAM_CODE_TO_ID: Record<string, string> = {
@@ -2824,13 +2827,19 @@ useEffect(() => {
   const captureCareerCanvas = async (target: HTMLElement, scale = 2) => {
     const prevWidth = target.style.width;
     const prevMaxWidth = target.style.maxWidth;
+    const prevMinHeight = target.style.minHeight;
+    const prevGridTemplateColumns = target.style.gridTemplateColumns;
     const prevMargin = target.style.margin;
     const prevGap = target.style.gap;
+    const prevZoom = target.style.getPropertyValue("zoom");
 
     target.style.width = `${CAREER_EXPORT_CAPTURE_WIDTH}px`;
     target.style.maxWidth = `${CAREER_EXPORT_CAPTURE_WIDTH}px`;
+    target.style.minHeight = `${CAREER_EXPORT_CAPTURE_MIN_HEIGHT}px`;
+    target.style.gridTemplateColumns = CAREER_EXPORT_CAPTURE_SPLIT;
     target.style.margin = "0 auto";
-    target.style.gap = "10px";
+    target.style.gap = "12px";
+    target.style.setProperty("zoom", String(CAREER_EXPORT_CAPTURE_ZOOM));
 
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
@@ -2839,8 +2848,15 @@ useEffect(() => {
     } finally {
       target.style.width = prevWidth;
       target.style.maxWidth = prevMaxWidth;
+      target.style.minHeight = prevMinHeight;
+      target.style.gridTemplateColumns = prevGridTemplateColumns;
       target.style.margin = prevMargin;
       target.style.gap = prevGap;
+      if (prevZoom) {
+        target.style.setProperty("zoom", prevZoom);
+      } else {
+        target.style.removeProperty("zoom");
+      }
     }
   };
 
@@ -2880,13 +2896,17 @@ useEffect(() => {
       if (!target) throw new Error("Career PDF export target not found.");
       const [canvas, { jsPDF }] = await Promise.all([captureCareerCanvas(target, 2), import("jspdf")]);
 
-      // Export onto landscape A4 with tighter margins for better fit in report image placeholders.
-      const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+      // Export to a near 1088x1288 portrait frame for better report placeholder fit.
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "pt",
+        format: [CAREER_EXPORT_CAPTURE_WIDTH, CAREER_EXPORT_CAPTURE_MIN_HEIGHT],
+      });
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const sideMargin = 44;
-      const topMargin = 34;
-      const bottomMargin = 34;
+      const sideMargin = 26;
+      const topMargin = 24;
+      const bottomMargin = 24;
       const maxWidth = pageWidth - sideMargin * 2;
       const maxHeight = pageHeight - topMargin - bottomMargin;
       const ratio = Math.min(maxWidth / canvas.width, maxHeight / canvas.height);
