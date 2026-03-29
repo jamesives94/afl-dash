@@ -2726,6 +2726,7 @@ const [comparePanelOpen, setComparePanelOpen] = useState(false);
 const [exporting, setExporting] = useState<"png" | "pdf" | null>(null);
 const [page, setPage] = useState<"team" | "career">(() => (routeMode === "player" ? "career" : "team"));
 const [currentPlayerId, setCurrentPlayerId] = useState<string>(() => (routeMode === "player" ? normalizePlayerId(routePlayerId) : ""));
+const [exportPlayerName, setExportPlayerName] = useState<string>("");
 const [playerTeamResolved, setPlayerTeamResolved] = useState(false);
 useEffect(() => {
   setCompareTeam("");
@@ -2805,12 +2806,17 @@ useEffect(() => {
 
   const logoSrc = useMemo(() => getLogoUrlByClubName(clubName), [clubName]);
   const exportFileBase = useMemo(() => {
-    const clubSlug = clubName
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "") || "club";
-    return `afl-dash-${clubSlug}-${page}-${season}`;
-  }, [clubName, page, season]);
+    const toSlug = (v: string, fallback: string) =>
+      v
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "") || fallback;
+
+    const clubSlug = toSlug(clubName, "club");
+    const playerSlug = toSlug(exportPlayerName || normalizePlayerId(currentPlayerId), "player");
+    const subjectSlug = page === "career" ? playerSlug : clubSlug;
+    return `afl-dash-${subjectSlug}-${page}-${season}`;
+  }, [clubName, page, season, exportPlayerName, currentPlayerId]);
 
   const captureElementCanvas = async (node: HTMLElement, scale = 2) => {
     const { default: html2canvas } = await import("html2canvas");
@@ -2943,6 +2949,31 @@ useEffect(() => {
   const [careerProjectionsLastUpdated, setCareerProjectionsLastUpdated] = useState<string>("");
   const [playerStatsAgg, setPlayerStatsAgg] = useState<PlayerStatsAggRow[]>([]);
   const [comparablePlayers, setComparablePlayers] = useState<ComparablePlayerRow[]>([]);
+
+  useEffect(() => {
+    if (page !== "career") {
+      setExportPlayerName("");
+      return;
+    }
+    const pid = normalizePlayerId(currentPlayerId);
+    if (!pid) {
+      setExportPlayerName("");
+      return;
+    }
+
+    const rosterRow =
+      rosterPlayers.find((r) => normalizePlayerId(r.providerId) === pid && r.season === season) ??
+      rosterPlayers.find((r) => normalizePlayerId(r.providerId) === pid);
+    const rosterName = toTrimmedString(rosterRow?.player_name);
+
+    const careerRow =
+      careerProjections.find((r) => normalizePlayerId(r.SourceproviderId) === pid && r.SourceSeason === season) ??
+      careerProjections.find((r) => normalizePlayerId(r.SourceproviderId) === pid);
+    const careerName = toTrimmedString(careerRow?.SourcePlayer);
+
+    const nextName = rosterName || careerName || "";
+    setExportPlayerName((prev) => (prev === nextName ? prev : nextName));
+  }, [page, currentPlayerId, season, rosterPlayers, careerProjections]);
 
   // Keep teamId in sync with the selected player (based on roster_players for the chosen season).
   useEffect(() => {
