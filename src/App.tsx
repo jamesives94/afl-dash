@@ -177,8 +177,8 @@ function getLogoUrlByClubName(clubName: string) {
   return bestUrl;
 }
 
-// --- Player images from src/players (supports id/name + common image extensions)
-const PLAYER_IMAGES = import.meta.glob("/src/players/*.{png,jpg,jpeg,webp}", {
+// --- Player images from src/players (numeric player IDs only)
+const PLAYER_IMAGES = import.meta.glob("/src/players/[0-9]*.{png,jpg,jpeg,webp}", {
   eager: true,
   query: "?url",
   import: "default",
