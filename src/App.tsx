@@ -2107,12 +2107,12 @@ return [minFinal, maxFinal];
 
       {/* KPI strip */}
       <div id={CAREER_TILES_EXPORT_ID}>
-        <Card style={{ overflow: "hidden" }}>
+        <Card style={{ overflow: "hidden", padding: 8 }}>
           <div
             style={{
               display: "grid",
               gridTemplateColumns: "minmax(122px, 0.72fr) repeat(4, minmax(0, 1fr))",
-              gap: 10,
+              gap: 8,
               alignItems: "stretch",
             }}
           >
@@ -2120,10 +2120,10 @@ return [minFinal, maxFinal];
               title={careerProjectionsLastUpdated ? `Last updated: ${careerProjectionsLastUpdated}` : undefined}
               style={{
                 borderRadius: 16,
-                padding: "8px 12px",
+                padding: "2px 10px",
                 background: "rgba(245,245,246,0.7)",
                 border: "1px solid rgba(0,0,0,0.08)",
-                minHeight: 80,
+                minHeight: 56,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -2162,10 +2162,10 @@ return [minFinal, maxFinal];
                 key={k.label}
                 style={{
                   borderRadius: 16,
-                  padding: "8px 12px",
+                  padding: "2px 10px",
                   background: "rgba(245,245,246,0.7)",
                   border: "1px solid rgba(0,0,0,0.08)",
-                  minHeight: 80,
+                  minHeight: 56,
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "center",
