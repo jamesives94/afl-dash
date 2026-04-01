@@ -1600,22 +1600,28 @@ return [minFinal, maxFinal];
         const ageNum = typeof row?.age === "number" && Number.isFinite(row.age) ? Math.round(row.age) : null;
         return ageNum != null ? `${ageNum}yr` : null;
       })();
-      const hasVitals = (r: CareerProjectionRow) => !!(toTrimmedString(r.Height) || toTrimmedString(r.Age) || toTrimmedString(r.Drafted));
+      const draftLabel = (r: CareerProjectionRow): string | null => {
+        const drafted = toPresentString(r.Drafted);
+        if (drafted) return drafted;
+        const draftYear = toPresentString(r.draftYear);
+        return draftYear ? `Draft ${draftYear}` : null;
+      };
+      const vitalsScore = (r: CareerProjectionRow) =>
+        [toPresentString(r.Height), toPresentString(r.Age), draftLabel(r)].filter(Boolean).length;
       const seasonMatch = (r: CareerProjectionRow) => seasonFixed != null && (r.SourceSeason === seasonFixed || r.Season === seasonFixed);
+      const rankRows = (arr: CareerProjectionRow[]) =>
+        [...arr].sort((a, b) => {
+          const scoreDiff = vitalsScore(b) - vitalsScore(a);
+          if (scoreDiff !== 0) return scoreDiff;
+          return (a.Horizon ?? Number.MAX_SAFE_INTEGER) - (b.Horizon ?? Number.MAX_SAFE_INTEGER);
+        });
 
-      const pick =
-        rows.find((r) => seasonMatch(r) && hasVitals(r)) ??
-        rows.find((r) => hasVitals(r)) ??
-        rows.find((r) => seasonMatch(r)) ??
-        rows[0];
-
-      const draftYear = toPresentString(pick?.draftYear);
-      const draftYearFallback = draftYear ? `Draft ${draftYear}` : null;
+      const pick = rankRows(rows.filter((r) => seasonMatch(r)))[0] ?? rankRows(rows)[0];
 
       return {
         height: toPresentString(pick?.Height),
         age: toPresentString(pick?.Age) || rosterAge || null,
-        drafted: toPresentString(pick?.Drafted) || draftYearFallback,
+        drafted: pick ? draftLabel(pick) : null,
       };
     })();
 
@@ -3289,10 +3295,59 @@ return {
                   r["Season 90"]
               ),
               Games: toNumberOrNull(r["Games"] ?? r["Games100"] ?? r["Games_100"] ?? r["Games100+"] ?? r["Games100Plus"] ?? r["Games Probability"] ?? r["Games_prob"] ?? r["GamesProb"]),
-              Height: toTrimmedString(r["Height"] ?? r["height"] ?? r["Height_cm"] ?? r["height_cm"] ?? r["height.cm"] ?? r["Height (cm)"]) || null,
-              Age: toTrimmedString(r["Age"] ?? r["age"] ?? r["Age_Season"] ?? r["age.season"] ?? r["age_season"]) || null,
-              Drafted: toTrimmedString(r["Drafted"] ?? r["drafted"] ?? r["Draft"] ?? r["draft"]) || null,
-              draftYear: toTrimmedString(r["draftYear"] ?? r["DraftYear"] ?? r["draft_year"] ?? r["Draft Year"]) || null,
+              Height:
+                toPresentString(
+                  r["Height"] ??
+                    r["height"] ??
+                    r["Height.y"] ??
+                    r["height.y"] ??
+                    r["Height_x"] ??
+                    r["Height.x"] ??
+                    r["height_x"] ??
+                    r["height.x"] ??
+                    r["Height_cm"] ??
+                    r["height_cm"] ??
+                    r["height.cm"] ??
+                    r["Height (cm)"]
+                ) || null,
+              Age:
+                toPresentString(
+                  r["Age"] ??
+                    r["age"] ??
+                    r["Age.y"] ??
+                    r["age.y"] ??
+                    r["Age_x"] ??
+                    r["Age.x"] ??
+                    r["age_x"] ??
+                    r["age.x"] ??
+                    r["Age_Season"] ??
+                    r["age.season"] ??
+                    r["age_season"]
+                ) || null,
+              Drafted:
+                toPresentString(
+                  r["Drafted"] ??
+                    r["drafted"] ??
+                    r["Drafted.y"] ??
+                    r["drafted.y"] ??
+                    r["Drafted_x"] ??
+                    r["Drafted.x"] ??
+                    r["drafted_x"] ??
+                    r["drafted.x"] ??
+                    r["Draft"] ??
+                    r["draft"]
+                ) || null,
+              draftYear:
+                toPresentString(
+                  r["draftYear"] ??
+                    r["DraftYear"] ??
+                    r["draftYear.y"] ??
+                    r["DraftYear.y"] ??
+                    r["draftYear_x"] ??
+                    r["DraftYear_x"] ??
+                    r["draft_year"] ??
+                    r["Draft Year"]
+                ) || null,
                             Type: toTrimmedString(r["Type"]) || undefined,
               team: toTrimmedString(r["team"]) || undefined,
               rank_all: toNumberOrNull(r["rank_all"] ?? r["Rank_all"] ?? r["rankAll"] ?? r["rank_all "]),
