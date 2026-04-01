@@ -446,6 +446,7 @@ const DEFAULT_TEAM_ID = "40"; // Collingwood
 const DEFAULT_SEASON = 2026;
 const CAREER_TILES_EXPORT_ID = "career-tiles-export-target";
 const CAREER_PDF_EXPORT_ID = "career-pdf-export-target";
+const CAREER_MAIN_EXPORT_ID = "career-main-export-target";
 const CAREER_EXPORT_CAPTURE_WIDTH = 1088;
 const CAREER_EXPORT_CAPTURE_MIN_HEIGHT = 920;
 const CAREER_EXPORT_CAPTURE_SPLIT = "0.30fr 0.70fr";
@@ -2118,6 +2119,7 @@ return [minFinal, maxFinal];
         </div>
       )}
 
+      <div id={CAREER_PDF_EXPORT_ID} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       {/* KPI strip */}
       <div id={CAREER_TILES_EXPORT_ID}>
         <Card style={{ overflow: "hidden", padding: 8 }}>
@@ -2196,7 +2198,7 @@ return [minFinal, maxFinal];
       </div>
 
       {/* Main row */}
-      <div id={CAREER_PDF_EXPORT_ID} style={{ display: "grid", gridTemplateColumns: "0.36fr 0.64fr", gap: 14 }}>
+      <div id={CAREER_MAIN_EXPORT_ID} style={{ display: "grid", gridTemplateColumns: "0.36fr 0.64fr", gap: 14 }}>
         {/* Left panel */}
         <Card>
           <SectionTitle title="Advanced Stats" right={<span style={{ fontSize: 11, color: "rgba(0,0,0,0.55)" }}>Percentiles</span>} />
@@ -2503,6 +2505,7 @@ return [minFinal, maxFinal];
               Shaded band = lower/upper confidence interval (when available). Dashed lines = league avg + top 10% avg rating. Compare series is dashed.
             </div>
         </Card>
+      </div>
       </div>
 
       {/* Right compare sidebar (player-level) */}
@@ -2843,19 +2846,24 @@ useEffect(() => {
   const captureCareerCanvas = async (target: HTMLElement, scale = 2) => {
     const prevWidth = target.style.width;
     const prevMaxWidth = target.style.maxWidth;
-    const prevMinHeight = target.style.minHeight;
-    const prevGridTemplateColumns = target.style.gridTemplateColumns;
     const prevMargin = target.style.margin;
     const prevGap = target.style.gap;
     const prevZoom = target.style.getPropertyValue("zoom");
+    const mainRow = target.querySelector<HTMLElement>(`#${CAREER_MAIN_EXPORT_ID}`);
+    const prevMainMinHeight = mainRow?.style.minHeight ?? "";
+    const prevMainGridTemplateColumns = mainRow?.style.gridTemplateColumns ?? "";
+    const prevMainGap = mainRow?.style.gap ?? "";
 
     target.style.width = `${CAREER_EXPORT_CAPTURE_WIDTH}px`;
     target.style.maxWidth = `${CAREER_EXPORT_CAPTURE_WIDTH}px`;
-    target.style.minHeight = `${CAREER_EXPORT_CAPTURE_MIN_HEIGHT}px`;
-    target.style.gridTemplateColumns = CAREER_EXPORT_CAPTURE_SPLIT;
     target.style.margin = "0 auto";
-    target.style.gap = "12px";
+    target.style.gap = "10px";
     target.style.setProperty("zoom", String(CAREER_EXPORT_CAPTURE_ZOOM));
+    if (mainRow) {
+      mainRow.style.minHeight = `${CAREER_EXPORT_CAPTURE_MIN_HEIGHT}px`;
+      mainRow.style.gridTemplateColumns = CAREER_EXPORT_CAPTURE_SPLIT;
+      mainRow.style.gap = "12px";
+    }
 
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
@@ -2864,10 +2872,13 @@ useEffect(() => {
     } finally {
       target.style.width = prevWidth;
       target.style.maxWidth = prevMaxWidth;
-      target.style.minHeight = prevMinHeight;
-      target.style.gridTemplateColumns = prevGridTemplateColumns;
       target.style.margin = prevMargin;
       target.style.gap = prevGap;
+      if (mainRow) {
+        mainRow.style.minHeight = prevMainMinHeight;
+        mainRow.style.gridTemplateColumns = prevMainGridTemplateColumns;
+        mainRow.style.gap = prevMainGap;
+      }
       if (prevZoom) {
         target.style.setProperty("zoom", prevZoom);
       } else {
