@@ -1570,16 +1570,27 @@ return [minFinal, maxFinal];
     const totalAll = rankInfo?.totalAll ?? null;
     const totalPos = rankInfo?.totalPos ?? null;
 
-    // Player vitals come from career_projections.csv (Height / Age / Drafted columns)
+    // Player vitals come from career_projections.csv (Height / Age / Drafted columns).
+    // Match IDs using the same normalization as the rest of the dashboard, then
+    // prefer the selected snapshot season when available.
     const vitals = (() => {
-      const pid = player?.id ?? null;
+      const pid = normalizePlayerId(player?.id ?? "");
       if (!pid) return { height: null as string | null, age: null as string | null, drafted: null as string | null };
-      const rows = careerProjections.filter((r) => r.SourceproviderId === pid);
-      const pick = rows.find((r) => r.Height || r.Age || r.Drafted) ?? rows[0];
+
+      const rows = careerProjections.filter((r) => normalizePlayerId(r.SourceproviderId) === pid);
+      const hasVitals = (r: CareerProjectionRow) => !!(toTrimmedString(r.Height) || toTrimmedString(r.Age) || toTrimmedString(r.Drafted));
+      const seasonMatch = (r: CareerProjectionRow) => seasonFixed != null && (r.SourceSeason === seasonFixed || r.Season === seasonFixed);
+
+      const pick =
+        rows.find((r) => seasonMatch(r) && hasVitals(r)) ??
+        rows.find((r) => hasVitals(r)) ??
+        rows.find((r) => seasonMatch(r)) ??
+        rows[0];
+
       return {
-        height: (pick?.Height ?? null) as string | null,
-        age: (pick?.Age ?? null) as string | null,
-        drafted: (pick?.Drafted ?? null) as string | null,
+        height: toTrimmedString(pick?.Height) || null,
+        age: toTrimmedString(pick?.Age) || null,
+        drafted: toTrimmedString(pick?.Drafted) || null,
       };
     })();
 
@@ -1605,7 +1616,7 @@ return [minFinal, maxFinal];
         sub: `${vitals.age ? `Age ${vitals.age}` : "Age —"} • ${vitals.drafted ?? "Draft —"}`,
       },
     ];
-  }, [lastActual, nextProj, rankInfo, primaryTraj, outlook]);
+  }, [lastActual, nextProj, rankInfo, primaryTraj, outlook, careerProjections, player?.id, seasonFixed]);
 
   // ----------------------------------------
   // Advanced stats (left panel)
