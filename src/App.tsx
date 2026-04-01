@@ -565,6 +565,14 @@ function toTrimmedString(x: any): string {
   return String(x ?? "").trim();
 }
 
+function toPresentString(x: any): string | null {
+  const s = toTrimmedString(x);
+  if (!s) return null;
+  const lower = s.toLowerCase();
+  if (lower === "na" || lower === "n/a" || lower === "null" || lower === "nan" || lower === "undefined" || lower === "-") return null;
+  return s;
+}
+
 function normalizePlayerId(x: any): string {
   // Canonicalise IDs so deep links work even if some CSVs store IDs like "CD_I1004757"
   // while URLs (and other files) use just "1004757".
@@ -1601,14 +1609,13 @@ return [minFinal, maxFinal];
         rows.find((r) => seasonMatch(r)) ??
         rows[0];
 
-      const draftYear = toTrimmedString(pick?.draftYear);
-      const sourceSeasonStr = pick?.SourceSeason != null ? String(pick.SourceSeason) : seasonFixed != null ? String(seasonFixed) : "";
-      const draftYearFallback = draftYear && draftYear !== sourceSeasonStr ? `Draft ${draftYear}` : null;
+      const draftYear = toPresentString(pick?.draftYear);
+      const draftYearFallback = draftYear ? `Draft ${draftYear}` : null;
 
       return {
-        height: toTrimmedString(pick?.Height) || null,
-        age: toTrimmedString(pick?.Age) || rosterAge || null,
-        drafted: toTrimmedString(pick?.Drafted) || draftYearFallback,
+        height: toPresentString(pick?.Height),
+        age: toPresentString(pick?.Age) || rosterAge || null,
+        drafted: toPresentString(pick?.Drafted) || draftYearFallback,
       };
     })();
 
@@ -2215,11 +2222,42 @@ return [minFinal, maxFinal];
                   justifyContent: "center",
                 }}
               >
+                {(() => {
+                  return (
+                    <>
                 <div style={{ fontSize: 11, fontWeight: 900, color: "rgba(0,0,0,0.55)" }}>{k.label}</div>
-                <div style={{ fontSize: 18, fontWeight: 950, letterSpacing: -0.2, marginTop: 6, color: "#111" }}>{k.value}</div>
+                <div
+                  style={{
+                    fontSize: 18,
+                    fontWeight: 950,
+                    letterSpacing: -0.2,
+                    marginTop: 6,
+                    color: "#111",
+                    whiteSpace: "normal",
+                    overflow: "visible",
+                    textOverflow: "clip",
+                  }}
+                >
+                  {k.value}
+                </div>
                 {k.sub ? (
-                  <div style={{ fontSize: 11, color: "rgba(0,0,0,0.50)", marginTop: 4, lineHeight: 1.2 }}>{k.sub}</div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: "rgba(0,0,0,0.50)",
+                      marginTop: 4,
+                      lineHeight: 1.2,
+                      whiteSpace: "normal",
+                      overflow: "visible",
+                      textOverflow: "clip",
+                    }}
+                  >
+                    {k.sub}
+                  </div>
                 ) : null}
+                    </>
+                  );
+                })()}
               </div>
             ))}
           </div>
