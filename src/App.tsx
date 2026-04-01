@@ -348,6 +348,7 @@ type CareerProjectionRow = {
   Height?: string | null;
   Age?: string | null;
   Drafted?: string | null;
+  draftYear?: string | null;
 
   // Optional columns that may exist in your CSV (safe to ignore if missing)
   Type?: string;
@@ -971,6 +972,8 @@ function CareerProjectionDashboard({
   comparablePlayers,
   playerStatsAgg,
   playerProjections,
+  rosterPlayers,
+  selectedSeason,
   initialPlayerId,
   onPlayerIdChange,
 }: {
@@ -980,6 +983,8 @@ function CareerProjectionDashboard({
   comparablePlayers: ComparablePlayerRow[];
   playerStatsAgg: PlayerStatsAggRow[];
   playerProjections: PlayerProjectionRow[];
+  rosterPlayers: RosterPlayerRow[];
+  selectedSeason: number;
   initialPlayerId?: string;
   onPlayerIdChange?: (id: string) => void;
 }) {
@@ -1578,6 +1583,15 @@ return [minFinal, maxFinal];
       if (!pid) return { height: null as string | null, age: null as string | null, drafted: null as string | null };
 
       const rows = careerProjections.filter((r) => normalizePlayerId(r.SourceproviderId) === pid);
+      const rosterAge = (() => {
+        const rosterRows = rosterPlayers.filter((r) => normalizePlayerId(r.providerId) === pid);
+        if (!rosterRows.length) return null as string | null;
+        const row =
+          rosterRows.find((r) => r.season === selectedSeason) ??
+          rosterRows.reduce((best, r) => (Math.abs(r.season - selectedSeason) < Math.abs(best.season - selectedSeason) ? r : best), rosterRows[0]);
+        const ageNum = typeof row?.age === "number" && Number.isFinite(row.age) ? Math.round(row.age) : null;
+        return ageNum != null ? `${ageNum}yr` : null;
+      })();
       const hasVitals = (r: CareerProjectionRow) => !!(toTrimmedString(r.Height) || toTrimmedString(r.Age) || toTrimmedString(r.Drafted));
       const seasonMatch = (r: CareerProjectionRow) => seasonFixed != null && (r.SourceSeason === seasonFixed || r.Season === seasonFixed);
 
@@ -1587,10 +1601,14 @@ return [minFinal, maxFinal];
         rows.find((r) => seasonMatch(r)) ??
         rows[0];
 
+      const draftYear = toTrimmedString(pick?.draftYear);
+      const sourceSeasonStr = pick?.SourceSeason != null ? String(pick.SourceSeason) : seasonFixed != null ? String(seasonFixed) : "";
+      const draftYearFallback = draftYear && draftYear !== sourceSeasonStr ? `Draft ${draftYear}` : null;
+
       return {
         height: toTrimmedString(pick?.Height) || null,
-        age: toTrimmedString(pick?.Age) || null,
-        drafted: toTrimmedString(pick?.Drafted) || null,
+        age: toTrimmedString(pick?.Age) || rosterAge || null,
+        drafted: toTrimmedString(pick?.Drafted) || draftYearFallback,
       };
     })();
 
@@ -1612,11 +1630,11 @@ return [minFinal, maxFinal];
       },
       {
         label: "Vitals",
-        value: vitals.height ?? "—",
-        sub: `${vitals.age ? `Age ${vitals.age}` : "Age —"} • ${vitals.drafted ?? "Draft —"}`,
+        value: vitals.height ?? (vitals.age ? `Age ${vitals.age}` : "—"),
+        sub: vitals.height ? `${vitals.age ? `Age ${vitals.age}` : "Age —"} • ${vitals.drafted ?? "Draft —"}` : (vitals.drafted ?? "Draft —"),
       },
     ];
-  }, [lastActual, nextProj, rankInfo, primaryTraj, outlook, careerProjections, player?.id, seasonFixed]);
+  }, [lastActual, nextProj, rankInfo, primaryTraj, outlook, careerProjections, player?.id, seasonFixed, rosterPlayers, selectedSeason]);
 
   // ----------------------------------------
   // Advanced stats (left panel)
@@ -3233,9 +3251,10 @@ return {
                   r["Season 90"]
               ),
               Games: toNumberOrNull(r["Games"] ?? r["Games100"] ?? r["Games_100"] ?? r["Games100+"] ?? r["Games100Plus"] ?? r["Games Probability"] ?? r["Games_prob"] ?? r["GamesProb"]),
-              Height: toTrimmedString(r["Height"] ?? r["height"]) || null,
-              Age: toTrimmedString(r["Age"] ?? r["age"]) || null,
-              Drafted: toTrimmedString(r["Drafted"] ?? r["drafted"]) || null,
+              Height: toTrimmedString(r["Height"] ?? r["height"] ?? r["Height_cm"] ?? r["height_cm"] ?? r["height.cm"] ?? r["Height (cm)"]) || null,
+              Age: toTrimmedString(r["Age"] ?? r["age"] ?? r["Age_Season"] ?? r["age.season"] ?? r["age_season"]) || null,
+              Drafted: toTrimmedString(r["Drafted"] ?? r["drafted"] ?? r["Draft"] ?? r["draft"]) || null,
+              draftYear: toTrimmedString(r["draftYear"] ?? r["DraftYear"] ?? r["draft_year"] ?? r["Draft Year"]) || null,
                             Type: toTrimmedString(r["Type"]) || undefined,
               team: toTrimmedString(r["team"]) || undefined,
               rank_all: toNumberOrNull(r["rank_all"] ?? r["Rank_all"] ?? r["rankAll"] ?? r["rank_all "]),
@@ -4595,7 +4614,7 @@ const kpis = useMemo(() => {
 
             </>
           ) : (
-            <CareerProjectionDashboard defaultTeam={team} careerProjections={careerProjections} careerProjectionsLastUpdated={careerProjectionsLastUpdated} comparablePlayers={comparablePlayers} playerStatsAgg={playerStatsAgg} playerProjections={playerProjections} initialPlayerId={currentPlayerId || undefined} onPlayerIdChange={(id) => {
+            <CareerProjectionDashboard defaultTeam={team} careerProjections={careerProjections} careerProjectionsLastUpdated={careerProjectionsLastUpdated} comparablePlayers={comparablePlayers} playerStatsAgg={playerStatsAgg} playerProjections={playerProjections} rosterPlayers={rosterPlayers} selectedSeason={season} initialPlayerId={currentPlayerId || undefined} onPlayerIdChange={(id) => {
                 const nextId = normalizePlayerId(id);
                 setCurrentPlayerId(nextId);
 
