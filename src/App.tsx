@@ -431,6 +431,7 @@ const TEAMS: TeamOption[] = [
 
 const DEFAULT_TEAM_ID = "40"; // Collingwood
 const DEFAULT_SEASON = 2026;
+const UI_SEASONS = [2023, 2024, 2025, 2026] as const;
 const CAREER_TILES_EXPORT_ID = "career-tiles-export-target";
 const CAREER_PDF_EXPORT_ID = "career-pdf-export-target";
 const CAREER_MAIN_EXPORT_ID = "career-main-export-target";
@@ -574,6 +575,10 @@ function toNumberOrNull(x: any): number | null {
   if (t === "" || t.toLowerCase() === "na" || t.toLowerCase() === "null") return null;
   const n = Number(t);
   return Number.isFinite(n) ? n : null;
+}
+
+function clampUiSeason(input: number): number {
+  return (UI_SEASONS as readonly number[]).includes(input) ? input : DEFAULT_SEASON;
 }
 
 async function loadApiDataAsObjects<T>(file: string, mapper: (r: Record<string, any>) => T | null): Promise<T[]> {
@@ -2805,7 +2810,7 @@ function AppCore({ routeMode, routeTeamId, routePlayerId }: { routeMode: "team" 
   const navigate = useNavigate();
   const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const [team, setTeam] = useState(() => (routeMode === "team" && routeTeamId ? coerceTeamId(routeTeamId) : (coerceTeamId(searchParams.get("team")) || DEFAULT_TEAM_ID)));
-  const [season, setSeason] = useState(() => Number(searchParams.get("season") || DEFAULT_SEASON));
+  const [season, setSeason] = useState(() => clampUiSeason(Number(searchParams.get("season") || DEFAULT_SEASON)));
 const [compareTeam, setCompareTeam] = useState<string>(""); // "" = no comparison
 const [comparePanelOpen, setComparePanelOpen] = useState(false);
 const [exporting, setExporting] = useState<"png" | "pdf" | null>(null);
@@ -2827,10 +2832,9 @@ useEffect(() => {
     // Sync URL -> state (only when the URL changes)
     const sp = new URLSearchParams(location.search);
 
-    const nextSeason = Number(sp.get("season") || DEFAULT_SEASON);
-    if (Number.isFinite(nextSeason)) {
-      setSeason((prev) => (nextSeason !== prev ? nextSeason : prev));
-    }
+    const parsedSeason = Number(sp.get("season") || DEFAULT_SEASON);
+    const nextSeason = clampUiSeason(parsedSeason);
+    setSeason((prev) => (nextSeason !== prev ? nextSeason : prev));
 
     if (routeMode === "team") {
       const nextTeam = coerceTeamId(routeTeamId || sp.get("team") || DEFAULT_TEAM_ID);
@@ -2857,7 +2861,7 @@ useEffect(() => {
 
   // Keep the URL (path + query) in sync with the in-app state so SharePoint embeds can deep-link reliably.
   useEffect(() => {
-    const baseSeason = Number.isFinite(season) ? season : DEFAULT_SEASON;
+    const baseSeason = clampUiSeason(Number.isFinite(season) ? season : DEFAULT_SEASON);
 
     if (page === "team") {
       const nextPath = `/team/${team || DEFAULT_TEAM_ID}`;
@@ -3437,16 +3441,7 @@ return {
   // --------
   // Years pills
   // --------
-  const years = useMemo(() => {
-    const ys = teamKpis
-      .filter((r) => normalizeClubName(r.Club) === clubKey)
-      .map((r) => r.season)
-      .sort((a, b) => a - b);
-    const uniq = Array.from(new Set(ys));
-    const seeded = uniq.length > 0 ? uniq : [DEFAULT_SEASON - 3, DEFAULT_SEASON - 2, DEFAULT_SEASON - 1, DEFAULT_SEASON];
-    const withDefault = Array.from(new Set([...seeded, DEFAULT_SEASON, season])).sort((a, b) => a - b);
-    return withDefault.slice(-4);
-  }, [teamKpis, clubKey, season]);
+  const years = useMemo(() => [...UI_SEASONS], []);
 
 
 
