@@ -1,5 +1,5 @@
 // src/App.tsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ResponsiveContainer,
   Area,
@@ -19,7 +19,6 @@ import {
  ComposedChart,
   ReferenceLine,
   LabelList,
-  Cell,
 } from "recharts";
 import { RefreshCcw, RotateCcw, Home, BarChart3, Gauge, Users } from "lucide-react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
@@ -585,6 +584,25 @@ function clampUiSeason(input: number): number {
   return (UI_SEASONS as readonly number[]).includes(input) ? input : DEFAULT_SEASON;
 }
 
+function pickSeasonRow<T extends { season: number }>(
+  rows: T[],
+  targetSeason: number
+): { row: T | null; usedSeason: number | null; isExact: boolean } {
+  if (!rows.length) return { row: null, usedSeason: null, isExact: false };
+  const sorted = [...rows].sort((a, b) => a.season - b.season);
+  const exact = sorted.find((r) => r.season === targetSeason);
+  if (exact) return { row: exact, usedSeason: targetSeason, isExact: true };
+
+  const pastOrCurrent = sorted.filter((r) => r.season <= targetSeason);
+  if (pastOrCurrent.length) {
+    const row = pastOrCurrent[pastOrCurrent.length - 1];
+    return { row, usedSeason: row.season, isExact: false };
+  }
+
+  const latest = sorted[sorted.length - 1];
+  return { row: latest, usedSeason: latest.season, isExact: false };
+}
+
 async function loadApiDataAsObjects<T>(file: string, mapper: (r: Record<string, any>) => T | null): Promise<T[]> {
   const { rows } = await fetchApiRows(file);
   const out: T[] = [];
@@ -815,6 +833,7 @@ function HorizontalBarRows({
   rows,
   labelKey,
   valueKey,
+  getColor,
   barHeight = 14,
   valueColWidth = 44,
   labelCol = { min: 130, ideal: 170, max: 240 },
@@ -824,25 +843,33 @@ function HorizontalBarRows({
   rows: any[];
   labelKey: string;
   valueKey: string;
+  getColor?: (label: string) => string;
   barHeight?: number;
   valueColWidth?: number;
   labelCol?: { min: number; ideal: number; max: number };
   rowGap?: number;
   colGap?: number;
 }) {
-  const max = Math.max(1, ...rows.map((r) => r.pct));
+  const max = Math.max(
+    1,
+    ...rows.map((r) => {
+      const n = Number(r[valueKey]);
+      return Number.isFinite(n) ? n : 0;
+    })
+  );
   const labelColTemplate = `${labelCol.ideal}px 1fr`;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: rowGap, marginTop: 6 }}>
       {rows.map((r) => {
-        const value = r[valueKey];
-        const rawPct = (value / max) * 100;
-	const pct = rawPct;
+        const value = Number(r[valueKey]);
+        const safeValue = Number.isFinite(value) ? value : 0;
+        const pct = (safeValue / max) * 100;
+        const label = String(r[labelKey] ?? "");
 
         return (
           <div
-            key={r[labelKey]}
+            key={label}
             style={{
               display: "grid",
               gridTemplateColumns: labelColTemplate,
@@ -860,7 +887,7 @@ function HorizontalBarRows({
               }}
               title={r[labelKey]}
             >
-              {r[labelKey]}
+              {label}
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: `1fr ${valueColWidth}px`, gap: 8, alignItems: "center" }}>
@@ -877,12 +904,12 @@ function HorizontalBarRows({
                   style={{
                     height: "100%",
                     width: `${pct}%`,
-                    background: AGE_CAT_COLOR[r[labelKey]] ?? "rgba(0,0,0,0.65)",
+                    background: getColor ? getColor(label) : AGE_CAT_COLOR[label] ?? "rgba(0,0,0,0.65)",
                   }}
                 />
               </div>
               <div style={{ fontSize: 12, color: "rgba(0,0,0,0.6)", textAlign: "right", lineHeight: 1 }}>
-                {typeof value === "number" ? `${value.toFixed(0)}%` : value}
+                {Number.isFinite(value) ? `${value.toFixed(0)}%` : "—"}
               </div>
             </div>
           </div>
@@ -2813,8 +2840,9 @@ function AppCore({ routeMode, routeTeamId, routePlayerId }: { routeMode: "team" 
   const location = useLocation();
   const navigate = useNavigate();
   const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const didInitSeasonRef = useRef(false);
   const [team, setTeam] = useState(() => (routeMode === "team" && routeTeamId ? coerceTeamId(routeTeamId) : (coerceTeamId(searchParams.get("team")) || DEFAULT_TEAM_ID)));
-  const [season, setSeason] = useState(() => clampUiSeason(Number(searchParams.get("season") || DEFAULT_SEASON)));
+  const [season, setSeason] = useState<number>(DEFAULT_SEASON);
 const [compareTeam, setCompareTeam] = useState<string>(""); // "" = no comparison
 const [comparePanelOpen, setComparePanelOpen] = useState(false);
 const [exporting, setExporting] = useState<"png" | "pdf" | null>(null);
@@ -2837,7 +2865,12 @@ useEffect(() => {
     const sp = new URLSearchParams(location.search);
 
     const parsedSeason = Number(sp.get("season") || DEFAULT_SEASON);
-    const nextSeason = clampUiSeason(parsedSeason);
+    let nextSeason = clampUiSeason(parsedSeason);
+    if (!didInitSeasonRef.current) {
+      // Always open on current season after a hard refresh.
+      if (routeMode === "team") nextSeason = DEFAULT_SEASON;
+      didInitSeasonRef.current = true;
+    }
     setSeason((prev) => (nextSeason !== prev ? nextSeason : prev));
 
     if (routeMode === "team") {
@@ -3481,6 +3514,47 @@ function getRosterForClubSeason(targetClubKey: string) {
   return { players, usedSeason };
 }
 
+const rosterTurnoverByTeamSeason = useMemo(() => {
+  const idsByKey = new Map<string, Set<string>>();
+
+  for (const r of rosterPlayers) {
+    const teamName = normalizeClubName(r.team);
+    const pid = normalizePlayerId(r.providerId);
+    if (!teamName || !pid || !Number.isFinite(r.season)) continue;
+
+    const key = `${teamName}|${r.season}`;
+    let set = idsByKey.get(key);
+    if (!set) {
+      set = new Set<string>();
+      idsByKey.set(key, set);
+    }
+    set.add(pid);
+  }
+
+  const countNew = (teamName: string, yr: number): number | null => {
+    const cur = idsByKey.get(`${teamName}|${yr}`);
+    const prev = idsByKey.get(`${teamName}|${yr - 1}`);
+    if (!cur || !prev) return null;
+    let n = 0;
+    for (const pid of cur) if (!prev.has(pid)) n += 1;
+    return n;
+  };
+
+  const clubCurrent = countNew(clubKey, season);
+  const clubPrev = countNew(clubKey, season - 1);
+  const clubYoY =
+    clubCurrent !== null && clubPrev !== null ? clubCurrent - clubPrev : null;
+
+  const teams = Array.from(
+    new Set(Array.from(idsByKey.keys()).map((k) => k.split("|")[0]))
+  );
+  const leagueVals = teams
+    .map((t) => countNew(t, season))
+    .filter((v): v is number => v !== null && Number.isFinite(v));
+
+  return { clubCurrent, clubYoY, leagueVals };
+}, [rosterPlayers, clubKey, season]);
+
 
   const ageHist = useMemo(() => makeAgeHistogram(rosterForSeason.players), [rosterForSeason.players]);
 const AGE_CAT_ORDER = ["Rising Stars", "Established Youth", "Prime", "Veterans", "Old Timers"];
@@ -3553,13 +3627,11 @@ const toAgeLabel = (x: number) => String(Math.round(x));
   // --------
   // Club KPI row from team_kpis
   // --------
-  const clubKpi = useMemo(() => {
+  const clubKpiSelection = useMemo(() => {
     const rows = teamKpis.filter((r) => normalizeClubName(r.Club) === clubKey);
-    if (rows.length === 0) return null;
-    const exact = rows.find((r) => r.season === season);
-    if (exact) return exact;
-    return rows.reduce((best, r) => (Math.abs(r.season - season) < Math.abs(best.season - season) ? r : best), rows[0]);
+    return pickSeasonRow(rows, season);
   }, [teamKpis, clubKey, season]);
+  const clubKpi = clubKpiSelection.row;
 
   // --------
   // AFL + VFL KPI selections
@@ -3587,32 +3659,34 @@ const toAgeLabel = (x: number) => String(Math.round(x));
     const deduped = Array.from(byPlayer.values());
     return deduped.reduce((best, r) => (r.rating > best.rating ? r : best), deduped[0]);
   }, [careerProjections, clubKey, season]);
-const rankTrend = useMemo(() => {
+const rankTrendMeta = useMemo(() => {
   const clubRows = rankSeries
     .filter((r) => normalizeClubName(r.Club) === clubKey)
     .sort((a, b) => a.year - b.year);
 
-  if (clubRows.length === 0) return [];
+  if (clubRows.length === 0) {
+    return { rows: [] as any[], missingActualYears: [] as number[] };
+  }
 
-  const latestYear = Math.max(...clubRows.map((r) => r.year));
-  const latest = clubRows.find((r) => r.year === latestYear);
+  const missingActualYears = clubRows
+    .filter((r) => r.year <= DEFAULT_SEASON - 1 && r.actual_rank == null)
+    .map((r) => r.year);
 
-  const lastActualYear =
-    [...clubRows].reverse().find((r) => r.actual_rank != null)?.year ?? latestYear;
+  // Forecast rows are anchored on the latest year where an actual rank exists.
+  // This prevents future-placeholder rows (with NA actuals) from shifting forecast years too far out.
+  const latestActual = [...clubRows].reverse().find((r) => r.actual_rank != null) ?? clubRows[clubRows.length - 1];
+  const latestYear = latestActual.year;
 
-  const lastActualRow = clubRows.find((r) => r.year === lastActualYear);
-
-  // history rows (actuals only)
-  const history = clubRows.map((r) => ({
-    year: String(r.year),
-    actual: r.actual_rank ?? null,
-    fcstA: null as number | null,
-    fcstB: null as number | null,
-    p25: null as number | null,
-    p75: null as number | null,
-  }));
-
-  if (!latest) return history;
+  const history = clubRows
+    .filter((r) => r.year <= latestYear)
+    .map((r) => ({
+      year: String(r.year),
+      actual: r.actual_rank ?? null,
+      fcstA: null as number | null,
+      fcstB: null as number | null,
+      p25: null as number | null,
+      p75: null as number | null,
+    }));
 
   const projYear1 = latestYear + 1;
   const projYear2 = latestYear + 2;
@@ -3620,9 +3694,9 @@ const rankTrend = useMemo(() => {
   const streamed = [
     // anchor for forecast connection
     {
-      year: String(lastActualYear),
-      actual: lastActualRow?.actual_rank ?? null,
-      fcstA: lastActualRow?.actual_rank ?? null,
+      year: String(latestYear),
+      actual: latestActual.actual_rank ?? null,
+      fcstA: latestActual.actual_rank ?? null,
       fcstB: null,
       p25: null,
       p75: null,
@@ -3631,19 +3705,19 @@ const rankTrend = useMemo(() => {
     {
       year: String(projYear1),
       actual: null,
-      fcstA: latest.forecast_a_rank ?? null,
-      fcstB: latest.forecast_a_rank ?? null,
-      p25: latest.finish_1_p25 ?? null,
-      p75: latest.finish_1_p75 ?? null,
+      fcstA: latestActual.forecast_a_rank ?? null,
+      fcstB: latestActual.forecast_a_rank ?? null,
+      p25: latestActual.finish_1_p25 ?? null,
+      p75: latestActual.finish_1_p75 ?? null,
     },
     // +2 season
     {
       year: String(projYear2),
       actual: null,
       fcstA: null,
-      fcstB: latest.forecast_b_rank ?? null,
-      p25: latest.finish_2_p25 ?? null,
-      p75: latest.finish_2_p75 ?? null,
+      fcstB: latestActual.forecast_b_rank ?? null,
+      p25: latestActual.finish_2_p25 ?? null,
+      p75: latestActual.finish_2_p75 ?? null,
     },
   ];
 
@@ -3653,7 +3727,7 @@ const rankTrend = useMemo(() => {
   for (const r of streamed) map.set(r.year, { ...(map.get(r.year) ?? {}), ...r });
 
   // ✅ add band fields here, then return once
-  return Array.from(map.values())
+  const rows = Array.from(map.values())
     .map((r: any) => {
       const p25 = r.p25;
       const p75 = r.p75;
@@ -3670,7 +3744,10 @@ const rankTrend = useMemo(() => {
       };
     })
     .sort((a, b) => Number(a.year) - Number(b.year));
+  return { rows, missingActualYears };
 }, [rankSeries, clubKey]);
+const rankTrend = rankTrendMeta.rows;
+const rankMissingActualYears = rankTrendMeta.missingActualYears;
 
 
   function ActualEndLabelDot(props: any) {
@@ -3782,10 +3859,7 @@ const compareAgeCatShare = useMemo(
 const compareClubKpi = useMemo(() => {
   if (!compareClubKey) return null;
   const rows = teamKpis.filter((r) => normalizeClubName(r.Club) === compareClubKey);
-  if (rows.length === 0) return null;
-  const exact = rows.find((r) => r.season === season);
-  if (exact) return exact;
-  return rows.reduce((best, r) => (Math.abs(r.season - season) < Math.abs(best.season - season) ? r : best), rows[0]);
+  return pickSeasonRow(rows, season).row;
 }, [teamKpis, compareClubKey, season]);
 
 const compareAcquisitionShare = useMemo(() => {
@@ -3915,7 +3989,7 @@ const mergedSkillRadar = useMemo(() => {
 // --------
 const kpis = useMemo(() => {
   // Use the season actually being shown for KPI + ranks (falls back to selected season)
-  const rankSeason = clubKpi?.season ?? season;
+  const rankSeason = clubKpiSelection.usedSeason ?? season;
 
   // League rows for that season (used for ranks)
   const leagueRows = teamKpis
@@ -3939,8 +4013,16 @@ const kpis = useMemo(() => {
   const expValue = clubKpi ? Math.round(clubKpi.squad_experience_avg_games).toLocaleString() : "—";
   const expYoY   = clubKpi ? safeYoY(clubKpi.squad_experience_yoy, 1) : "YoY: —";
 
-  const toValue  = clubKpi ? `${Math.round(clubKpi.squad_turnover_players)} players` : "—";
-  const toYoY    = clubKpi ? safeYoY(clubKpi.squad_turnover_yoy, 1) : "YoY: —";
+  // Prefer roster-derived turnover for the selected season to avoid stale KPI feeds.
+  const effectiveTurnover =
+    rosterTurnoverByTeamSeason.clubCurrent ??
+    (clubKpi ? clubKpi.squad_turnover_players : null);
+  const effectiveTurnoverYoY =
+    rosterTurnoverByTeamSeason.clubYoY ??
+    (clubKpi ? clubKpi.squad_turnover_yoy : null);
+
+  const toValue  = effectiveTurnover != null ? `${Math.round(effectiveTurnover)} players` : "—";
+  const toYoY    = safeYoY(effectiveTurnoverYoY, 1);
 
   // Ranks
   // Age: youngest = #1 (ascending)
@@ -3956,14 +4038,22 @@ const kpis = useMemo(() => {
       : null;
 
   // Turnover: highest turnover = #1 (descending)
+  const turnoverLeagueVals =
+    rosterTurnoverByTeamSeason.leagueVals.length > 0
+      ? rosterTurnoverByTeamSeason.leagueVals
+      : leagueRows.map((r) => r.squad_turnover_players);
   const toRank =
-    clubKpi && Number.isFinite(clubKpi.squad_turnover_players)
-      ? denseRank(leagueRows.map((r) => r.squad_turnover_players), clubKpi.squad_turnover_players, "desc")
+    effectiveTurnover != null && Number.isFinite(effectiveTurnover)
+      ? denseRank(turnoverLeagueVals, effectiveTurnover, "desc")
       : null;
 
   const ageSub = `${ageYoY} • Rank: ${ageRank ?? "—"}/${nTeams}`;
   const expSub = `${expYoY} • Rank: ${expRank ?? "—"}/${nTeams}`;
-  const toSub  = `${toYoY} • Rank: ${toRank ?? "—"}/${nTeams}`;
+  const kpiSeasonSuffix =
+    clubKpiSelection.usedSeason != null && clubKpiSelection.usedSeason !== season
+      ? ` • Data: ${clubKpiSelection.usedSeason}`
+      : "";
+  const toSub  = `${toYoY} • Rank: ${toRank ?? "—"}/${nTeams}${kpiSeasonSuffix}`;
 
   // AFL form: top AFL rating from career projections for selected team + season.
   const aflValue = aflFormPick ? aflFormPick.rating.toFixed(1) : "—";
@@ -3992,7 +4082,7 @@ const kpis = useMemo(() => {
     { label: "AFL Form",         value: aflValue, sub: aflSub, icon: Users,    imgSrc: aflImg },
     { label: "VFL Form",         value: vflValue, sub: vflSub, icon: Home,     imgSrc: vflImg },
   ];
-}, [clubKpi, teamKpis, aflFormPick, vflForm, clubKey, season]);
+}, [clubKpi, clubKpiSelection.usedSeason, teamKpis, aflFormPick, vflForm, clubKey, season, rosterTurnoverByTeamSeason]);
 
 
 
@@ -4279,6 +4369,11 @@ const kpis = useMemo(() => {
               </div>
 
               <div style={{ marginTop: 10, fontSize: 14, color: "rgba(0,0,0,0.55)" }}>Black = actual. Grey dashed = forecast scenarios (only from the most recent season).</div>
+              {rankMissingActualYears.length > 0 ? (
+                <div style={{ marginTop: 6, fontSize: 12, color: "rgba(0,0,0,0.5)" }}>
+                  Actual ladder rank is unavailable in `team_rank_timeseries.csv` for: {rankMissingActualYears.join(", ")}.
+                </div>
+              ) : null}
             </Card>
 
             <Card style={{ minHeight: 420, display: "flex", flexDirection: "column" }}>
@@ -4376,47 +4471,18 @@ const kpis = useMemo(() => {
                     No list build data available for this season.
                   </div>
                 ) : (
-                  <div style={{ height: 320 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={acquisitionBars}
-                        layout="vertical"
-                        margin={{ top: 6, right: 24, left: 12, bottom: 6 }}
-                        barCategoryGap={12}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                        <XAxis
-                          type="number"
-                          domain={[0, 100]}
-                          tick={{ fontSize: 11, fill: "rgba(0,0,0,0.65)" }}
-                          tickFormatter={(v: any) => `${Math.round(Number(v))}%`}
-                        />
-                        <YAxis
-                          type="category"
-                          dataKey="metric"
-                          interval={0}
-                          width={150}
-                          tick={{ fontSize: 12, fill: "rgba(0,0,0,0.8)", fontWeight: 700 }}
-                        />
-                        <Tooltip
-                          formatter={(v: any, _name: any, props: any) => {
-                            const label = props?.payload?.metric ?? "Method";
-                            return [`${Number(v).toFixed(1)}%`, label];
-                          }}
-                        />
-                        <Bar dataKey="value" radius={[0, 6, 6, 0]} isAnimationActive={false}>
-                          {acquisitionBars.map((d, i) => (
-                            <Cell key={`acq-bar-${d.metric}-${i}`} fill={stableColorForKey(d.metric)} />
-                          ))}
-                          <LabelList
-                            dataKey="value"
-                            position="right"
-                            formatter={(v: any) => `${Number(v).toFixed(0)}%`}
-                            style={{ fill: "rgba(0,0,0,0.8)", fontWeight: 800, fontSize: 12 }}
-                          />
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
+                  <div style={{ paddingTop: 2, paddingRight: 6 }}>
+                    <HorizontalBarRows
+                      rows={acquisitionBars}
+                      labelKey="metric"
+                      valueKey="value"
+                      getColor={(label) => stableColorForKey(label)}
+                      labelCol={{ min: 0, ideal: 150, max: 210 }}
+                      barHeight={14}
+                      rowGap={14}
+                      valueColWidth={50}
+                      colGap={10}
+                    />
                   </div>
                 )}
               </div>
