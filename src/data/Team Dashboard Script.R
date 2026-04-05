@@ -278,8 +278,164 @@ write_csv(roster_players, "roster_players.csv")
 # -----------------------------------------#
 # player acquisition breakdown
 # -----------------------------------------#
+get_afl_list_data <- function(seasons) {
+  
+  library(rvest)
+  library(dplyr)
+  library(purrr)
+  library(stringr)
+  
+  # -------------------------------
+  # AFL Clubs (URL-safe versions)
+  # -------------------------------
+  clubs <- c(
+    "Adelaide", "Brisbane", "Carlton", "Collingwood", "Essendon",
+    "Fremantle", "Geelong", "Gold-coast", "greater-western-sydney",
+    "Hawthorn", "Melbourne", "North-Melbourne", "Port-Adelaide",
+    "Richmond", "St-Kilda", "Sydney", "West-Coast", "Western-Bulldogs"
+  )
+  
+  # -------------------------------
+  # Internal scraper
+  # -------------------------------
+  scrape_list_data <- function(year, club) {
+    
+    url <- paste0("https://www.draftguru.com.au/lists/", year, "/", club)
+    message("Scraping: ", url)
+    
+    page <- tryCatch(read_html(url), error = function(e) NULL)
+    if (is.null(page)) return(NULL)
+    
+    tables <- page %>% html_nodes("table") %>% html_table(fill = TRUE)
+    if (length(tables) == 0) return(NULL)
+    
+    cleaned <- map(tables, function(tbl) {
+      
+      # Fix missing column names
+      if (any(is.na(names(tbl))) || any(names(tbl) == "")) {
+        names(tbl) <- ifelse(
+          names(tbl) == "" | is.na(names(tbl)),
+          paste0("V", seq_along(tbl)),
+          names(tbl)
+        )
+      }
+      
+      tbl <- tbl %>%
+        mutate(across(everything(), as.character)) %>%
+        mutate(
+          Year = as.character(year),
+          Club = club
+        )
+      
+      names(tbl) <- make.names(names(tbl), unique = TRUE)
+      tbl
+    })
+    
+    bind_rows(cleaned, .id = "Table_Number")
+  }
+  
+  # -------------------------------
+  # Run across all seasons × clubs
+  # -------------------------------
+  params <- expand.grid(
+    year = seasons,
+    club = clubs,
+    stringsAsFactors = FALSE
+  )
+  
+  output <- pmap_dfr(params, scrape_list_data)
+  
+  return(output)
+}
 
-player_acquisition_breakdown <- list_data_mod %>%
+list_data <- get_afl_list_data(1994:2026)
+
+
+# -------------------------------
+# 🧹 Clean & Standardize Club Names
+# -------------------------------
+list_data_per <- list_data %>%
+  select(Year, Club, Player,GamesPrior, Grade, Height, Weight, Age, Drafted) %>%
+  mutate(
+    Club = case_when(
+      Club %in% c("adelaide") ~ "Adelaide",
+      Club %in% c("brisbane", "fitzroy") ~ "Brisbane",
+      Club %in% c("carlton") ~ "Carlton",
+      Club %in% c("collingwood") ~ "Collingwood",
+      Club %in% c("essendon") ~ "Essendon",
+      Club %in% c("fremantle") ~ "Fremantle",
+      Club %in% c("geelong") ~ "Geelong",
+      Club %in% c("Gold-coast") ~ "Gold Coast",
+      Club %in% c("greater-western-sydney") ~ "GWS",
+      Club %in% c("hawthorn") ~ "Hawthorn",
+      Club %in% c("melbourne") ~ "Melbourne",
+      Club %in% c("North-Melbourne") ~ "North Melbourne",
+      Club %in% c("Port-Adelaide") ~ "Port Adelaide",
+      Club %in% c("richmond") ~ "Richmond",
+      Club %in% c("St-Kilda") ~ "St Kilda",
+      Club %in% c("sydney") ~ "Sydney",
+      Club %in% c("West-Coast") ~ "West Coast",
+      Club %in% c("Western-Bulldogs") ~ "Western Bulldogs",
+      TRUE ~ Club
+    )
+  )
+
+list_data_per %>% distinct(Club)
+draft_data %>% distinct(Club)
+
+
+# -------------------------------
+# 🧠 Function: Scrape Draft Data (1991–2025)
+# -------------------------------
+scrape_draft_data <- function(year) {
+  url <- paste0("https://www.draftguru.com.au/years/", year)
+  message("Scraping draft year: ", year)
+  
+  page <- tryCatch(read_html(url), error = function(e) return(NULL))
+  if (is.null(page)) return(NULL)
+  
+  tables <- page %>% html_nodes("table") %>% html_table(fill = TRUE)
+  if (length(tables) == 0) return(NULL)
+  
+  # Clean and annotate
+  tables_cleaned <- map(tables, function(tbl) {
+    tbl <- mutate_all(tbl, as.character)
+    tbl$Year <- as.character(year)
+    return(tbl)
+  })
+  
+  # Standardize and combine
+  tables_cleaned <- map(tables_cleaned, ~ rename_with(.x, ~ make.names(.x, unique = TRUE)))
+  bind_rows(tables_cleaned, .id = "Table_Number")
+}
+
+# Scrape all draft years
+draft_data <- map_df(1991:2026, scrape_draft_data)
+
+# -------------------------------
+# 🔗 Join List & Draft Data
+# -------------------------------
+draft_data_refined <- inner_join(
+  list_data_per,
+  draft_data,
+  by = c("Player", "Club")
+) %>%
+  distinct(
+    Year = Year.x,
+    Other_Year = Year.y,
+    Club,
+    Player,
+    Draft,
+    Pick = X...,
+    Age.x,
+    Age.y,
+    Games,
+    Goals,
+    Height.x
+  )
+
+
+player_acquisition_breakdown <- list_data_per %>%
   left_join(draft_data_refined, by = c("Player", "Club", "Year" = "Year")) %>%
   filter(Year > Other_Year) %>%
   mutate(
@@ -302,6 +458,11 @@ player_acquisition_breakdown <- list_data_mod %>%
   summarise(value = n(), .groups = "drop")
 
 write_csv(player_acquisition_breakdown, "player_acquisition_breakdown.csv")
+
+player_acquisition_breakdown %>% summarise(max(Year))
+test <- getSquadLists()
+
+test %>% distinct(squad.id, squad.name)
 
 # -----------------------------------------#
 # career projection table
