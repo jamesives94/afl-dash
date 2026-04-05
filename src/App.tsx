@@ -45,11 +45,6 @@ function fmtAUDShort(n: number) {
   return `$${Math.round(n / 1000)}k`;
 }
 
-function fmtSigned(n: number, decimals = 2) {
-  const s = n >= 0 ? "+" : "";
-  return `${s}${n.toFixed(decimals)}`;
-}
-
 function fmtProbPct(p: number | null | undefined) {
   if (p == null) return "—";
   const v = Math.max(0, Math.min(1, p));
@@ -254,16 +249,6 @@ type TeamKpiRow = {
   squad_turnover_yoy: number | null;
 };
 
-type AflFormRow = {
-  season: number;
-  playerId: string;
-  team: string;
-  player_name: string;
-  weighted_avg: number;
-  recent_form?: number | null;
-  form_change: number;
-};
-
 type VflFormRow = {
   season: number;
   player_name: string;
@@ -327,6 +312,7 @@ type PlayerProjectionRow = {
 type CareerProjectionRow = {
   SourceproviderId: string;
   SourcePlayer: string;
+  SourceClub: string;
   SourceSeason: number;
   SourceRating: number;
   SourcePosition: string;
@@ -706,10 +692,22 @@ function Kpi({
   return (
     <Card style={{ padding: 14 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-        <div>
+        <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ fontSize: 12, color: "rgba(0,0,0,0.6)", marginBottom: 6 }}>{label}</div>
           <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.3, color: "#111" }}>{value}</div>
-          <div style={{ fontSize: 11, color: "rgba(0,0,0,0.5)", marginTop: 4 }}>{sub}</div>
+          <div
+            style={{
+              fontSize: 11,
+              color: "rgba(0,0,0,0.5)",
+              marginTop: 4,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+            title={sub}
+          >
+            {sub}
+          </div>
         </div>
 
         <div
@@ -3038,7 +3036,6 @@ useEffect(() => {
   const [skillRadar, setSkillRadar] = useState<SkillRadarRow[]>([]);
   const [acqBreakdown, setAcqBreakdown] = useState<AcquisitionRow[]>([]);
   const [playerProjections, setPlayerProjections] = useState<PlayerProjectionRow[]>([]);
-  const [aflForm, setAflForm] = useState<AflFormRow[]>([]);
   const [vflForm, setVflForm] = useState<VflFormRow[]>([]);
   const [careerProjections, setCareerProjections] = useState<CareerProjectionRow[]>([]);
   const [careerProjectionsLastUpdated, setCareerProjectionsLastUpdated] = useState<string>("");
@@ -3100,7 +3097,7 @@ useEffect(() => {
         setLoading(true);
         setLoadErr(null);
 
-        const [roster, kpis, ranks, radar, acq, proj, aflFormRows, vflFormRows, careerProjResult, playerStatsAggRows, comparableRows] = await Promise.all([
+        const [roster, kpis, ranks, radar, acq, proj, vflFormRows, careerProjResult, playerStatsAggRows, comparableRows] = await Promise.all([
           loadApiDataAsObjects<RosterPlayerRow>("roster_players.csv", (r) => {
             const seasonN = toNumberOrNull(r["season"]);
             const ageN = toNumberOrNull(r["age"]);
@@ -3220,28 +3217,6 @@ return {
             };
           }),
 
-          // NEW: AFL form
-          loadApiDataAsObjects<AflFormRow>("form_player_afl.csv", (r) => {
-            const seasonN = toNumberOrNull(r["season"]);
-            const wavg = toNumberOrNull(r["weighted_avg"]);
-            const fchg = toNumberOrNull(r["form_change"]);
-            const teamS = normalizeClubName(r["team"] ?? "");
-            const playerId = toTrimmedString(r["playerId"]);
-            const playerName = toTrimmedString(r["player_name"]);
-
-            if (seasonN === null || wavg === null || fchg === null || !teamS || !playerId || !playerName) return null;
-
-            return {
-              season: seasonN,
-              playerId,
-              team: teamS,
-              player_name: playerName,
-              weighted_avg: wavg,
-              recent_form: toNumberOrNull(r["recent_form"]),
-              form_change: fchg,
-            };
-          }),
-
           // NEW: VFL form
           loadApiDataAsObjects<VflFormRow>("form_player_vfl.csv", (r) => {
             const seasonN = toNumberOrNull(r["season"]);
@@ -3272,6 +3247,7 @@ return {
             return {
               SourceproviderId: toTrimmedString(r["SourceproviderId"]),
               SourcePlayer: toTrimmedString(r["SourcePlayer"]),
+              SourceClub: normalizeClubName(r["SourceClub"] ?? r["team"] ?? ""),
               SourceSeason: srcSeasonN ?? seasonN,
               SourceRating: toNumberOrNull(r["SourceRating"]) ?? 0,
               SourcePosition: toTrimmedString(r["SourcePosition"]),
@@ -3438,7 +3414,6 @@ return {
         setSkillRadar(radar);
         setAcqBreakdown(acq);
         setPlayerProjections(proj);
-        setAflForm(aflFormRows);
         setVflForm(vflFormRows);
         setCareerProjections(careerProjResult.rows);
         setCareerProjectionsLastUpdated(careerProjResult.lastUpdatedLabel);
@@ -3591,11 +3566,28 @@ const toAgeLabel = (x: number) => String(Math.round(x));
   // AFL + VFL KPI selections
   // --------
   const aflFormPick = useMemo(() => {
-    const rows = aflForm.filter((r) => normalizeClubName(r.team) === clubKey && r.season === season);
-    if (rows.length === 0) return null;
-    // best improver by form_change
-    return rows.reduce((best, r) => (r.form_change > best.form_change ? r : best), rows[0]);
-  }, [aflForm, clubKey, season]);
+    const candidates = careerProjections
+      .filter((r) => r.Season === season && r.estimate != null && Number.isFinite(r.estimate))
+      .map((r) => ({
+        team: normalizeClubName(r.SourceClub ?? r.team ?? ""),
+        playerId: normalizePlayerId(r.SourceproviderId),
+        player_name: toTrimmedString(r.SourcePlayer),
+        rating: Number(r.estimate),
+      }))
+      .filter((r) => r.team === clubKey && r.playerId && r.player_name);
+
+    if (candidates.length === 0) return null;
+
+    // Keep one row per player (best rating row wins), then pick team top rating.
+    const byPlayer = new Map<string, { playerId: string; player_name: string; rating: number }>();
+    for (const r of candidates) {
+      const prev = byPlayer.get(r.playerId);
+      if (!prev || r.rating > prev.rating) byPlayer.set(r.playerId, r);
+    }
+
+    const deduped = Array.from(byPlayer.values());
+    return deduped.reduce((best, r) => (r.rating > best.rating ? r : best), deduped[0]);
+  }, [careerProjections, clubKey, season]);
 const rankTrend = useMemo(() => {
   const clubRows = rankSeries
     .filter((r) => normalizeClubName(r.Club) === clubKey)
@@ -3725,6 +3717,33 @@ const rankTrend = useMemo(() => {
       value: (r.value / total) * 100,
     }));
   }, [acqBreakdown, clubKey, season]);
+
+  const renderAcquisitionLabel = (p: any) => {
+    const pct = Number(p.percent ?? 0) * 100;
+    if (!Number.isFinite(pct) || pct < 7) return null;
+
+    const angle = -((p.midAngle ?? 0) * Math.PI) / 180;
+    const radius = (Number(p.innerRadius ?? 0) + Number(p.outerRadius ?? 0)) / 2;
+    const x = Number(p.cx ?? 0) + radius * Math.cos(angle);
+    const y = Number(p.cy ?? 0) + radius * Math.sin(angle);
+
+    const rawName = String(p.name ?? "").trim();
+    const shortName = rawName.length > 12 ? `${rawName.slice(0, 11)}…` : rawName;
+
+    return (
+      <text
+        x={x}
+        y={y}
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize={10}
+        fill="rgba(0,0,0,0.74)"
+        style={{ pointerEvents: "none" }}
+      >
+        {`${shortName} ${pct.toFixed(0)}%`}
+      </text>
+    );
+  };
 
   // --------
   // Team radar
@@ -3966,8 +3985,8 @@ const kpis = useMemo(() => {
   const expSub = `${expYoY} • Rank: ${expRank ?? "—"}/${nTeams}`;
   const toSub  = `${toYoY} • Rank: ${toRank ?? "—"}/${nTeams}`;
 
-  // ✅ AFL pick (already club+season filtered in your aflFormPick memo)
-  const aflValue = aflFormPick ? fmtSigned(aflFormPick.form_change, 2) : "—";
+  // AFL form: top AFL rating from career projections for selected team + season.
+  const aflValue = aflFormPick ? aflFormPick.rating.toFixed(1) : "—";
   const aflSub   = aflFormPick ? `Player: ${aflFormPick.player_name}` : "Player: —";
   const aflImg   = aflFormPick ? getPlayerImgUrl(aflFormPick.playerId) : null;
 
@@ -4384,12 +4403,12 @@ const kpis = useMemo(() => {
                       data={acquisitionSpider}
                       dataKey="value"
                       nameKey="metric"
-                      innerRadius="45%"
-                      outerRadius="78%"
+                      innerRadius="48%"
+                      outerRadius="72%"
                       paddingAngle={2}
                       isAnimationActive={false}
                       labelLine={false}
-                      label={(p: any) => `${p.name} (${Number(p.percent * 100).toFixed(0)}%)`}
+                      label={renderAcquisitionLabel}
                     >
                       {acquisitionSpider.map((d, i) => (
                         <Cell key={`cell-${d.metric}-${i}`} fill={stableColorForKey(d.metric)} />
