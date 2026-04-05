@@ -184,10 +184,11 @@ write_csv(team_skill_radar, "team_skill_radar.csv")
 
 team_kpis <- list_data %>%
   mutate(
-    Age = as.numeric(str_sub(Average.Age, 1, 4)),
-    Games = as.numeric(str_sub(Average.Games, 1, 4)),
-    season = as.numeric(Year),
-    New.Players = as.numeric(str_sub(New.Players, 2, 3))
+    # Parse numerics defensively: DraftGuru formatting can vary by season/site.
+    Age = readr::parse_number(Average.Age),
+    Games = readr::parse_number(Average.Games),
+    season = readr::parse_number(Year),
+    New.Players = readr::parse_number(New.Players)
   ) %>%
   group_by(Club) %>%
   arrange(Club, season, .by_group = TRUE) %>%

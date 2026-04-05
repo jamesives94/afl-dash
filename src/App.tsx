@@ -19,8 +19,6 @@ import {
  ComposedChart,
   ReferenceLine,
   LabelList,
-  PieChart,
-  Pie,
   Cell,
 } from "recharts";
 import { RefreshCcw, RotateCcw, Home, BarChart3, Gauge, Users } from "lucide-react";
@@ -55,36 +53,34 @@ function fmtProbPct(p: number | null | undefined) {
   return `${Math.round(pct)}%`;
 }
 
-const PIE_COLORS = [
+const ACQ_FALLBACK_COLORS = [
   "#2563EB", // blue
-  "#7C3AED", // violet
-  "#059669", // green
-  "#F59E0B", // amber
-  "#EF4444", // red
-  "#14B8A6", // teal
-  "#64748B", // slate
+  "#16A34A", // green
+  "#DC2626", // red
+  "#6B7280", // grey
+  "#EAB308", // yellow
+  "#7C3AED", // purple
   "#EC4899", // pink
 ];
 
-// Stable acquisition colours (category -> colour)
-// ✅ National Draft is always purple.
+// Stable acquisition colours (category -> colour), fixed across all teams/seasons.
 const ACQ_COLOR_MAP: Record<string, string> = {
   National: "#7C3AED", // purple
   "National Draft": "#7C3AED", // purple
-  "Top-10 National": "#5B21B6", // deep purple
-  "Top-20 National": "#8B5CF6", // medium purple
-  "Rookie/Post-Draft": "#334155", // slate
+  "Top-10 National": "#2563EB", // blue
+  "Top-20 National": "#16A34A", // green
+  "Rookie/Post-Draft": "#6B7280", // grey
   "Rookie Draft": "#2563EB", // blue
-  "Mid-Season": "#14B8A6", // teal
-  "Mid-Season Draft": "#14B8A6", // teal
-  Trade: "#F59E0B", // amber
-  "Free Agency": "#EF4444", // red
-  "Free Agent": "#EF4444", // red
-  "Pre-Draft": "#059669", // green
-  "Pre-Listing": "#059669", // green
+  "Mid-Season": "#EC4899", // pink
+  "Mid-Season Draft": "#EC4899", // pink
+  Trade: "#EAB308", // yellow
+  "Free Agency": "#DC2626", // red
+  "Free Agent": "#DC2626", // red
+  "Pre-Draft": "#16A34A", // green
+  "Pre-Listing": "#16A34A", // green
   "Category B": "#EC4899", // pink
-  SSP: "#64748B", // slate
-  Other: "#94A3B8", // light slate
+  SSP: "#6B7280", // grey
+  Other: "#6B7280", // grey
 };
 
 // deterministic fallback so any unknown category is still consistent
@@ -94,7 +90,7 @@ function stableColorForKey(key: string) {
 
   let h = 0;
   for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) >>> 0;
-  return PIE_COLORS[h % PIE_COLORS.length];
+  return ACQ_FALLBACK_COLORS[h % ACQ_FALLBACK_COLORS.length];
 }
 
 // --- Logos from src/AFL_Logos_Official (Vite)
@@ -3721,34 +3717,13 @@ const rankTrend = useMemo(() => {
     }));
   }, [acqBreakdown, clubKey, season]);
 
-  const acquisitionDonut = useMemo(() => {
-    const rows = acquisitionSpider
-      .filter((r) => Number.isFinite(r.value) && r.value > 0)
-      .sort((a, b) => b.value - a.value);
-
-    if (!rows.length) {
-      return {
-        chartRows: [] as { metric: string; value: number }[],
-        legendRows: [] as { metric: string; value: number }[],
-        top: null as { metric: string; value: number } | null,
-      };
-    }
-
-    const minorCutoff = 5;
-    const major = rows.filter((r) => r.value >= minorCutoff);
-    const minor = rows.filter((r) => r.value < minorCutoff);
-    const minorTotal = minor.reduce((sum, r) => sum + r.value, 0);
-
-    const chartRows = [...major];
-    if (minorTotal > 0) chartRows.push({ metric: "Other", value: minorTotal });
-    chartRows.sort((a, b) => b.value - a.value);
-
-    return {
-      chartRows,
-      legendRows: rows,
-      top: rows[0],
-    };
-  }, [acquisitionSpider]);
+  const acquisitionBars = useMemo(
+    () =>
+      acquisitionSpider
+        .filter((r) => Number.isFinite(r.value) && r.value > 0)
+        .sort((a, b) => b.value - a.value),
+    [acquisitionSpider]
+  );
 
   // --------
   // Team radar
@@ -4396,97 +4371,52 @@ const kpis = useMemo(() => {
             <Card>
               <SectionTitle title="How the list was built..." right={<span style={{ fontSize: 11, color: "rgba(0,0,0,0.55)" }}>share of list (%)</span>} />
               <div style={{ minHeight: 280 }}>
-                {acquisitionDonut.chartRows.length === 0 ? (
+                {acquisitionBars.length === 0 ? (
                   <div style={{ height: 240, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(0,0,0,0.55)", fontSize: 14 }}>
                     No list build data available for this season.
                   </div>
                 ) : (
-                  <div style={{ display: "flex", gap: 18, flexWrap: "wrap", alignItems: "stretch" }}>
-                    <div style={{ flex: "1 1 260px", minWidth: 240, height: 280, position: "relative" }}>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Tooltip
-                            formatter={(v: any, _name: any, props: any) => {
-                              const label = props?.payload?.metric ?? "Group";
-                              return [`${Number(v).toFixed(1)}%`, label];
-                            }}
-                          />
-                          <Pie
-                            data={acquisitionDonut.chartRows}
-                            dataKey="value"
-                            nameKey="metric"
-                            innerRadius="56%"
-                            outerRadius="80%"
-                            paddingAngle={2}
-                            minAngle={3}
-                            isAnimationActive={false}
-                            labelLine={false}
-                          >
-                            {acquisitionDonut.chartRows.map((d, i) => (
-                              <Cell key={`cell-${d.metric}-${i}`} fill={stableColorForKey(d.metric)} />
-                            ))}
-                          </Pie>
-                        </PieChart>
-                      </ResponsiveContainer>
-
-                      <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
-                        <div
-                          style={{
-                            textAlign: "center",
-                            background: "rgba(255,255,255,0.78)",
-                            border: "1px solid rgba(0,0,0,0.08)",
-                            borderRadius: 12,
-                            padding: "8px 12px",
-                            maxWidth: 160,
+                  <div style={{ height: 320 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={acquisitionBars}
+                        layout="vertical"
+                        margin={{ top: 6, right: 24, left: 12, bottom: 6 }}
+                        barCategoryGap={12}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                        <XAxis
+                          type="number"
+                          domain={[0, 100]}
+                          tick={{ fontSize: 11, fill: "rgba(0,0,0,0.65)" }}
+                          tickFormatter={(v: any) => `${Math.round(Number(v))}%`}
+                        />
+                        <YAxis
+                          type="category"
+                          dataKey="metric"
+                          interval={0}
+                          width={150}
+                          tick={{ fontSize: 12, fill: "rgba(0,0,0,0.8)", fontWeight: 700 }}
+                        />
+                        <Tooltip
+                          formatter={(v: any, _name: any, props: any) => {
+                            const label = props?.payload?.metric ?? "Method";
+                            return [`${Number(v).toFixed(1)}%`, label];
                           }}
-                        >
-                          <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(0,0,0,0.52)", letterSpacing: 0.2 }}>Top Source</div>
-                          <div
-                            style={{
-                              fontSize: 16,
-                              fontWeight: 900,
-                              color: "rgba(0,0,0,0.86)",
-                              whiteSpace: "nowrap",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                            }}
-                            title={acquisitionDonut.top?.metric ?? ""}
-                          >
-                            {acquisitionDonut.top?.metric ?? "—"}
-                          </div>
-                          <div style={{ fontSize: 20, fontWeight: 900, color: teamColor }}>
-                            {acquisitionDonut.top ? `${acquisitionDonut.top.value.toFixed(0)}%` : "—"}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{ flex: "1 1 230px", minWidth: 220, display: "flex", flexDirection: "column", justifyContent: "center", gap: 10, paddingRight: 4 }}>
-                      {acquisitionDonut.legendRows.map((d) => (
-                        <div key={`acq-legend-${d.metric}`} style={{ display: "grid", gridTemplateColumns: "12px minmax(0,1fr) 54px", gap: 10, alignItems: "center" }}>
-                          <div style={{ width: 12, height: 12, borderRadius: 999, background: stableColorForKey(d.metric) }} />
-                          <div style={{ minWidth: 0 }}>
-                            <div
-                              style={{
-                                fontSize: 13,
-                                fontWeight: 700,
-                                color: "rgba(0,0,0,0.8)",
-                                whiteSpace: "nowrap",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                              }}
-                              title={d.metric}
-                            >
-                              {d.metric}
-                            </div>
-                            <div style={{ marginTop: 4, height: 6, borderRadius: 999, overflow: "hidden", background: "rgba(0,0,0,0.08)" }}>
-                              <div style={{ width: `${Math.max(2, d.value)}%`, height: "100%", background: stableColorForKey(d.metric), borderRadius: 999 }} />
-                            </div>
-                          </div>
-                          <div style={{ fontSize: 15, fontWeight: 900, color: "rgba(0,0,0,0.82)", textAlign: "right" }}>{d.value.toFixed(0)}%</div>
-                        </div>
-                      ))}
-                    </div>
+                        />
+                        <Bar dataKey="value" radius={[0, 6, 6, 0]} isAnimationActive={false}>
+                          {acquisitionBars.map((d, i) => (
+                            <Cell key={`acq-bar-${d.metric}-${i}`} fill={stableColorForKey(d.metric)} />
+                          ))}
+                          <LabelList
+                            dataKey="value"
+                            position="right"
+                            formatter={(v: any) => `${Number(v).toFixed(0)}%`}
+                            style={{ fill: "rgba(0,0,0,0.8)", fontWeight: 800, fontSize: 12 }}
+                          />
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
                 )}
               </div>
