@@ -2091,8 +2091,9 @@ return [minFinal, maxFinal];
                     const idx = k + 1;
                     const key = `adj_${idx}` as keyof ComparablePlayerRow;
                     const v = r[key] as number | null | undefined;
-                    return v == null || !Number.isFinite(v) ? null : { x: idx, y: v };
-                  }).filter(Boolean) as { x: number; y: number }[];
+                    return { x: idx, y: v == null || !Number.isFinite(v) ? null : v };
+                  }) as { x: number; y: number | null }[];
+                  const hasAnyFuturePoint = series.some((d) => d.y != null);
 
                   return (
                     <div
@@ -2121,7 +2122,23 @@ return [minFinal, maxFinal];
                       </div>
 
                       <div style={{ flex: 1, height: 70 }}>
-                        {series.length === 0 ? (
+                        {hasAnyFuturePoint ? (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <ComposedChart data={series} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.08)" />
+                              <XAxis dataKey="x" type="number" domain={[1, 10]} allowDecimals={false} hide />
+                              <YAxis hide domain={["auto", "auto"]} />
+                              <Line
+                                type="monotone"
+                                dataKey="y"
+                                stroke="rgba(0,0,0,0.75)"
+                                strokeWidth={3}
+                                dot={false}
+                                isAnimationActive={false}
+                              />
+                            </ComposedChart>
+                          </ResponsiveContainer>
+                        ) : (
                           <div
                             style={{
                               height: "100%",
@@ -2134,22 +2151,6 @@ return [minFinal, maxFinal];
                           >
                             *No future seasons
                           </div>
-                        ) : (
-                          <ResponsiveContainer width="100%" height="100%">
-                            <ComposedChart data={series} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.08)" />
-                              <XAxis dataKey="x" hide />
-                              <YAxis hide domain={["auto", "auto"]} />
-                              <Line
-                                type="monotone"
-                                dataKey="y"
-                                stroke="rgba(0,0,0,0.75)"
-                                strokeWidth={3}
-                                dot={false}
-                                isAnimationActive={false}
-                              />
-                            </ComposedChart>
-                          </ResponsiveContainer>
                         )}
                       </div>
                     </div>
