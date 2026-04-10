@@ -4457,7 +4457,7 @@ const mergedSkillRadar = useMemo(() => {
             </Card>
 
             <Card style={{ minHeight: 420, display: "flex", flexDirection: "column" }}>
-              <SectionTitle title="List Profile: Age Distribution" />
+              <SectionTitle title="Playing Profile: Age Distribution" />
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 0.95fr", gridTemplateRows: "auto 260px", gap: 16, alignItems: "start" }}>
                 <div style={{ fontSize: 14, fontWeight: 800, color: "rgba(0,0,0,0.72)" }}>
