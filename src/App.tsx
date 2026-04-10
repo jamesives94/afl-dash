@@ -1,5 +1,5 @@
 // src/App.tsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ResponsiveContainer,
   Area,
@@ -1471,6 +1471,44 @@ return [minFinal, maxFinal];
     return lastActual?.season ?? primaryTraj[0]?.season ?? null;
   }, [primaryTraj, lastActual]);
 
+  const targetProjectionSeason = useMemo(() => {
+    const baseSeason = seasonFixed ?? selectedSeason ?? lastActual?.season ?? null;
+    return baseSeason == null ? null : baseSeason + 1;
+  }, [seasonFixed, selectedSeason, lastActual]);
+
+  const compareSeasonFixed = useMemo(() => {
+    const fromSource = compareTraj.find((d: any) => d.sourceSeason != null)?.sourceSeason ?? null;
+    if (fromSource != null) return fromSource;
+    const lastCompareActual = compareTraj.filter((d: any) => d.actual != null);
+    if (lastCompareActual.length > 0) return lastCompareActual[lastCompareActual.length - 1].season ?? null;
+    return compareTraj[0]?.season ?? null;
+  }, [compareTraj]);
+
+  const compareTargetProjectionSeason = useMemo(() => {
+    if (compareSeasonFixed != null) return compareSeasonFixed + 1;
+    return targetProjectionSeason;
+  }, [compareSeasonFixed, targetProjectionSeason]);
+
+  const pickProjectionRowForSeason = useCallback(
+    (pid: string, desiredSeason: number | null): PlayerProjectionRow | null => {
+      const rows = playerProjections.filter((p: PlayerProjectionRow) => normalizePlayerId(p.playerId) === pid);
+      if (rows.length === 0) return null;
+
+      if (desiredSeason != null) {
+        const exact = rows.find((r) => r.season === desiredSeason);
+        if (exact) return exact;
+
+        const nearestFuture = rows
+          .filter((r) => r.season > desiredSeason)
+          .sort((a, b) => a.season - b.season)[0];
+        if (nearestFuture) return nearestFuture;
+      }
+
+      return [...rows].sort((a, b) => b.season - a.season)[0];
+    },
+    [playerProjections]
+  );
+
   const comparableTop10 = useMemo(() => {
     if (!showComparablePlayers) return [];
     // Match on providerId + source season (career projection season fixed / selected)
@@ -1509,10 +1547,7 @@ return [minFinal, maxFinal];
 
     // ✅ Source AA/Games probabilities from player_projections (Azure Blob -> API)
     const pid = normalizePlayerId(player?.id);
-    const projRow =
-      pid
-        ? playerProjections.find((p: PlayerProjectionRow) => normalizePlayerId(p.playerId) === pid)
-        : null;
+    const projRow = pid ? pickProjectionRowForSeason(pid, targetProjectionSeason) : null;
 
     const pickFirst = (row: any, keys: string[]) => {
       for (const k of keys) {
@@ -1548,7 +1583,7 @@ return [minFinal, maxFinal];
       AA: projAA ?? pickProbFromTrajectory("AA"),
       Games: projGames ?? pickProbFromTrajectory("Games"),
     };
-  }, [playerProjections, player, primaryTraj]);
+  }, [player, primaryTraj, pickProjectionRowForSeason, targetProjectionSeason]);
 
   const rankInfo = useMemo(() => {
     const snapSeason = lastActual?.season ?? null;
@@ -1892,7 +1927,7 @@ return [minFinal, maxFinal];
     };
 
     const pid = normalizePlayerId(comparePlayer.id);
-    const projRow = pid ? playerProjections.find((p: PlayerProjectionRow) => normalizePlayerId(p.playerId) === pid) : null;
+    const projRow = pid ? pickProjectionRowForSeason(pid, compareTargetProjectionSeason) : null;
 
     const pickFirst = (row: any, keys: string[]) => {
       for (const k of keys) {
@@ -1922,7 +1957,7 @@ return [minFinal, maxFinal];
       AA: projAA ?? pickProbFromTrajectory("AA"),
       Games: projGames ?? pickProbFromTrajectory("Games"),
     };
-  }, [comparePlayer, playerProjections, compareTraj]);
+  }, [comparePlayer, compareTraj, pickProjectionRowForSeason, compareTargetProjectionSeason]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -3167,7 +3202,7 @@ return {
             const ageAvg = toNumberOrNull(r["squad_age_avg"]);
             const expAvg = toNumberOrNull(r["squad_experience_avg_games"]);
             const turnover = toNumberOrNull(r["squad_turnover_players"]);
-            if (!club || seasonN === null || ageAvg === null || expAvg === null || turnover === null) return null;
+            if (!club || seasonN === null || ageAvg === null || expAvg === null) return null;
             return {
               Club: club,
               season: seasonN,
@@ -3175,7 +3210,7 @@ return {
               squad_age_yoy: toNumberOrNull(r["squad_age_yoy"]),
               squad_experience_avg_games: expAvg,
               squad_experience_yoy: toNumberOrNull(r["squad_experience_yoy"]),
-              squad_turnover_players: turnover,
+              squad_turnover_players: turnover ?? 0,
               squad_turnover_yoy: toNumberOrNull(r["squad_turnover_yoy"]),
             };
           }),
@@ -3987,25 +4022,44 @@ const mergedSkillRadar = useMemo(() => {
 // --------
 // KPI row (AFL + VFL are club-aware)
 // --------
-const kpis = useMemo(() => {
-  // Use the season actually being shown for KPI + ranks (falls back to selected season)
-  const rankSeason = clubKpiSelection.usedSeason ?? season;
+  const kpis = useMemo(() => {
+    // Use the season actually being shown for KPI + ranks (falls back to selected season)
+    const rankSeason = clubKpiSelection.usedSeason ?? season;
 
   // League rows for that season (used for ranks)
   const leagueRows = teamKpis
     .filter((r) => r.season === rankSeason)
     .map((r) => ({ ...r, Club: normalizeClubName(r.Club) }));
 
-  const nTeams = Math.max(1, new Set(leagueRows.map((r) => r.Club)).size);
+    const nTeams = Math.max(18, new Set(leagueRows.map((r) => r.Club)).size);
 
-  const denseRank = (vals: number[], target: number, direction: "asc" | "desc") => {
-    const cleaned = vals.filter((v) => Number.isFinite(v));
-    if (!cleaned.length || !Number.isFinite(target)) return null;
+    const denseRank = (vals: number[], target: number, direction: "asc" | "desc") => {
+      const cleaned = vals.filter((v) => Number.isFinite(v));
+      if (!cleaned.length || !Number.isFinite(target)) return null;
 
     const uniq = Array.from(new Set(cleaned)).sort((a, b) => (direction === "asc" ? a - b : b - a));
-    const idx = uniq.findIndex((v) => v === target);
-    return idx === -1 ? null : idx + 1;
-  };
+      const idx = uniq.findIndex((v) => v === target);
+      return idx === -1 ? null : idx + 1;
+    };
+
+    const ordinalRankByMetric = (
+      rows: TeamKpiRow[],
+      metric: (r: TeamKpiRow) => number,
+      direction: "asc" | "desc",
+      targetClubKey: string
+    ) => {
+      const ranked = rows
+        .filter((r) => Number.isFinite(metric(r)) && !!r.Club)
+        .sort((a, b) => {
+          const av = metric(a);
+          const bv = metric(b);
+          if (av === bv) return String(a.Club).localeCompare(String(b.Club));
+          return direction === "asc" ? av - bv : bv - av;
+        });
+
+      const idx = ranked.findIndex((r) => normalizeClubName(r.Club) === targetClubKey);
+      return idx === -1 ? null : idx + 1;
+    };
 
   const ageValue = clubKpi ? clubKpi.squad_age_avg.toFixed(1) : "—";
   const ageYoY   = clubKpi ? safeYoY(clubKpi.squad_age_yoy, 1) : "YoY: —";
@@ -4025,17 +4079,17 @@ const kpis = useMemo(() => {
   const toYoY    = safeYoY(effectiveTurnoverYoY, 1);
 
   // Ranks
-  // Age: youngest = #1 (ascending)
-  const ageRank =
-    clubKpi && Number.isFinite(clubKpi.squad_age_avg)
-      ? denseRank(leagueRows.map((r) => r.squad_age_avg), clubKpi.squad_age_avg, "desc")
-      : null;
+    // Age: oldest = #1 (descending)
+    const ageRank =
+      clubKpi && Number.isFinite(clubKpi.squad_age_avg)
+        ? ordinalRankByMetric(leagueRows, (r) => r.squad_age_avg, "desc", clubKey)
+        : null;
 
-  // Experience: most experienced = #1 (descending)
-  const expRank =
-    clubKpi && Number.isFinite(clubKpi.squad_experience_avg_games)
-      ? denseRank(leagueRows.map((r) => r.squad_experience_avg_games), clubKpi.squad_experience_avg_games, "desc")
-      : null;
+    // Experience: most experienced = #1 (descending)
+    const expRank =
+      clubKpi && Number.isFinite(clubKpi.squad_experience_avg_games)
+        ? ordinalRankByMetric(leagueRows, (r) => r.squad_experience_avg_games, "desc", clubKey)
+        : null;
 
   // Turnover: highest turnover = #1 (descending)
   const turnoverLeagueVals =
