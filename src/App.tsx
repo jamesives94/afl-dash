@@ -1545,7 +1545,8 @@ return [minFinal, maxFinal];
       return Math.max(0, Math.min(1, v));
     };
 
-    // ✅ Source AA/Games probabilities from player_projections (Azure Blob -> API)
+    // Source AA probability from player_projections (Azure Blob -> API).
+    // Games probability is sourced from career_projections below.
     const pid = normalizePlayerId(player?.id);
     const projRow = pid ? pickProjectionRowForSeason(pid, targetProjectionSeason) : null;
 
@@ -1560,11 +1561,7 @@ return [minFinal, maxFinal];
     const projAA = clamp01(
       pickFirst(projRow, ["AA", "AA_prob", "AA_future_prob", "AA_probability", "AAProb", "AAProbability"])
     );
-    const projGames = clamp01(
-      pickFirst(projRow, ["Games", "Games_prob", "Games_100_prob", "Games100_prob", "Games_future_prob", "G100_prob", "GAMES"])
-    );
-
-    // Fallback: derive from career_projections trajectory if projections file doesn't have them yet.
+    // Derive probabilities from career_projections trajectory.
     // IMPORTANT: use projected-season probabilities only (never actual-game counts).
     const pickProbFromTrajectory = (key: "AA" | "Games") => {
       const sourceSeason = seasonFixed ?? null;
@@ -1596,7 +1593,8 @@ return [minFinal, maxFinal];
 
     return {
       AA: projAA ?? pickProbFromTrajectory("AA"),
-      Games: projGames ?? pickProbFromTrajectory("Games"),
+      // Games probability is intentionally sourced from career_projections only.
+      Games: pickProbFromTrajectory("Games"),
     };
   }, [player, primaryTraj, pickProjectionRowForSeason, targetProjectionSeason, seasonFixed]);
 
@@ -1955,10 +1953,6 @@ return [minFinal, maxFinal];
     const projAA = clamp01(
       pickFirst(projRow, ["AA", "AA_prob", "AA_future_prob", "AA_probability", "AAProb", "AAProbability"])
     );
-    const projGames = clamp01(
-      pickFirst(projRow, ["Games", "Games_prob", "Games_100_prob", "Games100_prob", "Games_future_prob", "G100_prob", "GAMES"])
-    );
-
     const rows = compareTraj;
     const pickProbFromTrajectory = (key: "AA" | "Games") => {
       const sourceSeason = compareSeasonFixed ?? null;
@@ -1986,7 +1980,8 @@ return [minFinal, maxFinal];
 
     return {
       AA: projAA ?? pickProbFromTrajectory("AA"),
-      Games: projGames ?? pickProbFromTrajectory("Games"),
+      // Games probability is intentionally sourced from career_projections only.
+      Games: pickProbFromTrajectory("Games"),
     };
   }, [comparePlayer, compareTraj, pickProjectionRowForSeason, compareTargetProjectionSeason, compareSeasonFixed]);
 
