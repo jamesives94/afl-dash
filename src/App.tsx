@@ -1564,15 +1564,30 @@ return [minFinal, maxFinal];
       pickFirst(projRow, ["Games", "Games_prob", "Games_100_prob", "Games100_prob", "Games_future_prob", "G100_prob", "GAMES"])
     );
 
-    // Fallback: derive from career_projections trajectory if projections file doesn't have them yet
+    // Fallback: derive from career_projections trajectory if projections file doesn't have them yet.
+    // IMPORTANT: use projected-season probabilities only (never actual-game counts).
     const pickProbFromTrajectory = (key: "AA" | "Games") => {
-      // Prefer Horizon = 1 when available
-      const h1 = primaryTraj.find((d: any) => d.horizon === 1 && d[key] != null);
+      const sourceSeason = seasonFixed ?? null;
+      const projectedRows = primaryTraj.filter((d: any) => {
+        if (d == null) return false;
+        if (sourceSeason != null && typeof d.season === "number") return d.season > sourceSeason;
+        return typeof d.horizon === "number" ? d.horizon > 0 : false;
+      });
+
+      if (targetProjectionSeason != null) {
+        const targetRow = projectedRows.find((d: any) => d.season === targetProjectionSeason && d[key] != null);
+        const targetV = clamp01(targetRow?.[key]);
+        if (targetV != null) return targetV;
+      }
+
+      // Prefer Horizon = 1 projected row when available.
+      const h1 = projectedRows.find((d: any) => d.horizon === 1 && d[key] != null);
       const h1v = clamp01(h1?.[key]);
       if (h1v != null) return h1v;
 
-      // Otherwise: first non-null probability-looking value in the trajectory
-      const anyProb = primaryTraj
+      // Otherwise: first non-null probability-looking value from projected rows only.
+      const anyProb = projectedRows
+        .sort((a: any, b: any) => (a.season ?? 0) - (b.season ?? 0))
         .map((d: any) => clamp01(d[key]))
         .find((v: any) => v != null);
 
@@ -1583,7 +1598,7 @@ return [minFinal, maxFinal];
       AA: projAA ?? pickProbFromTrajectory("AA"),
       Games: projGames ?? pickProbFromTrajectory("Games"),
     };
-  }, [player, primaryTraj, pickProjectionRowForSeason, targetProjectionSeason]);
+  }, [player, primaryTraj, pickProjectionRowForSeason, targetProjectionSeason, seasonFixed]);
 
   const rankInfo = useMemo(() => {
     const snapSeason = lastActual?.season ?? null;
@@ -1946,10 +1961,26 @@ return [minFinal, maxFinal];
 
     const rows = compareTraj;
     const pickProbFromTrajectory = (key: "AA" | "Games") => {
-      const h1 = rows.find((d: any) => d.horizon === 1 && d[key] != null);
+      const sourceSeason = compareSeasonFixed ?? null;
+      const projectedRows = rows.filter((d: any) => {
+        if (d == null) return false;
+        if (sourceSeason != null && typeof d.season === "number") return d.season > sourceSeason;
+        return typeof d.horizon === "number" ? d.horizon > 0 : false;
+      });
+
+      if (compareTargetProjectionSeason != null) {
+        const targetRow = projectedRows.find((d: any) => d.season === compareTargetProjectionSeason && d[key] != null);
+        const targetV = clamp01(targetRow?.[key]);
+        if (targetV != null) return targetV;
+      }
+
+      const h1 = projectedRows.find((d: any) => d.horizon === 1 && d[key] != null);
       const h1v = clamp01(h1?.[key]);
       if (h1v != null) return h1v;
-      const anyProb = rows.map((d: any) => clamp01(d[key])).find((v: any) => v != null);
+      const anyProb = projectedRows
+        .sort((a: any, b: any) => (a.season ?? 0) - (b.season ?? 0))
+        .map((d: any) => clamp01(d[key]))
+        .find((v: any) => v != null);
       return anyProb ?? null;
     };
 
@@ -1957,7 +1988,7 @@ return [minFinal, maxFinal];
       AA: projAA ?? pickProbFromTrajectory("AA"),
       Games: projGames ?? pickProbFromTrajectory("Games"),
     };
-  }, [comparePlayer, compareTraj, pickProjectionRowForSeason, compareTargetProjectionSeason]);
+  }, [comparePlayer, compareTraj, pickProjectionRowForSeason, compareTargetProjectionSeason, compareSeasonFixed]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
