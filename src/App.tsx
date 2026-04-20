@@ -3738,6 +3738,43 @@ const rankTrendMeta = useMemo(() => {
   const latestActual = [...clubRows].reverse().find((r) => r.actual_rank != null) ?? clubRows[clubRows.length - 1];
   const latestYear = latestActual.year;
 
+  // Prefer explicit future forecast rows (e.g. 2026 row after a 2025 actual),
+  // then fall back to the latest-actual row for legacy files.
+  const hasForecastSignal = (r: RankRow) =>
+    r.forecast_a_rank != null ||
+    r.forecast_b_rank != null ||
+    r.finish_1_p25 != null ||
+    r.finish_1_p75 != null ||
+    r.finish_2_p25 != null ||
+    r.finish_2_p75 != null;
+
+  const futureForecastRows = clubRows
+    .filter((r) => r.year > latestYear && hasForecastSignal(r))
+    .sort((a, b) => a.year - b.year);
+
+  const forecastSource = futureForecastRows[0] ?? latestActual;
+  const forecastSourceNext = futureForecastRows[1] ?? null;
+
+  const proj1Forecast = forecastSource.forecast_a_rank ?? latestActual.forecast_a_rank ?? null;
+  const proj1P25 = forecastSource.finish_1_p25 ?? latestActual.finish_1_p25 ?? null;
+  const proj1P75 = forecastSource.finish_1_p75 ?? latestActual.finish_1_p75 ?? null;
+
+  const proj2Forecast =
+    forecastSource.forecast_b_rank ??
+    forecastSourceNext?.forecast_a_rank ??
+    latestActual.forecast_b_rank ??
+    null;
+  const proj2P25 =
+    forecastSource.finish_2_p25 ??
+    forecastSourceNext?.finish_1_p25 ??
+    latestActual.finish_2_p25 ??
+    null;
+  const proj2P75 =
+    forecastSource.finish_2_p75 ??
+    forecastSourceNext?.finish_1_p75 ??
+    latestActual.finish_2_p75 ??
+    null;
+
   const history = clubRows
     .filter((r) => r.year <= latestYear)
     .map((r) => ({
@@ -3766,19 +3803,19 @@ const rankTrendMeta = useMemo(() => {
     {
       year: String(projYear1),
       actual: null,
-      fcstA: latestActual.forecast_a_rank ?? null,
-      fcstB: latestActual.forecast_a_rank ?? null,
-      p25: latestActual.finish_1_p25 ?? null,
-      p75: latestActual.finish_1_p75 ?? null,
+      fcstA: proj1Forecast,
+      fcstB: proj1Forecast,
+      p25: proj1P25,
+      p75: proj1P75,
     },
     // +2 season
     {
       year: String(projYear2),
       actual: null,
       fcstA: null,
-      fcstB: latestActual.forecast_b_rank ?? null,
-      p25: latestActual.finish_2_p25 ?? null,
-      p75: latestActual.finish_2_p75 ?? null,
+      fcstB: proj2Forecast,
+      p25: proj2P25,
+      p75: proj2P75,
     },
   ];
 
