@@ -3846,20 +3846,100 @@ const rankTrendMeta = useMemo(() => {
 }, [rankSeries, clubKey]);
 const rankTrend = rankTrendMeta.rows;
 const rankMissingActualYears = rankTrendMeta.missingActualYears;
+const rankLastActualYear = useMemo(() => {
+  for (let i = rankTrend.length - 1; i >= 0; i--) {
+    if (rankTrend[i].actual !== null && rankTrend[i].actual !== undefined) return rankTrend[i].year;
+  }
+  return null;
+}, [rankTrend]);
+
+const ordinalRank = (n: number) => {
+  const v = Math.round(n);
+  const mod100 = v % 100;
+  if (mod100 >= 11 && mod100 <= 13) return `${v}th`;
+  const mod10 = v % 10;
+  if (mod10 === 1) return `${v}st`;
+  if (mod10 === 2) return `${v}nd`;
+  if (mod10 === 3) return `${v}rd`;
+  return `${v}th`;
+};
+
+const rankContextLabel = (rank: number | null | undefined) => {
+  if (rank == null || !Number.isFinite(rank)) return "-";
+  const rounded = Math.round(rank);
+  if (Math.abs(rank - rounded) < 1e-6) return ordinalRank(rounded);
+  return `${rank.toFixed(1)} (~${ordinalRank(rounded)})`;
+};
+
+const rankBandLabel = (rank: number | null | undefined) => {
+  if (rank == null || !Number.isFinite(rank)) return null;
+  if (rank <= 4) return "Top 4";
+  if (rank <= 8) return "Finals (5-8)";
+  if (rank <= 14) return "Mid-table (9-14)";
+  return "Bottom 4 (15-18)";
+};
+
+function RankTrendTooltip({ active, label, payload }: any) {
+  if (!active || !Array.isArray(payload) || payload.length === 0) return null;
+  const row = payload[0]?.payload;
+  if (!row) return null;
+
+  const toFinite = (v: any): number | null => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const actual = toFinite(row.actual);
+  const fcstA = toFinite(row.fcstA);
+  const fcstB = toFinite(row.fcstB);
+  const lastActualYearN = rankLastActualYear == null ? null : Number(rankLastActualYear);
+  const yearN = Number(label ?? row.year);
+
+  const isPlus2 =
+    lastActualYearN != null && Number.isFinite(lastActualYearN) && Number.isFinite(yearN) && yearN === lastActualYearN + 2;
+  const forecast = isPlus2 ? (fcstB ?? fcstA) : (fcstA ?? fcstB);
+  const forecastLabel = isPlus2 ? "Forecast +2" : "Forecast +1";
+  const outcomeBand = rankBandLabel(forecast);
+
+  return (
+    <div
+      style={{
+        background: "rgba(255,255,255,0.98)",
+        border: "1px solid rgba(0,0,0,0.12)",
+        borderRadius: 12,
+        padding: "8px 10px",
+        boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+        minWidth: 170,
+      }}
+    >
+      <div style={{ fontSize: 11, color: "rgba(0,0,0,0.55)", marginBottom: 4 }}>Year {label}</div>
+      {actual != null ? (
+        <div style={{ fontSize: 12, color: "rgba(0,0,0,0.82)" }}>
+          Actual rank: <strong>{ordinalRank(actual)}</strong>
+        </div>
+      ) : null}
+      {actual == null && forecast != null ? (
+        <>
+          <div style={{ fontSize: 12, color: "rgba(0,0,0,0.82)" }}>
+            {forecastLabel}: <strong>{rankContextLabel(forecast)}</strong>
+          </div>
+          {outcomeBand ? (
+            <div style={{ fontSize: 12, color: "rgba(0,0,0,0.82)", marginTop: 2 }}>
+              Outcome band: <strong>{outcomeBand}</strong>
+            </div>
+          ) : null}
+        </>
+      ) : null}
+    </div>
+  );
+}
 
 
   function ActualEndLabelDot(props: any) {
     const { cx, cy, payload } = props;
     if (!payload) return null;
 
-    const lastActualYear = (() => {
-      for (let i = rankTrend.length - 1; i >= 0; i--) {
-        if (rankTrend[i].actual !== null && rankTrend[i].actual !== undefined) return rankTrend[i].year;
-      }
-      return null;
-    })();
-
-    if (!lastActualYear || payload.year !== lastActualYear) return null;
+    if (!rankLastActualYear || payload.year !== rankLastActualYear) return null;
 
     return (
       <g>
@@ -4443,18 +4523,13 @@ const mergedSkillRadar = useMemo(() => {
 
                     {rankTrend.length > 0 && (
                       <ReferenceLine
-                        x={(() => {
-                          for (let i = rankTrend.length - 1; i >= 0; i--) {
-                            if (rankTrend[i].actual !== null && rankTrend[i].actual !== undefined) return rankTrend[i].year;
-                          }
-                          return undefined;
-                        })()}
+                        x={rankLastActualYear ?? undefined}
                         stroke="rgba(0,0,0,0.18)"
                         strokeDasharray="4 4"
                       />
                     )}
 
-                    <Tooltip formatter={(val: any, name: any) => [val, name]} labelFormatter={(label: any) => `Year: ${label}`} />
+                    <Tooltip content={<RankTrendTooltip />} />
 {/* Invisible base up to p25 */}
 <Area
   type="monotone"
