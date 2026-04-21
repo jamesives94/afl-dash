@@ -3885,6 +3885,7 @@ function RankTrendTooltip({ active, label, payload }: any) {
   if (!row) return null;
 
   const toFinite = (v: any): number | null => {
+    if (v === null || v === undefined || v === "") return null;
     const n = Number(v);
     return Number.isFinite(n) ? n : null;
   };
