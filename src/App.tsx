@@ -101,6 +101,7 @@ const LOGOS = import.meta.glob("/src/AFL_Logos_Official/*.{png,svg,jpg,jpeg,webp
 }) as Record<string, string>;
 
 
+
 function getLogoUrlByClubName(clubName: string) {
   // Try exact file names first (fast path)
   const targets = [
@@ -226,11 +227,14 @@ function getPlayerImgUrl(playerId: string | number | null | undefined, playerNam
 // --------------------
 // Types
 // --------------------
-type TeamOption = { id: string; name: string };
+type LeagueCode = "AFL" | "AFLW";
+type TeamOption = { id: string; name: string; league: LeagueCode; label?: string };
 
 type RosterPlayerRow = {
   season: number;
   team: string;
+  team_id: string;
+  league: LeagueCode;
   providerId: string;
   player_name: string;
   age: number;
@@ -244,6 +248,8 @@ type RosterPlayerRow = {
 type TeamKpiRow = {
   Club: string;
   season: number;
+  team_id: string;
+  league: LeagueCode;
   squad_age_avg: number;
   squad_age_yoy: number | null;
   squad_experience_avg_games: number;
@@ -257,7 +263,21 @@ type VflFormRow = {
   player_name: string;
   playerId: string;
   team: string;
+  team_id?: string;
+  league?: string;
   weighted_avg: number;
+};
+
+type AflFormRow = {
+  season: number;
+  player_name: string;
+  playerId: string;
+  team: string;
+  team_id: string;
+  league: LeagueCode;
+  weighted_avg: number;
+  recent_form: number | null;
+  form_change: number | null;
 };
 
 type RankRow = {
@@ -280,6 +300,8 @@ type RankRow = {
 type SkillRadarRow = {
   season: string;
   squad_name: string;
+  team_id: string;
+  league: LeagueCode;
   KH_Ratio: number;
   GB_MK_Ratio: number;
   Fwd_Half: number;
@@ -298,17 +320,21 @@ type AcquisitionRow = {
   Year: number;
   Draft: string;
   value: number;
+  team_id: string;
+  league: LeagueCode;
 };
 
 type PlayerProjectionRow = {
   team: string;
   season: number;
+  team_id: string;
+  league: LeagueCode;
   playerId: string;
   player_name: string;
   rating: number;
-  salary: number;
-  AA: number;
-  Games: number;
+  salary: number | null;
+  AA: number | null;
+  Games: number | null;
 };
 
 
@@ -406,28 +432,47 @@ type PlayerStatsAggRow = {
 };
 
 
+
 // --------------------
 // Teams
 // --------------------
 const TEAMS: TeamOption[] = [
-  { id: "10", name: "Adelaide" },
-  { id: "20", name: "Brisbane Lions" },
-  { id: "30", name: "Carlton" },
-  { id: "40", name: "Collingwood" },
-  { id: "50", name: "Essendon" },
-  { id: "60", name: "Fremantle" },
-  { id: "70", name: "Geelong Cats" },
-  { id: "1000", name: "Gold Coast SUNS" },
-  { id: "1010", name: "GWS GIANTS" },
-  { id: "80", name: "Hawthorn" },
-  { id: "90", name: "Melbourne" },
-  { id: "100", name: "North Melbourne" },
-  { id: "110", name: "Port Adelaide" },
-  { id: "120", name: "Richmond" },
-  { id: "130", name: "St Kilda" },
-  { id: "160", name: "Sydney" },
-  { id: "150", name: "West Coast" },
-  { id: "140", name: "Western Bulldogs" },
+  { id: "10", name: "Adelaide Crows", league: "AFL" },
+  { id: "20", name: "Brisbane Lions", league: "AFL" },
+  { id: "30", name: "Carlton", league: "AFL" },
+  { id: "40", name: "Collingwood", league: "AFL" },
+  { id: "50", name: "Essendon", league: "AFL" },
+  { id: "60", name: "Fremantle", league: "AFL" },
+  { id: "70", name: "Geelong Cats", league: "AFL" },
+  { id: "1000", name: "Gold Coast SUNS", league: "AFL" },
+  { id: "1010", name: "GWS GIANTS", league: "AFL" },
+  { id: "80", name: "Hawthorn", league: "AFL" },
+  { id: "90", name: "Melbourne", league: "AFL" },
+  { id: "100", name: "North Melbourne", league: "AFL" },
+  { id: "110", name: "Port Adelaide", league: "AFL" },
+  { id: "120", name: "Richmond", league: "AFL" },
+  { id: "130", name: "St Kilda", league: "AFL" },
+  { id: "160", name: "Sydney", league: "AFL" },
+  { id: "150", name: "West Coast", league: "AFL" },
+  { id: "140", name: "Western Bulldogs", league: "AFL" },
+  { id: "8098", name: "Adelaide Crows", league: "AFLW", label: "Adelaide Crows (AFLW)" },
+  { id: "7887", name: "Brisbane Lions", league: "AFLW", label: "Brisbane Lions (AFLW)" },
+  { id: "8096", name: "Carlton", league: "AFLW", label: "Carlton (AFLW)" },
+  { id: "8097", name: "Collingwood", league: "AFLW", label: "Collingwood (AFLW)" },
+  { id: "9406", name: "Essendon", league: "AFLW", label: "Essendon (AFLW)" },
+  { id: "7886", name: "Fremantle", league: "AFLW", label: "Fremantle (AFLW)" },
+  { id: "8467", name: "Geelong Cats", league: "AFLW", label: "Geelong Cats (AFLW)" },
+  { id: "8786", name: "Gold Coast SUNS", league: "AFLW", label: "Gold Coast SUNS (AFLW)" },
+  { id: "7889", name: "GWS GIANTS", league: "AFLW", label: "GWS GIANTS (AFLW)" },
+  { id: "9407", name: "Hawthorn", league: "AFLW", label: "Hawthorn (AFLW)" },
+  { id: "7386", name: "Melbourne", league: "AFLW", label: "Melbourne (AFLW)" },
+  { id: "8466", name: "North Melbourne", league: "AFLW", label: "North Melbourne (AFLW)" },
+  { id: "9409", name: "Port Adelaide", league: "AFLW", label: "Port Adelaide (AFLW)" },
+  { id: "8788", name: "Richmond", league: "AFLW", label: "Richmond (AFLW)" },
+  { id: "8796", name: "St Kilda", league: "AFLW", label: "St Kilda (AFLW)" },
+  { id: "9408", name: "Sydney Swans", league: "AFLW", label: "Sydney Swans (AFLW)" },
+  { id: "8787", name: "West Coast Eagles", league: "AFLW", label: "West Coast Eagles (AFLW)" },
+  { id: "7387", name: "Western Bulldogs", league: "AFLW", label: "Western Bulldogs (AFLW)" },
 ];
 
 
@@ -486,6 +531,8 @@ const TEAM_PRIMARY_COLOR: Record<string, string> = {
   "Western Bulldogs": "#1E3A8A",
 };
 
+const TEAM_BY_ID = new Map(TEAMS.map((t) => [t.id, t] as const));
+
 const AGE_CAT_COLOR: Record<string, string> = {
   "Rising Stars": "#2563EB",
   "Established Youth": "#7C3AED",
@@ -514,6 +561,44 @@ function normalizeClubName(s: string) {
     "Western Bulldogs": "Western Bulldogs",
   };
   return map[x] ?? x;
+}
+
+function normalizeLeague(x: any): LeagueCode {
+  const raw = toTrimmedString(x).toUpperCase();
+  return raw === "AFLW" ? "AFLW" : "AFL";
+}
+
+function normalizeTeamId(x: any): string {
+  return toTrimmedString(x);
+}
+
+function getTeamOptionById(teamId: string | null | undefined): TeamOption | null {
+  const id = normalizeTeamId(teamId);
+  return id ? TEAM_BY_ID.get(id) ?? null : null;
+}
+
+function findTeamOption(rawTeamId: any, rawTeamName: any, rawLeague: any): TeamOption | null {
+  const direct = getTeamOptionById(rawTeamId);
+  if (direct) return direct;
+
+  const teamName = normalizeClubName(toTrimmedString(rawTeamName));
+  if (!teamName) return null;
+
+  const league = normalizeLeague(rawLeague);
+  return (
+    TEAMS.find((t) => t.league === league && normalizeClubName(t.name) === teamName) ??
+    TEAMS.find((t) => t.league === "AFL" && normalizeClubName(t.name) === teamName) ??
+    TEAMS.find((t) => normalizeClubName(t.name) === teamName) ??
+    null
+  );
+}
+
+function resolveTeamIdentity(rawTeamId: any, rawTeamName: any, rawLeague: any) {
+  const option = findTeamOption(rawTeamId, rawTeamName, rawLeague);
+  const team = option?.name ?? normalizeClubName(toTrimmedString(rawTeamName));
+  const team_id = option?.id ?? normalizeTeamId(rawTeamId);
+  const league = option?.league ?? normalizeLeague(rawLeague);
+  return { team, team_id, league };
 }
 
 function coerceTeamId(raw: string | null | undefined): string {
@@ -549,6 +634,9 @@ function clamp(n: number, lo: number, hi: number) {
 //   VITE_DATA_API_KEY=...   (note: this is only "light protection" in-browser).
 // If a server/SharePoint process calls the API, keep the key server-side.
 const DATA_API_KEY = (import.meta as any).env?.VITE_DATA_API_KEY as string | undefined;
+const USE_LOCAL_DATA = String((import.meta as any).env?.VITE_USE_LOCAL_DATA ?? "").toLowerCase() === "true";
+const LOCAL_DATA_BASE = String((import.meta as any).env?.VITE_LOCAL_DATA_BASE ?? "/local-data").replace(/\/+$/, "") || "/local-data";
+let localDataManifestPromise: Promise<any | null> | null = null;
 
 function toTrimmedString(x: any): string {
   // Ensures we can safely call .trim() even if the API returns numbers/nulls.
@@ -614,6 +702,27 @@ async function loadApiDataAsObjects<T>(file: string, mapper: (r: Record<string, 
   return out;
 }
 
+async function loadOptionalApiDataAsObjects<T>(
+  file: string,
+  mapper: (r: Record<string, any>) => T | null
+): Promise<T[]> {
+  try {
+    return await loadApiDataAsObjects(file, mapper);
+  } catch (err: any) {
+    const message = String(err?.message ?? err ?? "");
+    if (
+      /invalid file/i.test(message) ||
+      /failed to load .*local snapshots \(404\)/i.test(message) ||
+      /blobnotfound/i.test(message) ||
+      /the specified blob does not exist/i.test(message) ||
+      /failed to load .* via api \(404\)/i.test(message)
+    ) {
+      return [];
+    }
+    throw err;
+  }
+}
+
 function parseLastUpdatedLabel(value: string | null): string {
   const raw = toTrimmedString(value);
   if (!raw) return "";
@@ -624,7 +733,35 @@ function parseLastUpdatedLabel(value: string | null): string {
   return "";
 }
 
+async function fetchLocalManifest(): Promise<any | null> {
+  if (!localDataManifestPromise) {
+    localDataManifestPromise = (async () => {
+      try {
+        const res = await fetch(`${LOCAL_DATA_BASE}/manifest.json`, { cache: "no-store" });
+        if (!res.ok) return null;
+        return await res.json();
+      } catch {
+        return null;
+      }
+    })();
+  }
+  return localDataManifestPromise;
+}
+
 async function fetchApiRows(file: string): Promise<{ rows: Record<string, any>[]; lastUpdatedLabel: string }> {
+  if (USE_LOCAL_DATA) {
+    const url = `${LOCAL_DATA_BASE}/${file}.json`;
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) throw new Error(`Failed to load ${file} from local snapshots (${res.status})`);
+
+    const json = await res.json();
+    const rows = Array.isArray(json) ? json : [];
+    const manifest = await fetchLocalManifest();
+    const entry = Array.isArray(manifest?.files) ? manifest.files.find((f: any) => f?.file === file) : null;
+    const lastUpdatedLabel = parseLastUpdatedLabel(entry?.lastModified ?? manifest?.generatedAt ?? null);
+    return { rows, lastUpdatedLabel };
+  }
+
   const url = `/api/data?file=${encodeURIComponent(file)}`;
 
   const headers: Record<string, string> = {};
@@ -640,7 +777,10 @@ async function fetchApiRows(file: string): Promise<{ rows: Record<string, any>[]
         : `Unauthorized calling ${url} (no VITE_DATA_API_KEY set in the frontend)`
     );
   }
-  if (!res.ok) throw new Error(`Failed to load ${file} via API (${res.status})`);
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(text ? `Failed to load ${file} via API (${res.status}): ${text}` : `Failed to load ${file} via API (${res.status})`);
+  }
 
   const json = await res.json();
   const rows = Array.isArray(json) ? json : [];
@@ -943,7 +1083,7 @@ function safeYoY(v: number | null | undefined, decimals = 1) {
 // --------------------
 // Player projection table
 // --------------------
-type PlayerTableRow = { name: string; rating: number; salary: number; AA: number; Games: number };
+type PlayerTableRow = { name: string; rating: number; salary: number | null; AA: number | null; Games: number | null };
 
 function PlayerProjectionTable({ rows }: { rows: PlayerTableRow[] }) {
   return (
@@ -984,8 +1124,12 @@ function PlayerProjectionTable({ rows }: { rows: PlayerTableRow[] }) {
               {r.name}
             </div>
             <div style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{r.rating.toFixed(1)}</div>
-            <div style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmtAUD(r.salary)}</div>
-            <div style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{formatPct(r.AA * 100)}</div>
+            <div style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+              {r.salary != null && Number.isFinite(r.salary) ? fmtAUD(r.salary) : "—"}
+            </div>
+            <div style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+              {r.AA != null && Number.isFinite(r.AA) ? formatPct(r.AA * 100) : "—"}
+            </div>
           </div>
         ))}
       </div>
@@ -1031,7 +1175,9 @@ function CareerProjectionDashboard({
   onPlayerIdChange?: (id: string) => void;
 }) {
   // Primary club context comes from the top-level team selector (query param)
-  const teamName = (TEAMS.find((t) => t.id === defaultTeam)?.name ?? defaultTeam) as string;
+  const teamOption = getTeamOptionById(defaultTeam);
+  const selectedLeague = teamOption?.league ?? "AFL";
+  const teamName = (teamOption?.name ?? defaultTeam) as string;
   const teamKey = normalizeClubName(teamName);
   const teamColor = TEAM_PRIMARY_COLOR[teamKey] ?? "#111827";
   const logoSrc = getLogoUrlByClubName(teamName);
@@ -1068,28 +1214,51 @@ function CareerProjectionDashboard({
   // ---------- Player pickers ----------
   // Primary list: players at the selected club (if team column exists)
   const clubPlayers = useMemo(() => {
-    const rows = careerProjections.filter((r) => {
-      const t = toTrimmedString(r.team);
-      if (!t) return true; // if no team column, don't filter it out
-
-      // Some exports store team as a numeric id (e.g. "40") instead of a club name.
-      // Coerce to a club name before comparing.
-      const tId = coerceTeamId(t);
-      const tName = TEAMS.find((x) => x.id === tId)?.name ?? t;
-      return normalizeClubName(tName) === teamKey;
-    });
-
     const map = new Map<string, { name: string; id: string; team?: string; pos?: string }>();
-    for (const r of rows) {
+    for (const r of careerProjections) {
+      const t = toTrimmedString(r.team);
+      if (t) {
+        const resolved = resolveTeamIdentity(t, t, "AFL");
+        if (normalizeTeamId(resolved.team_id) !== normalizeTeamId(defaultTeam)) continue;
+      }
       const id = normalizePlayerId(r.SourceproviderId);
       const name = toTrimmedString(r.SourcePlayer);
       if (!id || !name) continue;
       const key = `${id}__${name}`;
       if (!map.has(key)) map.set(key, { name, id, team: r.team, pos: r.SourcePosition });
     }
+
+    for (const r of rosterPlayers) {
+      if (
+        normalizeTeamId(r.team_id) !== normalizeTeamId(defaultTeam) ||
+        r.league !== selectedLeague
+      ) {
+        continue;
+      }
+      const id = normalizePlayerId(r.providerId);
+      const name = toTrimmedString(r.player_name);
+      if (!id || !name) continue;
+      const key = `${id}__${name}`;
+      if (!map.has(key)) map.set(key, { name, id, team: r.team, pos: r.position_group });
+    }
+
+    for (const r of playerProjections) {
+      if (
+        normalizeTeamId(r.team_id) !== normalizeTeamId(defaultTeam) ||
+        r.league !== selectedLeague
+      ) {
+        continue;
+      }
+      const id = normalizePlayerId(r.playerId);
+      const name = toTrimmedString(r.player_name);
+      if (!id || !name) continue;
+      const key = `${id}__${name}`;
+      if (!map.has(key)) map.set(key, { name, id, team: r.team });
+    }
+
     const out = Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
     return out.length ? out : [{ name: "Select a player", id: "" }];
-  }, [careerProjections, teamKey]);
+  }, [careerProjections, rosterPlayers, playerProjections, defaultTeam, selectedLeague]);
 
   // Compare list: any player in the database
   const allPlayers = useMemo(() => {
@@ -1101,8 +1270,22 @@ function CareerProjectionDashboard({
       const key = `${id}__${name}`;
       if (!map.has(key)) map.set(key, { name, id, team: r.team, pos: r.SourcePosition });
     }
+    for (const r of rosterPlayers) {
+      const id = normalizePlayerId(r.providerId);
+      const name = toTrimmedString(r.player_name);
+      if (!id || !name) continue;
+      const key = `${id}__${name}`;
+      if (!map.has(key)) map.set(key, { name, id, team: r.team, pos: r.position_group });
+    }
+    for (const r of playerProjections) {
+      const id = normalizePlayerId(r.playerId);
+      const name = toTrimmedString(r.player_name);
+      if (!id || !name) continue;
+      const key = `${id}__${name}`;
+      if (!map.has(key)) map.set(key, { name, id, team: r.team });
+    }
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [careerProjections]);
+  }, [careerProjections, rosterPlayers, playerProjections]);
 
   const [playerId, setPlayerId] = useState<string>(() => (
     initialPlayerId && clubPlayers.some((p) => normalizePlayerId(p.id) === normalizePlayerId(initialPlayerId))
@@ -1227,6 +1410,10 @@ function CareerProjectionDashboard({
           : outlook === "pessimistic"
           ? asNumOrNull((r as any).salary_pes ?? r.salary)
           : asNumOrNull(r.salary);
+      const optimisticEstimate = asNumOrNull((r as any).Optimistic ?? r.estimate);
+      const pessimisticEstimate = asNumOrNull((r as any).Pessimistic ?? r.estimate);
+      const optimisticSalary = asNumOrNull((r as any).salary_opt ?? r.salary);
+      const pessimisticSalary = asNumOrNull((r as any).salary_pes ?? r.salary);
 
       const lower = r.lower;
       const upper = r.upper;
@@ -1235,9 +1422,13 @@ function CareerProjectionDashboard({
         season: r.Season,
         actual: isActual ? r.estimate : null,
         estimate: isActual ? null : projEstimate,
+        optimistic: isActual ? null : optimisticEstimate,
+        pessimistic: isActual ? null : pessimisticEstimate,
         lower0: lower,
         band: lower != null && upper != null ? Math.max(0, upper - lower) : null,
         salary: isActual ? r.salary : projSalary,
+        salary_optimistic: isActual ? null : optimisticSalary,
+        salary_pessimistic: isActual ? null : pessimisticSalary,
         AA: r.AA,
         Games: r.Games,
         Seasons: r.Seasons,
@@ -1297,10 +1488,14 @@ function CareerProjectionDashboard({
         ...r,
         actual_rating: d.actual,
         estimate_rating: d.estimate,
+        optimistic_rating: d.optimistic,
+        pessimistic_rating: d.pessimistic,
         lower0_rating: d.lower0,
         band_rating: d.band,
         salary_actual: d.actual != null ? d.salary : null,
         salary_estimate: d.estimate != null ? d.salary : null,
+        salary_optimistic: d.salary_optimistic,
+        salary_pessimistic: d.salary_pessimistic,
         salary: d.salary,
         AA: d.AA,
         Games: d.Games,
@@ -1346,6 +1541,8 @@ function CareerProjectionDashboard({
       ...d,
       actual: d.actual_rating,
       estimate: d.estimate_rating,
+      optimistic: d.optimistic_rating,
+      pessimistic: d.pessimistic_rating,
       lower0: d.lower0_rating,
       band: d.band_rating,
       c_actual: d.c_actual_rating,
@@ -1405,9 +1602,13 @@ function CareerProjectionDashboard({
       if (hiB != null) highs.push(hiB);
 
       const vA = d.actual ?? d.estimate;
+      const vOpt = d.optimistic;
+      const vPes = d.pessimistic;
       const vB = d.c_actual ?? d.c_estimate;
 
       if (typeof vA === "number" && Number.isFinite(vA)) vals.push(vA);
+      if (typeof vOpt === "number" && Number.isFinite(vOpt)) vals.push(vOpt);
+      if (typeof vPes === "number" && Number.isFinite(vPes)) vals.push(vPes);
       if (typeof vB === "number" && Number.isFinite(vB)) vals.push(vB);
     }
 
@@ -1488,6 +1689,8 @@ return [minFinal, maxFinal];
     if (compareSeasonFixed != null) return compareSeasonFixed + 1;
     return targetProjectionSeason;
   }, [compareSeasonFixed, targetProjectionSeason]);
+  const optimisticLabelKey = projectionMetric === "salary" ? "salary_optimistic" : "optimistic";
+  const pessimisticLabelKey = projectionMetric === "salary" ? "salary_pessimistic" : "pessimistic";
 
   const pickProjectionRowForSeason = useCallback(
     (pid: string, desiredSeason: number | null): PlayerProjectionRow | null => {
@@ -2552,6 +2755,12 @@ return [minFinal, maxFinal];
                         case "bridge":
                           salaryVal = payload.salary_estimate ?? payload.salary_actual ?? payload.salary;
                           break;
+                        case "optimistic":
+                          salaryVal = payload.salary_optimistic ?? payload.salary_estimate ?? payload.salary;
+                          break;
+                        case "pessimistic":
+                          salaryVal = payload.salary_pessimistic ?? payload.salary_estimate ?? payload.salary;
+                          break;
                         default:
                           salaryVal = payload.salary ?? null;
                           break;
@@ -2625,6 +2834,62 @@ return [minFinal, maxFinal];
                   isAnimationActive={false}
                 />
 
+                <Line
+                  type="monotone"
+                  dataKey="optimistic"
+                  name="Optimistic Trend"
+                  stroke={teamColor}
+                  strokeOpacity={0.36}
+                  strokeDasharray="4 4"
+                  strokeWidth={2}
+                  dot={false}
+                  activeDot={false}
+                  connectNulls
+                  isAnimationActive={false}
+                >
+                  <LabelList
+                    dataKey={optimisticLabelKey}
+                    position="top"
+                    offset={10}
+                    formatter={(v: any) => {
+                      if (v == null) return "";
+                      const val = typeof v === "number" ? v : Number(v);
+                      if (!Number.isFinite(val)) return "";
+                      return projectionMetric === "salary" ? fmtAUDShort(val) : val.toFixed(1);
+                    }}
+                    fontSize={10}
+                    fill="rgba(0,0,0,0.28)"
+                  />
+                </Line>
+
+                <Line
+                  type="monotone"
+                  dataKey="pessimistic"
+                  name="Pessimistic Trend"
+                  stroke={teamColor}
+                  strokeOpacity={0.24}
+                  strokeDasharray="2 5"
+                  strokeWidth={2}
+                  dot={false}
+                  activeDot={false}
+                  connectNulls
+                  isAnimationActive={false}
+                >
+                  <LabelList
+                    dataKey={pessimisticLabelKey}
+                    position="bottom"
+                    offset={8}
+                    formatter={(v: any) => {
+                      if (v == null) return "";
+                      const val = typeof v === "number" ? v : Number(v);
+                      if (!Number.isFinite(val)) return "";
+                      return projectionMetric === "salary" ? fmtAUDShort(val) : val.toFixed(1);
+                    }}
+                    fontSize={10}
+                    fill="rgba(0,0,0,0.24)"
+                  />
+                </Line>
+
 
                 <Line
                   type="monotone"
@@ -2672,6 +2937,7 @@ return [minFinal, maxFinal];
 
             <div style={{ marginTop: 8, fontSize: 12, color: "rgba(0,0,0,0.55)" }}>
               Shaded band = lower/upper confidence interval (when available). Dashed lines = league avg + top 10% avg rating. Compare series is dashed.
+              <span style={{ color: "rgba(0,0,0,0.34)" }}> Optimistic and pessimistic trend lines are always shown as softer overlays.</span>
             </div>
         </Card>
       </div>
@@ -2880,6 +3146,7 @@ function PlayerRoute() {
   return <AppCore routeMode="player" routeTeamId={null} routePlayerId={String((params as any).playerId || "")} />;
 }
 
+
 // Default export wraps the existing single-page UI in a router so deep links work:
 //   /team/40?season=2026
 //   /player/CD_I1019038?season=2026
@@ -2911,6 +3178,12 @@ const [page, setPage] = useState<"team" | "career">(() => (routeMode === "player
 const [currentPlayerId, setCurrentPlayerId] = useState<string>(() => (routeMode === "player" ? normalizePlayerId(routePlayerId) : ""));
 const [exportPlayerName, setExportPlayerName] = useState<string>("");
 const [playerTeamResolved, setPlayerTeamResolved] = useState(false);
+const selectedTeamOption = useMemo(() => getTeamOptionById(team), [team]);
+const selectedLeague = selectedTeamOption?.league ?? "AFL";
+const teamOptionsForLeague = useMemo(
+  () => TEAMS.filter((t) => t.league === selectedLeague),
+  [selectedLeague]
+);
 useEffect(() => {
   setCompareTeam("");
 }, [team]);
@@ -2985,9 +3258,8 @@ useEffect(() => {
     if (cur !== next) navigate(next, { replace: true });
   }, [page, team, season, currentPlayerId, playerTeamResolved, location.pathname, location.search, navigate]);
 
-
-
-  const clubName = useMemo(() => TEAMS.find((t) => t.id === team)?.name ?? team, [team]);
+  const clubName = useMemo(() => selectedTeamOption?.name ?? team, [selectedTeamOption, team]);
+  const clubLabel = useMemo(() => selectedTeamOption?.label ?? clubName, [selectedTeamOption, clubName]);
   const clubKey = useMemo(() => normalizeClubName(clubName), [clubName]);
   const teamColor = useMemo(() => TEAM_PRIMARY_COLOR[clubKey] ?? "#111111", [clubKey]);
 
@@ -3138,6 +3410,7 @@ useEffect(() => {
   const [skillRadar, setSkillRadar] = useState<SkillRadarRow[]>([]);
   const [acqBreakdown, setAcqBreakdown] = useState<AcquisitionRow[]>([]);
   const [playerProjections, setPlayerProjections] = useState<PlayerProjectionRow[]>([]);
+  const [aflForm, setAflForm] = useState<AflFormRow[]>([]);
   const [vflForm, setVflForm] = useState<VflFormRow[]>([]);
   const [careerProjections, setCareerProjections] = useState<CareerProjectionRow[]>([]);
   const [careerProjectionsLastUpdated, setCareerProjectionsLastUpdated] = useState<string>("");
@@ -3156,7 +3429,13 @@ useEffect(() => {
     }
 
     const rosterRow =
-      rosterPlayers.find((r) => normalizePlayerId(r.providerId) === pid && r.season === season) ??
+      rosterPlayers.find(
+        (r) =>
+          normalizePlayerId(r.providerId) === pid &&
+          r.season === season &&
+          (normalizeTeamId(r.team_id) === normalizeTeamId(team) || !normalizeTeamId(team))
+      ) ??
+      rosterPlayers.find((r) => normalizePlayerId(r.providerId) === pid && normalizeTeamId(r.team_id) === normalizeTeamId(team)) ??
       rosterPlayers.find((r) => normalizePlayerId(r.providerId) === pid);
     const rosterName = toTrimmedString(rosterRow?.player_name);
 
@@ -3167,7 +3446,7 @@ useEffect(() => {
 
     const nextName = rosterName || careerName || "";
     setExportPlayerName((prev) => (prev === nextName ? prev : nextName));
-  }, [page, currentPlayerId, season, rosterPlayers, careerProjections]);
+  }, [page, currentPlayerId, season, team, rosterPlayers, careerProjections]);
 
   // Keep teamId in sync with the selected player (based on roster_players for the chosen season).
   useEffect(() => {
@@ -3177,13 +3456,11 @@ useEffect(() => {
     const row = rosterPlayers.find(
       (r) => normalizePlayerId(r.providerId) === normalizePlayerId(currentPlayerId) && r.season === season
     );
-    if (!row?.team) return;
+    if (!row) return;
 
-    // roster_players team is typically the club name; map it to your TEAMS id (e.g., "40").
-    const key = normalizeClubName(row.team);
-    const match = TEAMS.find((t) => normalizeClubName(t.name) === key) ?? null;
-    if (match) {
-      if (match.id !== team) setTeam(match.id);
+    const resolvedTeamId = normalizeTeamId(row.team_id);
+    if (resolvedTeamId) {
+      if (resolvedTeamId !== team) setTeam(resolvedTeamId);
       if (!playerTeamResolved) setPlayerTeamResolved(true);
     }
   }, [routeMode, currentPlayerId, rosterPlayers, season, team, searchParams, playerTeamResolved]);
@@ -3199,47 +3476,98 @@ useEffect(() => {
         setLoading(true);
         setLoadErr(null);
 
-        const [roster, kpis, ranks, radar, acq, proj, vflFormRows, careerProjResult, playerStatsAggRows, comparableRows] = await Promise.all([
-          loadApiDataAsObjects<RosterPlayerRow>("roster_players.csv", (r) => {
-            const seasonN = toNumberOrNull(r["season"]);
-            const ageN = toNumberOrNull(r["age"]);
-            const gamesN = toNumberOrNull(r["games"]);
-            const teamS = normalizeClubName(r["team"] ?? "");
-const ratingsN = toNumberOrNull(r["ratings"]) ?? 0;
-const ageCat = toTrimmedString(r["age_cat"]);
-if (seasonN === null || ageN === null || gamesN === null || !teamS) return null;
-return {
-  season: seasonN,
-  team: teamS,
-  providerId: r["providerId"] ?? "",
-  player_name: r["player_name"] ?? "",
-  age: ageN,
-  position_group: r["position_group"] ?? "",
-  games: gamesN,
-  ratings: ratingsN,
-  age_cat: ageCat,
-};
+        const [roster, kpis, ranks, radar, acq, proj, aflFormRows, vflFormRows, careerProjResult, playerStatsAggRows, comparableRows] = await Promise.all([
+          Promise.all([
+            loadApiDataAsObjects<RosterPlayerRow>("roster_players.csv", (r) => {
+              const seasonN = toNumberOrNull(r["season"]);
+              const ageN = toNumberOrNull(r["age"]);
+              const gamesN = toNumberOrNull(r["games"]);
+              const teamIdentity = resolveTeamIdentity(r["team_id"], r["team"], r["league"]);
+              const ratingsN = toNumberOrNull(r["ratings"]) ?? 0;
+              const ageCat = toTrimmedString(r["age_cat"]);
+              if (seasonN === null || ageN === null || gamesN === null || !teamIdentity.team || !teamIdentity.team_id) return null;
+              return {
+                season: seasonN,
+                team: teamIdentity.team,
+                team_id: teamIdentity.team_id,
+                league: teamIdentity.league,
+                providerId: r["providerId"] ?? "",
+                player_name: r["player_name"] ?? "",
+                age: ageN,
+                position_group: r["position_group"] ?? "",
+                games: gamesN,
+                ratings: ratingsN,
+                age_cat: ageCat,
+              };
+            }),
+            loadOptionalApiDataAsObjects<RosterPlayerRow>("roster_players_aflw.csv", (r) => {
+              const seasonN = toNumberOrNull(r["season"]);
+              const ageN = toNumberOrNull(r["age"]);
+              const gamesN = toNumberOrNull(r["games"]);
+              const teamIdentity = resolveTeamIdentity(r["team_id"], r["team"], r["league"]);
+              const ratingsN = toNumberOrNull(r["ratings"]) ?? 0;
+              const ageCat = toTrimmedString(r["age_cat"]);
+              if (seasonN === null || ageN === null || gamesN === null || !teamIdentity.team || !teamIdentity.team_id) return null;
+              return {
+                season: seasonN,
+                team: teamIdentity.team,
+                team_id: teamIdentity.team_id,
+                league: teamIdentity.league,
+                providerId: r["providerId"] ?? "",
+                player_name: r["player_name"] ?? "",
+                age: ageN,
+                position_group: r["position_group"] ?? "",
+                games: gamesN,
+                ratings: ratingsN,
+                age_cat: ageCat,
+              };
+            }),
+          ]).then((parts) => parts.flat()),
 
-          }),
-
-          loadApiDataAsObjects<TeamKpiRow>("team_kpis.csv", (r) => {
-            const club = normalizeClubName(r["Club"] ?? "");
-            const seasonN = toNumberOrNull(r["season"]);
-            const ageAvg = toNumberOrNull(r["squad_age_avg"]);
-            const expAvg = toNumberOrNull(r["squad_experience_avg_games"]);
-            const turnover = toNumberOrNull(r["squad_turnover_players"]);
-            if (!club || seasonN === null || ageAvg === null || expAvg === null) return null;
-            return {
-              Club: club,
-              season: seasonN,
-              squad_age_avg: ageAvg,
-              squad_age_yoy: toNumberOrNull(r["squad_age_yoy"]),
-              squad_experience_avg_games: expAvg,
-              squad_experience_yoy: toNumberOrNull(r["squad_experience_yoy"]),
-              squad_turnover_players: turnover ?? 0,
-              squad_turnover_yoy: toNumberOrNull(r["squad_turnover_yoy"]),
-            };
-          }),
+          Promise.all([
+            loadApiDataAsObjects<TeamKpiRow>("team_kpis.csv", (r) => {
+              const club = normalizeClubName(r["Club"] ?? "");
+              const seasonN = toNumberOrNull(r["season"]);
+              const ageAvg = toNumberOrNull(r["squad_age_avg"]);
+              const expAvg = toNumberOrNull(r["squad_experience_avg_games"]);
+              const turnover = toNumberOrNull(r["squad_turnover_players"]);
+              const teamIdentity = resolveTeamIdentity(r["team_id"], r["Club"], r["league"]);
+              if (!club || seasonN === null || ageAvg === null || expAvg === null || !teamIdentity.team_id) return null;
+              return {
+                Club: club,
+                season: seasonN,
+                team_id: teamIdentity.team_id,
+                league: teamIdentity.league,
+                squad_age_avg: ageAvg,
+                squad_age_yoy: toNumberOrNull(r["squad_age_yoy"]),
+                squad_experience_avg_games: expAvg,
+                squad_experience_yoy: toNumberOrNull(r["squad_experience_yoy"]),
+                squad_turnover_players: turnover ?? 0,
+                squad_turnover_yoy: toNumberOrNull(r["squad_turnover_yoy"]),
+              };
+            }),
+            loadOptionalApiDataAsObjects<TeamKpiRow>("team_kpis_aflw.csv", (r) => {
+              const club = normalizeClubName(r["Club"] ?? "");
+              const seasonN = toNumberOrNull(r["season"]);
+              const ageAvg = toNumberOrNull(r["squad_age_avg"]);
+              const expAvg = toNumberOrNull(r["squad_experience_avg_games"]);
+              const turnover = toNumberOrNull(r["squad_turnover_players"]);
+              const teamIdentity = resolveTeamIdentity(r["team_id"], r["Club"], r["league"]);
+              if (!club || seasonN === null || ageAvg === null || expAvg === null || !teamIdentity.team_id) return null;
+              return {
+                Club: club,
+                season: seasonN,
+                team_id: teamIdentity.team_id,
+                league: teamIdentity.league,
+                squad_age_avg: ageAvg,
+                squad_age_yoy: toNumberOrNull(r["squad_age_yoy"]),
+                squad_experience_avg_games: expAvg,
+                squad_experience_yoy: toNumberOrNull(r["squad_experience_yoy"]),
+                squad_turnover_players: turnover ?? 0,
+                squad_turnover_yoy: toNumberOrNull(r["squad_turnover_yoy"]),
+              };
+            }),
+          ]).then((parts) => parts.flat()),
 
           loadApiDataAsObjects<RankRow>("team_rank_timeseries.csv", (r) => {
             const club = normalizeClubName(r["Club"] ?? "");
@@ -3263,82 +3591,192 @@ return {
             };
           }),
 
-          loadApiDataAsObjects<SkillRadarRow>("team_skill_radar.csv", (r) => {
-            const squad = normalizeClubName(r["squad.name"] ?? r["squad_name"] ?? "");
-            const seasonStr = (r["season"] ?? r["season.id"] ?? "").toString().trim();
-            const seasonFinal = r["season"] ? String(r["season"]).trim() : seasonStr;
-            if (!squad || !seasonFinal) return null;
+          Promise.all([
+            loadApiDataAsObjects<SkillRadarRow>("team_skill_radar.csv", (r) => {
+              const teamIdentity = resolveTeamIdentity(r["team_id"], r["squad.name"] ?? r["squad_name"], r["league"]);
+              const seasonStr = toTrimmedString(r["season"] ?? r["season.id"]);
+              if (!teamIdentity.team || !teamIdentity.team_id || !seasonStr) return null;
 
-            const num = (k: string) => toNumberOrNull(r[k]) ?? 0;
+              const num = (k: string) => toNumberOrNull(r[k]) ?? 0;
 
-            return {
-              season: seasonFinal,
-              squad_name: squad,
-              KH_Ratio: num("KH_Ratio"),
-              GB_MK_Ratio: num("GB_MK_Ratio"),
-              Fwd_Half: num("Fwd_Half"),
-              Scores: num("Scores"),
-              PPchain: num("PPchain"),
-              Points_per_I50: num("Points_per_I50"),
-              Repeat_I50s: num("Repeat_I50s"),
-              Rating_Ball_Use: num("Rating_Ball_Use"),
-              Rating_Ball_Win: num("Rating_Ball_Win"),
-              Chain_Metres: num("Chain_Metres"),
-              Time_in_Poss_Pct: num("Time_in_Poss_Pct"),
-            };
-          }),
+              return {
+                season: seasonStr,
+                squad_name: teamIdentity.team,
+                team_id: teamIdentity.team_id,
+                league: teamIdentity.league,
+                KH_Ratio: num("KH_Ratio"),
+                GB_MK_Ratio: num("GB_MK_Ratio"),
+                Fwd_Half: num("Fwd_Half"),
+                Scores: num("Scores"),
+                PPchain: num("PPchain"),
+                Points_per_I50: num("Points_per_I50"),
+                Repeat_I50s: num("Repeat_I50s"),
+                Rating_Ball_Use: num("Rating_Ball_Use"),
+                Rating_Ball_Win: num("Rating_Ball_Win"),
+                Chain_Metres: num("Chain_Metres"),
+                Time_in_Poss_Pct: num("Time_in_Poss_Pct"),
+              };
+            }),
+            loadOptionalApiDataAsObjects<SkillRadarRow>("team_skill_radar_aflw.csv", (r) => {
+              const teamIdentity = resolveTeamIdentity(r["team_id"], r["squad.name"] ?? r["squad_name"], r["league"]);
+              const seasonStr = toTrimmedString(r["season"] ?? r["season.id"]);
+              if (!teamIdentity.team || !teamIdentity.team_id || !seasonStr) return null;
 
-          loadApiDataAsObjects<AcquisitionRow>("player_acquisition_breakdown.csv", (r) => {
-            const club = normalizeClubName(r["Club"] ?? "");
-            const year = toNumberOrNull(r["Year"]);
-            const value = toNumberOrNull(r["value"]);
-            const draft = toTrimmedString(r["Draft"]);
-            if (!club || year === null || value === null || !draft) return null;
-            return { Club: club, Year: year, Draft: draft, value };
-          }),
+              const num = (k: string) => toNumberOrNull(r[k]) ?? 0;
 
-          loadApiDataAsObjectsWithFallback<PlayerProjectionRow>(["player_projection.csv","player_projections.csv"], (r) => {
-            const t = normalizeClubName(r["team"] ?? "");
-            const seasonN = toNumberOrNull(r["season"]);
-            const rating = toNumberOrNull(r["rating"]);
-            const salary = toNumberOrNull(r["salary"]);
-            const aa = toNumberOrNull(r["AA"]);
-            const games = toNumberOrNull(r["Games"] ?? r["games"] ?? "");
+              return {
+                season: seasonStr,
+                squad_name: teamIdentity.team,
+                team_id: teamIdentity.team_id,
+                league: teamIdentity.league,
+                KH_Ratio: num("KH_Ratio"),
+                GB_MK_Ratio: num("GB_MK_Ratio"),
+                Fwd_Half: num("Fwd_Half"),
+                Scores: num("Scores"),
+                PPchain: num("PPchain"),
+                Points_per_I50: num("Points_per_I50"),
+                Repeat_I50s: num("Repeat_I50s"),
+                Rating_Ball_Use: num("Rating_Ball_Use"),
+                Rating_Ball_Win: num("Rating_Ball_Win"),
+                Chain_Metres: num("Chain_Metres"),
+                Time_in_Poss_Pct: num("Time_in_Poss_Pct"),
+              };
+            }),
+          ]).then((parts) => parts.flat()),
 
-            if (!t || seasonN === null || rating === null || salary === null || aa === null) return null;
+          Promise.all([
+            loadApiDataAsObjects<AcquisitionRow>("player_acquisition_breakdown.csv", (r) => {
+              const club = normalizeClubName(r["Club"] ?? "");
+              const year = toNumberOrNull(r["Year"]);
+              const value = toNumberOrNull(r["value"]);
+              const draft = toTrimmedString(r["Draft"]);
+              const teamIdentity = resolveTeamIdentity(r["team_id"], r["Club"], r["league"]);
+              if (!club || year === null || value === null || !draft || !teamIdentity.team_id) return null;
+              return { Club: club, Year: year, Draft: draft, value, team_id: teamIdentity.team_id, league: teamIdentity.league };
+            }),
+            loadOptionalApiDataAsObjects<AcquisitionRow>("player_acquisition_breakdown_aflw.csv", (r) => {
+              const club = normalizeClubName(r["Club"] ?? "");
+              const year = toNumberOrNull(r["Year"]);
+              const value = toNumberOrNull(r["value"]);
+              const draft = toTrimmedString(r["Draft"]);
+              const teamIdentity = resolveTeamIdentity(r["team_id"], r["Club"], r["league"]);
+              if (!club || year === null || value === null || !draft || !teamIdentity.team_id) return null;
+              return { Club: club, Year: year, Draft: draft, value, team_id: teamIdentity.team_id, league: teamIdentity.league };
+            }),
+          ]).then((parts) => parts.flat()),
 
-            return {
-              team: t,
-              season: seasonN,
-              playerId: toTrimmedString(r["playerId"]),
-              player_name: toTrimmedString(r["player_name"]),
-              rating,
-              salary,
-              AA: aa,
-              Games: games ?? 0,
-            };
-          }),
+          Promise.all([
+            loadApiDataAsObjectsWithFallback<PlayerProjectionRow>(["player_projection.csv", "player_projections.csv"], (r) => {
+              const teamIdentity = resolveTeamIdentity(r["team_id"], r["team"], r["league"]);
+              const seasonN = toNumberOrNull(r["season"]);
+              const rating = toNumberOrNull(r["rating"]);
+              const games = toNumberOrNull(r["Games"] ?? r["games"] ?? "");
+              const playerId = toTrimmedString(r["playerId"]);
+              const playerName = toTrimmedString(r["player_name"]);
 
-          // NEW: VFL form
+              if (!teamIdentity.team || !teamIdentity.team_id || seasonN === null || rating === null || !playerId || !playerName) return null;
+
+              return {
+                team: teamIdentity.team,
+                team_id: teamIdentity.team_id,
+                league: teamIdentity.league,
+                season: seasonN,
+                playerId,
+                player_name: playerName,
+                rating,
+                salary: toNumberOrNull(r["salary"]),
+                AA: toNumberOrNull(r["AA"]),
+                Games: games,
+              };
+            }),
+            loadOptionalApiDataAsObjects<PlayerProjectionRow>("player_projections_aflw.csv", (r) => {
+              const teamIdentity = resolveTeamIdentity(r["team_id"], r["team"], r["league"]);
+              const seasonN = toNumberOrNull(r["season"]);
+              const rating = toNumberOrNull(r["rating"]);
+              const games = toNumberOrNull(r["Games"] ?? r["games"] ?? "");
+              const playerId = toTrimmedString(r["playerId"]);
+              const playerName = toTrimmedString(r["player_name"]);
+
+              if (!teamIdentity.team || !teamIdentity.team_id || seasonN === null || rating === null || !playerId || !playerName) return null;
+
+              return {
+                team: teamIdentity.team,
+                team_id: teamIdentity.team_id,
+                league: teamIdentity.league,
+                season: seasonN,
+                playerId,
+                player_name: playerName,
+                rating,
+                salary: toNumberOrNull(r["salary"]),
+                AA: toNumberOrNull(r["AA"]),
+                Games: games,
+              };
+            }),
+          ]).then((parts) => parts.flat()),
+
+          Promise.all([
+            loadApiDataAsObjects<AflFormRow>("form_player_afl.csv", (r) => {
+              const seasonN = toNumberOrNull(r["season"]);
+              const wavg = toNumberOrNull(r["weighted_avg"]);
+              const teamIdentity = resolveTeamIdentity(r["team_id"], r["team"], r["league"]);
+              const playerId = toTrimmedString(r["playerId"]);
+              const playerName = toTrimmedString(r["player_name"]);
+              if (seasonN === null || wavg === null || !teamIdentity.team || !teamIdentity.team_id || !playerId || !playerName) return null;
+              return {
+                season: seasonN,
+                playerId,
+                team: teamIdentity.team,
+                team_id: teamIdentity.team_id,
+                league: teamIdentity.league,
+                player_name: playerName,
+                weighted_avg: wavg,
+                recent_form: toNumberOrNull(r["recent_form"]),
+                form_change: toNumberOrNull(r["form_change"]),
+              };
+            }),
+            loadOptionalApiDataAsObjects<AflFormRow>("form_player_aflw.csv", (r) => {
+              const seasonN = toNumberOrNull(r["season"]);
+              const wavg = toNumberOrNull(r["weighted_avg"]);
+              const teamIdentity = resolveTeamIdentity(r["team_id"], r["team"], r["league"]);
+              const playerId = toTrimmedString(r["playerId"]);
+              const playerName = toTrimmedString(r["player_name"]);
+              if (seasonN === null || wavg === null || !teamIdentity.team || !teamIdentity.team_id || !playerId || !playerName) return null;
+              return {
+                season: seasonN,
+                playerId,
+                team: teamIdentity.team,
+                team_id: teamIdentity.team_id,
+                league: teamIdentity.league,
+                player_name: playerName,
+                weighted_avg: wavg,
+                recent_form: toNumberOrNull(r["recent_form"]),
+                form_change: toNumberOrNull(r["form_change"]),
+              };
+            }),
+          ]).then((parts) => parts.flat()),
+
           loadApiDataAsObjects<VflFormRow>("form_player_vfl.csv", (r) => {
             const seasonN = toNumberOrNull(r["season"]);
             const wavg = toNumberOrNull(r["weighted_avg"]);
             const teamS = toTrimmedString(r["team"]);
             const playerId = toTrimmedString(r["playerId"]);
             const playerName = toTrimmedString(r["player_name"]);
+            const teamIdentity = resolveTeamIdentity(r["team_id"], r["team"], r["league"]);
 
             if (seasonN === null || wavg === null || !teamS || !playerId || !playerName) return null;
 
             return {
               season: seasonN,
               playerId,
-              team: teamS,
+              team: teamIdentity.team || teamS,
+              team_id: teamIdentity.team_id || undefined,
+              league: teamIdentity.league,
               player_name: playerName,
               weighted_avg: wavg,
             };
           }),
 
-          // NEW: Career projections
+          // Career projections
           loadApiDataAsObjectsWithMeta<CareerProjectionRow>("career_projections.csv", (r) => {
             const seasonN = toNumberOrNull(r["Season"]);
             const horizonN = toNumberOrNull(r["Horizon"]);
@@ -3516,6 +3954,7 @@ return {
         setSkillRadar(radar);
         setAcqBreakdown(acq);
         setPlayerProjections(proj);
+        setAflForm(aflFormRows);
         setVflForm(vflFormRows);
         setCareerProjections(careerProjResult.rows);
         setCareerProjectionsLastUpdated(careerProjResult.lastUpdatedLabel);
@@ -3539,7 +3978,21 @@ return {
   // --------
   // Years pills
   // --------
-  const years = useMemo(() => [...UI_SEASONS], []);
+  const years = useMemo(() => {
+    const values = new Set<number>();
+    for (const r of rosterPlayers) if (r.league === selectedLeague) values.add(r.season);
+    for (const r of teamKpis) if (r.league === selectedLeague) values.add(r.season);
+    for (const r of playerProjections) if (r.league === selectedLeague) values.add(r.season);
+    for (const r of aflForm) if (r.league === selectedLeague) values.add(r.season);
+    const out = Array.from(values).sort((a, b) => a - b);
+    return out.length ? out : [...UI_SEASONS];
+  }, [rosterPlayers, teamKpis, playerProjections, aflForm, selectedLeague]);
+
+  useEffect(() => {
+    if (!years.length || years.includes(season)) return;
+    const nearest = years.reduce((best, y) => (Math.abs(y - season) < Math.abs(best - season) ? y : best), years[0]);
+    if (nearest !== season) setSeason(nearest);
+  }, [years, season]);
 
 
 
@@ -3547,7 +4000,11 @@ return {
   // Roster panel
   // --------
   const rosterForSeason = useMemo(() => {
-    const clubRows = rosterPlayers.filter((r) => normalizeClubName(r.team) === clubKey);
+    const clubRows = rosterPlayers.filter(
+      (r) =>
+        normalizeTeamId(r.team_id) === normalizeTeamId(team) &&
+        r.league === selectedLeague
+    );
     const seasons = Array.from(new Set(clubRows.map((r) => r.season))).sort((a, b) => a - b);
     if (seasons.length === 0) return { players: [] as RosterPlayerRow[], usedSeason: season };
 
@@ -3558,11 +4015,15 @@ return {
 
     const players = clubRows.filter((r) => r.season === usedSeason);
     return { players, usedSeason };
-  }, [rosterPlayers, clubKey, season]);
+  }, [rosterPlayers, team, season, selectedLeague]);
 
 
-function getRosterForClubSeason(targetClubKey: string) {
-  const clubRows = rosterPlayers.filter((r) => normalizeClubName(r.team) === targetClubKey);
+function getRosterForClubSeason(targetTeamId: string) {
+  const clubRows = rosterPlayers.filter(
+    (r) =>
+      normalizeTeamId(r.team_id) === normalizeTeamId(targetTeamId) &&
+      r.league === selectedLeague
+  );
   const seasons = Array.from(new Set(clubRows.map((r) => r.season))).sort((a, b) => a - b);
   if (seasons.length === 0) return { players: [] as RosterPlayerRow[], usedSeason: season };
 
@@ -3579,11 +4040,12 @@ const rosterTurnoverByTeamSeason = useMemo(() => {
   const idsByKey = new Map<string, Set<string>>();
 
   for (const r of rosterPlayers) {
-    const teamName = normalizeClubName(r.team);
+    const teamName = normalizeTeamId(r.team_id);
     const pid = normalizePlayerId(r.providerId);
-    if (!teamName || !pid || !Number.isFinite(r.season)) continue;
+    const league = normalizeLeague(r.league);
+    if (!teamName || !pid || !league || !Number.isFinite(r.season)) continue;
 
-    const key = `${teamName}|${r.season}`;
+    const key = `${league}|${teamName}|${r.season}`;
     let set = idsByKey.get(key);
     if (!set) {
       set = new Set<string>();
@@ -3592,29 +4054,34 @@ const rosterTurnoverByTeamSeason = useMemo(() => {
     set.add(pid);
   }
 
-  const countNew = (teamName: string, yr: number): number | null => {
-    const cur = idsByKey.get(`${teamName}|${yr}`);
-    const prev = idsByKey.get(`${teamName}|${yr - 1}`);
+  const countNew = (league: LeagueCode, teamName: string, yr: number): number | null => {
+    const cur = idsByKey.get(`${league}|${teamName}|${yr}`);
+    const prev = idsByKey.get(`${league}|${teamName}|${yr - 1}`);
     if (!cur || !prev) return null;
     let n = 0;
     for (const pid of cur) if (!prev.has(pid)) n += 1;
     return n;
   };
 
-  const clubCurrent = countNew(clubKey, season);
-  const clubPrev = countNew(clubKey, season - 1);
+  const clubCurrent = countNew(selectedLeague, team, season);
+  const clubPrev = countNew(selectedLeague, team, season - 1);
   const clubYoY =
     clubCurrent !== null && clubPrev !== null ? clubCurrent - clubPrev : null;
 
   const teams = Array.from(
-    new Set(Array.from(idsByKey.keys()).map((k) => k.split("|")[0]))
+    new Set(
+      rosterPlayers
+        .filter((r) => r.league === selectedLeague)
+        .map((r) => normalizeTeamId(r.team_id))
+        .filter(Boolean)
+    )
   );
   const leagueVals = teams
-    .map((t) => countNew(t, season))
+    .map((t) => countNew(selectedLeague, t, season))
     .filter((v): v is number => v !== null && Number.isFinite(v));
 
   return { clubCurrent, clubYoY, leagueVals };
-}, [rosterPlayers, clubKey, season]);
+}, [rosterPlayers, selectedLeague, team, season]);
 
 
   const ageHist = useMemo(() => makeAgeHistogram(rosterForSeason.players), [rosterForSeason.players]);
@@ -3674,11 +4141,11 @@ const teamAvgAge = useMemo(() => {
 
 // league average age (all clubs, same usedSeason)
 const leagueAvgAge = useMemo(() => {
-  const ps = rosterPlayers.filter((p) => p.season === usedSeason);
+  const ps = rosterPlayers.filter((p) => p.season === usedSeason && p.league === selectedLeague);
   if (!ps.length) return null;
   const avg = ps.reduce((a, p) => a + p.age, 0) / ps.length;
   return avg;
-}, [rosterPlayers, usedSeason]);
+}, [rosterPlayers, selectedLeague, usedSeason]);
 
 // helper: convert numeric age to the X-axis label (your histogram uses String(age))
 const toAgeLabel = (x: number) => String(Math.round(x));
@@ -3689,38 +4156,33 @@ const toAgeLabel = (x: number) => String(Math.round(x));
   // Club KPI row from team_kpis
   // --------
   const clubKpiSelection = useMemo(() => {
-    const rows = teamKpis.filter((r) => normalizeClubName(r.Club) === clubKey);
+    const rows = teamKpis.filter(
+      (r) =>
+        normalizeTeamId(r.team_id) === normalizeTeamId(team) &&
+        r.league === selectedLeague
+    );
     return pickSeasonRow(rows, season);
-  }, [teamKpis, clubKey, season]);
+  }, [teamKpis, team, season, selectedLeague]);
   const clubKpi = clubKpiSelection.row;
 
   // --------
   // AFL + VFL KPI selections
   // --------
   const aflFormPick = useMemo(() => {
-    const candidates = careerProjections
-      .filter((r) => r.Season === season && r.estimate != null && Number.isFinite(r.estimate))
-      .map((r) => ({
-        team: normalizeClubName(r.SourceClub ?? r.team ?? ""),
-        playerId: normalizePlayerId(r.SourceproviderId),
-        player_name: toTrimmedString(r.SourcePlayer),
-        rating: Number(r.estimate),
-      }))
-      .filter((r) => r.team === clubKey && r.playerId && r.player_name);
-
-    if (candidates.length === 0) return null;
-
-    // Keep one row per player (best rating row wins), then pick team top rating.
-    const byPlayer = new Map<string, { playerId: string; player_name: string; rating: number }>();
-    for (const r of candidates) {
-      const prev = byPlayer.get(r.playerId);
-      if (!prev || r.rating > prev.rating) byPlayer.set(r.playerId, r);
-    }
-
-    const deduped = Array.from(byPlayer.values());
-    return deduped.reduce((best, r) => (r.rating > best.rating ? r : best), deduped[0]);
-  }, [careerProjections, clubKey, season]);
+    const rows = aflForm
+      .filter(
+        (r) =>
+          normalizeTeamId(r.team_id) === normalizeTeamId(team) &&
+          r.league === selectedLeague &&
+          r.season === season
+      )
+      .sort((a, b) => b.weighted_avg - a.weighted_avg);
+    return rows[0] ?? null;
+  }, [aflForm, team, season, selectedLeague]);
 const rankTrendMeta = useMemo(() => {
+  if (selectedLeague !== "AFL") {
+    return { rows: [] as any[], missingActualYears: [] as number[] };
+  }
   const clubRows = rankSeries
     .filter((r) => normalizeClubName(r.Club) === clubKey)
     .sort((a, b) => a.year - b.year);
@@ -3843,7 +4305,7 @@ const rankTrendMeta = useMemo(() => {
     })
     .sort((a, b) => Number(a.year) - Number(b.year));
   return { rows, missingActualYears };
-}, [rankSeries, clubKey]);
+}, [rankSeries, clubKey, selectedLeague]);
 const rankTrend = rankTrendMeta.rows;
 const rankMissingActualYears = rankTrendMeta.missingActualYears;
 const rankLastActualYear = useMemo(() => {
@@ -3963,7 +4425,12 @@ function RankTrendTooltip({ active, label, payload }: any) {
   // --------
   const acquisitionSpider = useMemo(() => {
     const rows = acqBreakdown
-      .filter((r) => normalizeClubName(r.Club) === clubKey && r.Year === season)
+      .filter(
+        (r) =>
+          normalizeTeamId(r.team_id) === normalizeTeamId(team) &&
+          r.league === selectedLeague &&
+          r.Year === season
+      )
       .sort((a, b) => b.value - a.value);
 
     const total = rows.reduce((a, r) => a + (r.value ?? 0), 0) || 1;
@@ -3971,7 +4438,7 @@ function RankTrendTooltip({ active, label, payload }: any) {
       metric: r.Draft,
       value: (r.value / total) * 100,
     }));
-  }, [acqBreakdown, clubKey, season]);
+  }, [acqBreakdown, team, season, selectedLeague]);
 
   const acquisitionBars = useMemo(
     () =>
@@ -3984,8 +4451,12 @@ function RankTrendTooltip({ active, label, payload }: any) {
   // --------
   // Team radar
   // --------
-  function buildTeamSkillRadar(targetClubKey: string) {
-  const clubRows = skillRadar.filter((r) => normalizeClubName(r.squad_name) === targetClubKey);
+  function buildTeamSkillRadar(targetTeamId: string) {
+  const clubRows = skillRadar.filter(
+    (r) =>
+      normalizeTeamId(r.team_id) === normalizeTeamId(targetTeamId) &&
+      r.league === selectedLeague
+  );
   if (clubRows.length === 0) return [];
 
   const exact =
@@ -4010,41 +4481,49 @@ function RankTrendTooltip({ active, label, payload }: any) {
   ];
 }
 
-const teamSkillRadar = useMemo(() => buildTeamSkillRadar(clubKey), [skillRadar, clubKey, season]);
+const teamSkillRadar = useMemo(() => buildTeamSkillRadar(team), [skillRadar, team, season, selectedLeague]);
 
-const compareClubName = useMemo(
-  () => (compareTeam ? TEAMS.find((t) => t.id === compareTeam)?.name ?? "" : ""),
-  [compareTeam]
-);
+const compareTeamOption = useMemo(() => getTeamOptionById(compareTeam), [compareTeam]);
+const compareClubName = useMemo(() => compareTeamOption?.name ?? "", [compareTeamOption]);
+const compareClubLabel = useMemo(() => compareTeamOption?.label ?? compareTeamOption?.name ?? "", [compareTeamOption]);
 const compareClubKey = useMemo(() => (compareClubName ? normalizeClubName(compareClubName) : ""), [compareClubName]);
 const compareColor = useMemo(() => (compareClubKey ? (TEAM_PRIMARY_COLOR[compareClubKey] ?? "#111111") : "#111111"), [compareClubKey]);
 
 const compareSkillRadar = useMemo(
-  () => (compareClubKey ? buildTeamSkillRadar(compareClubKey) : []),
-  [skillRadar, compareClubKey, season]
+  () => (compareTeam ? buildTeamSkillRadar(compareTeam) : []),
+  [skillRadar, compareTeam, season, selectedLeague]
 );
 
 
 const compareRosterForSeason = useMemo(
-  () => (compareClubKey ? getRosterForClubSeason(compareClubKey) : { players: [] as RosterPlayerRow[], usedSeason: season }),
-  [rosterPlayers, compareClubKey, season]
+  () => (compareTeam ? getRosterForClubSeason(compareTeam) : { players: [] as RosterPlayerRow[], usedSeason: season }),
+  [rosterPlayers, compareTeam, season, selectedLeague]
 );
 
 const compareAgeCatShare = useMemo(
-  () => (compareClubKey ? calcAgeCatShare(compareRosterForSeason.players) : []),
-  [compareClubKey, compareRosterForSeason.players]
+  () => (compareTeam ? calcAgeCatShare(compareRosterForSeason.players) : []),
+  [compareTeam, compareRosterForSeason.players]
 );
 
 const compareClubKpi = useMemo(() => {
-  if (!compareClubKey) return null;
-  const rows = teamKpis.filter((r) => normalizeClubName(r.Club) === compareClubKey);
+  if (!compareTeam) return null;
+  const rows = teamKpis.filter(
+    (r) =>
+      normalizeTeamId(r.team_id) === normalizeTeamId(compareTeam) &&
+      r.league === selectedLeague
+  );
   return pickSeasonRow(rows, season).row;
-}, [teamKpis, compareClubKey, season]);
+}, [teamKpis, compareTeam, season, selectedLeague]);
 
 const compareAcquisitionShare = useMemo(() => {
-  if (!compareClubKey) return [] as { metric: string; value: number }[];
+  if (!compareTeam) return [] as { metric: string; value: number }[];
   const rows = acqBreakdown
-    .filter((r) => normalizeClubName(r.Club) === compareClubKey && r.Year === season)
+    .filter(
+      (r) =>
+        normalizeTeamId(r.team_id) === normalizeTeamId(compareTeam) &&
+        r.league === selectedLeague &&
+        r.Year === season
+    )
     .sort((a, b) => a.Draft.localeCompare(b.Draft));
 
   const total = rows.reduce((a, r) => a + (r.value ?? 0), 0) || 1;
@@ -4052,10 +4531,10 @@ const compareAcquisitionShare = useMemo(() => {
     metric: r.Draft,
     value: (r.value / total) * 100,
   }));
-}, [acqBreakdown, compareClubKey, season]);
+}, [acqBreakdown, compareTeam, season, selectedLeague]);
 
 const comparisonTables = useMemo(() => {
-  if (!compareClubKey) return null;
+  if (!compareTeam) return null;
 
   const num = (x: any) => (x == null || !Number.isFinite(Number(x)) ? null : Number(x));
   const pctByKey = (rows: any[], keyField: string, valField: string) => {
@@ -4125,7 +4604,7 @@ const comparisonTables = useMemo(() => {
 
   return { scalars, ageDrivers, acquisition, radar };
 }, [
-  compareClubKey,
+  compareTeam,
   clubKpi,
   compareClubKpi,
   ageCatShare,
@@ -4152,12 +4631,17 @@ const mergedSkillRadar = useMemo(() => {
   // --------
   const playerTable = useMemo<PlayerTableRow[]>(() => {
     const rows = playerProjections
-      .filter((r) => normalizeClubName(r.team) === clubKey && r.season === season)
+      .filter(
+        (r) =>
+          normalizeTeamId(r.team_id) === normalizeTeamId(team) &&
+          r.league === selectedLeague &&
+          r.season === season
+      )
       .map((r) => ({ name: r.player_name, rating: r.rating, salary: r.salary, AA: r.AA, Games: r.Games }))
       .sort((a, b) => b.rating - a.rating);
 
     return rows.slice(0, 12);
-  }, [playerProjections, clubKey, season]);
+  }, [playerProjections, team, season, selectedLeague]);
 
 
 
@@ -4172,10 +4656,9 @@ const mergedSkillRadar = useMemo(() => {
 
   // League rows for that season (used for ranks)
   const leagueRows = teamKpis
-    .filter((r) => r.season === rankSeason)
-    .map((r) => ({ ...r, Club: normalizeClubName(r.Club) }));
+    .filter((r) => r.season === rankSeason && r.league === selectedLeague);
 
-    const nTeams = Math.max(18, new Set(leagueRows.map((r) => r.Club)).size);
+    const nTeams = Math.max(selectedLeague === "AFL" ? 18 : 18, new Set(leagueRows.map((r) => normalizeTeamId(r.team_id))).size);
 
     const denseRank = (vals: number[], target: number, direction: "asc" | "desc") => {
       const cleaned = vals.filter((v) => Number.isFinite(v));
@@ -4190,18 +4673,18 @@ const mergedSkillRadar = useMemo(() => {
       rows: TeamKpiRow[],
       metric: (r: TeamKpiRow) => number,
       direction: "asc" | "desc",
-      targetClubKey: string
+      targetTeamId: string
     ) => {
       const ranked = rows
-        .filter((r) => Number.isFinite(metric(r)) && !!r.Club)
+        .filter((r) => Number.isFinite(metric(r)) && !!r.team_id)
         .sort((a, b) => {
           const av = metric(a);
           const bv = metric(b);
-          if (av === bv) return String(a.Club).localeCompare(String(b.Club));
+          if (av === bv) return String(a.team_id).localeCompare(String(b.team_id));
           return direction === "asc" ? av - bv : bv - av;
         });
 
-      const idx = ranked.findIndex((r) => normalizeClubName(r.Club) === targetClubKey);
+      const idx = ranked.findIndex((r) => normalizeTeamId(r.team_id) === normalizeTeamId(targetTeamId));
       return idx === -1 ? null : idx + 1;
     };
 
@@ -4226,13 +4709,13 @@ const mergedSkillRadar = useMemo(() => {
     // Age: oldest = #1 (descending)
     const ageRank =
       clubKpi && Number.isFinite(clubKpi.squad_age_avg)
-        ? ordinalRankByMetric(leagueRows, (r) => r.squad_age_avg, "desc", clubKey)
+        ? ordinalRankByMetric(leagueRows, (r) => r.squad_age_avg, "desc", team)
         : null;
 
     // Experience: most experienced = #1 (descending)
     const expRank =
       clubKpi && Number.isFinite(clubKpi.squad_experience_avg_games)
-        ? ordinalRankByMetric(leagueRows, (r) => r.squad_experience_avg_games, "desc", clubKey)
+        ? ordinalRankByMetric(leagueRows, (r) => r.squad_experience_avg_games, "desc", team)
         : null;
 
   // Turnover: highest turnover = #1 (descending)
@@ -4254,15 +4737,17 @@ const mergedSkillRadar = useMemo(() => {
   const toSub  = `${toYoY} • Rank: ${toRank ?? "—"}/${nTeams}${kpiSeasonSuffix}`;
 
   // AFL form: top AFL rating from career projections for selected team + season.
-  const aflValue = aflFormPick ? aflFormPick.rating.toFixed(1) : "—";
+  const aflValue = aflFormPick ? aflFormPick.weighted_avg.toFixed(1) : "—";
   const aflSub   = aflFormPick ? `Player: ${aflFormPick.player_name}` : "Player: —";
   const aflImg   = aflFormPick ? getPlayerImgUrl(aflFormPick.playerId) : null;
 
   // ✅ VFL pick (MAKE IT CLUB-AWARE HERE)
-  const vflRowsForClubSeason = vflForm
-    .filter((r) => r.season === season)
-    .filter((r) => normalizeClubName(r.team) === clubKey)
-    .filter((r) => toTrimmedString(r.team).toLowerCase() !== "multiple"); // safety
+  const vflRowsForClubSeason = selectedLeague !== "AFL"
+    ? []
+    : vflForm
+        .filter((r) => r.season === season)
+        .filter((r) => normalizeClubName(r.team) === clubKey)
+        .filter((r) => toTrimmedString(r.team).toLowerCase() !== "multiple"); // safety
 
   const vflPick =
     vflRowsForClubSeason.length === 0
@@ -4277,15 +4762,12 @@ const mergedSkillRadar = useMemo(() => {
     { label: "Squad Age",        value: ageValue, sub: ageSub, icon: BarChart3, imgSrc: null as string | null },
     { label: "Squad Experience", value: expValue, sub: expSub, icon: Gauge,    imgSrc: null as string | null },
     { label: "Squad Turnover",   value: toValue,  sub: toSub,  icon: RotateCcw,imgSrc: null as string | null },
-    { label: "AFL Form",         value: aflValue, sub: aflSub, icon: Users,    imgSrc: aflImg },
+    { label: `${selectedLeague} Form`, value: aflValue, sub: aflSub, icon: Users, imgSrc: aflImg },
     { label: "VFL Form",         value: vflValue, sub: vflSub, icon: Home,     imgSrc: vflImg },
   ];
-}, [clubKpi, clubKpiSelection.usedSeason, teamKpis, aflFormPick, vflForm, clubKey, season, rosterTurnoverByTeamSeason]);
+}, [clubKpi, clubKpiSelection.usedSeason, teamKpis, aflFormPick, vflForm, clubKey, season, rosterTurnoverByTeamSeason, team, selectedLeague]);
 
-
-
-
-
+  const isTeamPage = page === "team";
 
   return (
     <div style={{ minHeight: "100vh", background: "#f5f5f6", fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" }}>
@@ -4402,11 +4884,11 @@ const mergedSkillRadar = useMemo(() => {
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{ fontSize: 28, fontWeight: 950, color: "#111", letterSpacing: -0.6, lineHeight: 1.05 }}>{clubName}</div>
+                    <div style={{ fontSize: 28, fontWeight: 950, color: "#111", letterSpacing: -0.6, lineHeight: 1.05 }}>{clubLabel}</div>
                     {logoSrc ? (
                       <img
                         src={logoSrc}
-                        alt={`${clubName} logo`}
+                        alt={`${clubLabel} logo`}
                         style={{
                           height: 34,
                           width: 34,
@@ -4419,9 +4901,9 @@ const mergedSkillRadar = useMemo(() => {
                       />
                     ) : null}
                   </div>
-                  {page === "team" ? (
-                    <div style={{ fontSize: 12, color: "rgba(0,0,0,0.55)" }}>{`Team Profile | Season ${season}`}</div>
-                  ) : null}
+                  <div style={{ fontSize: 12, color: "rgba(0,0,0,0.55)" }}>
+                    {page === "team" ? `${selectedLeague} Team Profile | Season ${season}` : `${selectedLeague} career projection dashboard`}
+                  </div>
                 </div>
               </div>
 
@@ -4501,7 +4983,7 @@ const mergedSkillRadar = useMemo(() => {
             )}
           </div>
 
-          {page === "team" ? (
+          {isTeamPage ? (
             <>
               {/* Middle row */}
           <div className="midGrid">
@@ -4706,9 +5188,9 @@ const mergedSkillRadar = useMemo(() => {
         }}
       >
         <option value="">No comparison</option>
-        {TEAMS.filter((t) => t.id !== team).map((t) => (
+        {teamOptionsForLeague.filter((t) => t.id !== team).map((t) => (
           <option key={t.id} value={t.id}>
-            {t.name}
+            {t.label ?? t.name}
           </option>
         ))}
       </select>
@@ -4727,7 +5209,7 @@ const mergedSkillRadar = useMemo(() => {
 
   {/* Main team */}
   <Radar
-    name={clubName}
+    name={clubLabel}
     dataKey="value"
     stroke={teamColor}
     fill={teamColor}
@@ -4739,7 +5221,7 @@ const mergedSkillRadar = useMemo(() => {
   {/* Comparison team (overlay) */}
   {compareSkillRadar.length > 0 && (
     <Radar
-      name={compareClubName}
+      name={compareClubLabel}
       dataKey="compare"
       stroke={compareColor}
       fill={compareColor}
@@ -4820,9 +5302,9 @@ const mergedSkillRadar = useMemo(() => {
         <Pill active={!compareTeam} onClick={() => setCompareTeam("")}>
           No comparison
         </Pill>
-        {TEAMS.filter((t) => t.id !== team).map((t) => (
+        {teamOptionsForLeague.filter((t) => t.id !== team).map((t) => (
           <Pill key={t.id} active={compareTeam === t.id} onClick={() => setCompareTeam(t.id)}>
-            {t.name}
+            {t.label ?? t.name}
           </Pill>
         ))}
       </div>
@@ -4836,7 +5318,7 @@ const mergedSkillRadar = useMemo(() => {
           <div style={{ marginTop: 14, borderTop: "1px solid rgba(0,0,0,0.08)", paddingTop: 12 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
               <div style={{ fontSize: 12, fontWeight: 950, color: "rgba(0,0,0,0.72)" }}>Head-to-head</div>
-              <div style={{ fontSize: 11, color: "rgba(0,0,0,0.50)" }}>Diff =  {clubName} - {compareClubName}</div>
+              <div style={{ fontSize: 11, color: "rgba(0,0,0,0.50)" }}>Diff =  {clubLabel} - {compareClubLabel}</div>
             </div>
 
             {/* Scalar KPIs */}
@@ -4846,8 +5328,8 @@ const mergedSkillRadar = useMemo(() => {
                 <thead>
                   <tr>
                     <th>Metric</th>
-                    <th style={{ textAlign: "right" }}>{clubName}</th>
-                    <th style={{ textAlign: "right" }}>{compareClubName}</th>
+                    <th style={{ textAlign: "right" }}>{clubLabel}</th>
+                    <th style={{ textAlign: "right" }}>{compareClubLabel}</th>
                     <th style={{ textAlign: "right" }}>Diff</th>
                   </tr>
                 </thead>
@@ -4886,8 +5368,8 @@ const mergedSkillRadar = useMemo(() => {
                 <thead>
                   <tr>
                     <th>Category</th>
-                    <th style={{ textAlign: "right" }}>{clubName}</th>
-                    <th style={{ textAlign: "right" }}>{compareClubName}</th>
+                    <th style={{ textAlign: "right" }}>{clubLabel}</th>
+                    <th style={{ textAlign: "right" }}>{compareClubLabel}</th>
                     <th style={{ textAlign: "right" }}>Diff</th>
                   </tr>
                 </thead>
@@ -4920,8 +5402,8 @@ const mergedSkillRadar = useMemo(() => {
                 <thead>
                   <tr>
                     <th>Category</th>
-                    <th style={{ textAlign: "right" }}>{clubName}</th>
-                    <th style={{ textAlign: "right" }}>{compareClubName}</th>
+                    <th style={{ textAlign: "right" }}>{clubLabel}</th>
+                    <th style={{ textAlign: "right" }}>{compareClubLabel}</th>
                     <th style={{ textAlign: "right" }}>Diff</th>
                   </tr>
                 </thead>
@@ -4954,8 +5436,8 @@ const mergedSkillRadar = useMemo(() => {
                 <thead>
                   <tr>
                     <th>Metric</th>
-                    <th style={{ textAlign: "right" }}>{clubName}</th>
-                    <th style={{ textAlign: "right" }}>{compareClubName}</th>
+                    <th style={{ textAlign: "right" }}>{clubLabel}</th>
+                    <th style={{ textAlign: "right" }}>{compareClubLabel}</th>
                     <th style={{ textAlign: "right" }}>Diff</th>
                   </tr>
                 </thead>
@@ -4994,14 +5476,15 @@ const mergedSkillRadar = useMemo(() => {
                 setCurrentPlayerId(nextId);
 
                 // Immediately update teamId too (so the URL becomes /player/:id?team=...&season=... without a stale team).
-                const row = rosterPlayers.find((r) => String(r.providerId) === String(nextId) && r.season === season);
-                if (row?.team) {
-                  const key = normalizeClubName(row.team);
-                  const match = TEAMS.find((t) => normalizeClubName(t.name) === key) ?? null;
-                  if (match) {
-                    if (match.id !== team) setTeam(match.id);
-                    if (!playerTeamResolved) setPlayerTeamResolved(true);
-                  }
+                const row = rosterPlayers.find(
+                  (r) =>
+                    normalizePlayerId(r.providerId) === nextId &&
+                    r.season === season
+                );
+                const resolvedTeamId = normalizeTeamId(row?.team_id);
+                if (resolvedTeamId) {
+                  if (resolvedTeamId !== team) setTeam(resolvedTeamId);
+                  if (!playerTeamResolved) setPlayerTeamResolved(true);
                 }
               }} />
           )}
