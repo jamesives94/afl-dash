@@ -31,8 +31,8 @@ const RECENT_SEASON_FIELDS_BY_FILE = {
   "roster_players_aflw.csv": ["season"],
   "team_kpis.csv": ["season"],
   "team_kpis_aflw.csv": ["season"],
-  "team_rank_timeseries.csv": ["year"],
-  "team_rank_timeseries_aflw.csv": ["year"],
+  // rank timeseries: no server-side filter — the chart needs full history
+  // (10-year window is applied client-side after load)
   "team_skill_radar.csv": ["season", "season.id"],
   "team_skill_radar_aflw.csv": ["season", "season.id"],
   "player_acquisition_breakdown.csv": ["Year"],
