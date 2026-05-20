@@ -65,6 +65,7 @@ const ACQ_FALLBACK_COLORS = [
 
 // Stable acquisition colours (category -> colour), fixed across all teams/seasons.
 const ACQ_COLOR_MAP: Record<string, string> = {
+  // AFL men's
   National: "#7C3AED", // purple
   "National Draft": "#7C3AED", // purple
   "Top-10 National": "#2563EB", // blue
@@ -81,6 +82,21 @@ const ACQ_COLOR_MAP: Record<string, string> = {
   "Category B": "#EC4899", // pink
   SSP: "#6B7280", // grey
   Other: "#6B7280", // grey
+  // AFLW-specific
+  Draft: "#2563EB", // blue
+  "Top-5 Draft": "#1D4ED8", // dark blue
+  "Top-10 Draft": "#3B82F6", // medium blue
+  "Draft (Pick 1-5)": "#1D4ED8", // dark blue
+  "Draft (Pick 6-10)": "#60A5FA", // light blue
+  "Draft (Pick 11+)": "#93C5FD", // pale blue
+  "Marquee/Pre-list": "#7C3AED", // purple
+  "Cross-code": "#F97316", // orange
+  "State League Recruit": "#0D9488", // teal
+  Rookie: "#6B7280", // grey
+  Priority: "#A855F7", // violet
+  Marquee: "#7C3AED", // purple
+  "Expansion signing": "#14B8A6", // teal-green
+  "Pre-season Draft": "#0EA5E9", // sky blue
 };
 
 // deterministic fallback so any unknown category is still consistent
@@ -4309,7 +4325,7 @@ const rankTrendMeta = useMemo(() => {
     null;
 
   const history = clubRows
-    .filter((r) => r.year <= latestYear)
+    .filter((r) => r.year <= latestYear && r.year >= latestYear - 9)
     .map((r) => ({
       year: String(r.year),
       actual: r.actual_rank ?? null,
