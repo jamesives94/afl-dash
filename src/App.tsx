@@ -3636,7 +3636,7 @@ useEffect(() => {
             loadApiDataAsObjects<RankRow>("team_rank_timeseries.csv", (r) => {
               const club = normalizeClubName(r["Club"] ?? "");
               const yearN = toNumberOrNull(r["year"]);
-              if (!club || !isRecentSeasonValue(yearN)) return null;
+              if (!club || yearN == null || !Number.isFinite(yearN)) return null;
 
               return {
                 Club: club,
@@ -3658,7 +3658,7 @@ useEffect(() => {
             loadOptionalApiDataAsObjects<RankRow>("team_rank_timeseries_aflw.csv", (r) => {
               const club = normalizeClubName(r["Club"] ?? "");
               const yearN = toNumberOrNull(r["year"]);
-              if (!club || !isRecentSeasonValue(yearN)) return null;
+              if (!club || yearN == null || !Number.isFinite(yearN)) return null;
 
               return {
                 Club: club,
