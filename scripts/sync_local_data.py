@@ -12,6 +12,7 @@ REQUIRED_FILES = [
     "team_kpis.csv",
     "team_kpis_aflw.csv",
     "team_rank_timeseries.csv",
+    "team_rank_timeseries_aflw.csv",
     "team_skill_radar.csv",
     "team_skill_radar_aflw.csv",
     "player_acquisition_breakdown.csv",

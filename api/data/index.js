@@ -1,10 +1,15 @@
 const { BlobServiceClient } = require("@azure/storage-blob");
 const Papa = require("papaparse");
 
+const CURRENT_SEASON = 2026;
+const RECENT_SEASON_WINDOW = 3;
+const MIN_RECENT_SEASON = CURRENT_SEASON - (RECENT_SEASON_WINDOW - 1);
+
 const ALLOWED_FILES = new Set([
   "roster_players.csv",
   "team_kpis.csv",
   "team_rank_timeseries.csv",
+  "team_rank_timeseries_aflw.csv",
   "team_skill_radar.csv",
   "team_skill_radar_aflw.csv",
   "player_acquisition_breakdown.csv",
@@ -20,6 +25,24 @@ const ALLOWED_FILES = new Set([
   "CD_player_stats_agg.csv",
   "comparable_players.csv"
 ]);
+
+const RECENT_SEASON_FIELDS_BY_FILE = {
+  "roster_players.csv": ["season"],
+  "roster_players_aflw.csv": ["season"],
+  "team_kpis.csv": ["season"],
+  "team_kpis_aflw.csv": ["season"],
+  "team_rank_timeseries.csv": ["year"],
+  "team_rank_timeseries_aflw.csv": ["year"],
+  "team_skill_radar.csv": ["season", "season.id"],
+  "team_skill_radar_aflw.csv": ["season", "season.id"],
+  "player_acquisition_breakdown.csv": ["Year"],
+  "player_acquisition_breakdown_aflw.csv": ["Year"],
+  "player_projections.csv": ["season"],
+  "player_projections_aflw.csv": ["season"],
+  "form_player_afl.csv": ["season"],
+  "form_player_aflw.csv": ["season"],
+  "form_player_vfl.csv": ["season"],
+};
 
 module.exports = async function (context, req) {
   try {
@@ -68,18 +91,41 @@ module.exports = async function (context, req) {
       return;
     }
 
+    const rows = filterRecentRows(file, parsed.data);
+
     context.res = {
       status: 200,
       headers: {
         "content-type": "application/json",
         "cache-control": "no-store"
       },
-      body: parsed.data
+      body: rows
     };
   } catch (err) {
     context.res = { status: 500, body: String(err?.stack || err) };
   }
 };
+
+function filterRecentRows(file, rows) {
+  const seasonFields = RECENT_SEASON_FIELDS_BY_FILE[file];
+  if (!seasonFields || !Array.isArray(rows)) return rows;
+
+  return rows.filter((row) => {
+    const season = extractSeasonValue(row, seasonFields);
+    return season != null && season >= MIN_RECENT_SEASON && season <= CURRENT_SEASON;
+  });
+}
+
+function extractSeasonValue(row, fields) {
+  if (!row || typeof row !== "object") return null;
+  for (const field of fields) {
+    const raw = row[field];
+    if (raw == null || raw === "") continue;
+    const n = Number(raw);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
 
 function streamToString(readable) {
   return new Promise((resolve, reject) => {

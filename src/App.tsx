@@ -282,6 +282,7 @@ type AflFormRow = {
 
 type RankRow = {
   Club: string;
+  league: LeagueCode;
   year: number;
   actual_rank: number | null;
   forecast_a_rank: number | null;
@@ -479,7 +480,9 @@ const TEAMS: TeamOption[] = [
 
 const DEFAULT_TEAM_ID = "40"; // Collingwood
 const DEFAULT_SEASON = 2026;
-const UI_SEASONS = [2023, 2024, 2025, 2026] as const;
+const RECENT_SEASON_WINDOW = 3;
+const MIN_RECENT_SEASON = DEFAULT_SEASON - (RECENT_SEASON_WINDOW - 1);
+const UI_SEASONS = Array.from({ length: RECENT_SEASON_WINDOW }, (_, i) => MIN_RECENT_SEASON + i) as number[];
 const CAREER_TILES_EXPORT_ID = "career-tiles-export-target";
 const CAREER_PDF_EXPORT_ID = "career-pdf-export-target";
 const CAREER_MAIN_EXPORT_ID = "career-main-export-target";
@@ -572,6 +575,10 @@ function normalizeTeamId(x: any): string {
   return toTrimmedString(x);
 }
 
+function isKnownTeamId(teamId: string | null | undefined): boolean {
+  return !!getTeamOptionById(teamId);
+}
+
 function getTeamOptionById(teamId: string | null | undefined): TeamOption | null {
   const id = normalizeTeamId(teamId);
   return id ? TEAM_BY_ID.get(id) ?? null : null;
@@ -609,11 +616,14 @@ function coerceTeamId(raw: string | null | undefined): string {
 
   const upper = v.toUpperCase();
   if (LEGACY_TEAM_CODE_TO_ID[upper]) return LEGACY_TEAM_CODE_TO_ID[upper];
+  for (const [legacyCode, teamId] of Object.entries(LEGACY_TEAM_CODE_TO_ID)) {
+    if (upper.startsWith(legacyCode)) return teamId;
+  }
 
   // allow club name in URLs (e.g. /team/Collingwood) as a last resort
   const vNorm = normalizeClubName(v).toLowerCase();
   const byName = TEAMS.find((t) => normalizeClubName(t.name).toLowerCase() === vNorm);
-  return byName?.id ?? v;
+  return byName?.id ?? "";
 }
 
 
@@ -669,7 +679,30 @@ function toNumberOrNull(x: any): number | null {
 }
 
 function clampUiSeason(input: number): number {
-  return (UI_SEASONS as readonly number[]).includes(input) ? input : DEFAULT_SEASON;
+  return UI_SEASONS.includes(input) ? input : DEFAULT_SEASON;
+}
+
+function isRecentSeasonValue(value: number | null | undefined): value is number {
+  return value != null && Number.isFinite(value) && value >= MIN_RECENT_SEASON && value <= DEFAULT_SEASON;
+}
+
+function resolveIncomingTeamId(routeTeamId: string | null | undefined, searchParams: URLSearchParams): string {
+  const candidates = [
+    routeTeamId,
+    searchParams.get("team"),
+    searchParams.get("teamId"),
+    searchParams.get("club"),
+    searchParams.get("clubName"),
+    searchParams.get("teamName"),
+    searchParams.get("code"),
+  ];
+
+  for (const candidate of candidates) {
+    const teamId = coerceTeamId(candidate);
+    if (isKnownTeamId(teamId)) return teamId;
+  }
+
+  return DEFAULT_TEAM_ID;
 }
 
 function pickSeasonRow<T extends { season: number }>(
@@ -3169,7 +3202,7 @@ function AppCore({ routeMode, routeTeamId, routePlayerId }: { routeMode: "team" 
   const navigate = useNavigate();
   const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const didInitSeasonRef = useRef(false);
-  const [team, setTeam] = useState(() => (routeMode === "team" && routeTeamId ? coerceTeamId(routeTeamId) : (coerceTeamId(searchParams.get("team")) || DEFAULT_TEAM_ID)));
+  const [team, setTeam] = useState(() => resolveIncomingTeamId(routeMode === "team" ? routeTeamId : null, searchParams));
   const [season, setSeason] = useState<number>(DEFAULT_SEASON);
 const [compareTeam, setCompareTeam] = useState<string>(""); // "" = no comparison
 const [comparePanelOpen, setComparePanelOpen] = useState(false);
@@ -3208,15 +3241,17 @@ useEffect(() => {
     setSeason((prev) => (nextSeason !== prev ? nextSeason : prev));
 
     if (routeMode === "team") {
-      const nextTeam = coerceTeamId(routeTeamId || sp.get("team") || DEFAULT_TEAM_ID);
+      const nextTeam = resolveIncomingTeamId(routeTeamId, sp);
       setTeam((prev) => (nextTeam !== prev ? nextTeam : prev));
       setPage((prev) => (prev !== "team" ? "team" : prev));
     } else {
       // /player/:playerId route
       setPage((prev) => (prev !== "career" ? "career" : prev));
 
-      const qTeam = coerceTeamId(sp.get("team") || "");
-      if (qTeam) {
+      const qTeam = resolveIncomingTeamId(null, sp);
+      if (qTeam === DEFAULT_TEAM_ID && !sp.get("team") && !sp.get("teamId") && !sp.get("club") && !sp.get("clubName") && !sp.get("teamName") && !sp.get("code")) {
+        // No explicit team information was provided on the player route.
+      } else {
         setTeam((prev) => (qTeam !== prev ? qTeam : prev));
         setPlayerTeamResolved(true);
       }
@@ -3485,7 +3520,7 @@ useEffect(() => {
               const teamIdentity = resolveTeamIdentity(r["team_id"], r["team"], r["league"]);
               const ratingsN = toNumberOrNull(r["ratings"]) ?? 0;
               const ageCat = toTrimmedString(r["age_cat"]);
-              if (seasonN === null || ageN === null || gamesN === null || !teamIdentity.team || !teamIdentity.team_id) return null;
+              if (!isRecentSeasonValue(seasonN) || ageN === null || gamesN === null || !teamIdentity.team || !teamIdentity.team_id) return null;
               return {
                 season: seasonN,
                 team: teamIdentity.team,
@@ -3507,7 +3542,7 @@ useEffect(() => {
               const teamIdentity = resolveTeamIdentity(r["team_id"], r["team"], r["league"]);
               const ratingsN = toNumberOrNull(r["ratings"]) ?? 0;
               const ageCat = toTrimmedString(r["age_cat"]);
-              if (seasonN === null || ageN === null || gamesN === null || !teamIdentity.team || !teamIdentity.team_id) return null;
+              if (!isRecentSeasonValue(seasonN) || ageN === null || gamesN === null || !teamIdentity.team || !teamIdentity.team_id) return null;
               return {
                 season: seasonN,
                 team: teamIdentity.team,
@@ -3532,7 +3567,7 @@ useEffect(() => {
               const expAvg = toNumberOrNull(r["squad_experience_avg_games"]);
               const turnover = toNumberOrNull(r["squad_turnover_players"]);
               const teamIdentity = resolveTeamIdentity(r["team_id"], r["Club"], r["league"]);
-              if (!club || seasonN === null || ageAvg === null || expAvg === null || !teamIdentity.team_id) return null;
+              if (!club || !isRecentSeasonValue(seasonN) || ageAvg === null || expAvg === null || !teamIdentity.team_id) return null;
               return {
                 Club: club,
                 season: seasonN,
@@ -3553,7 +3588,7 @@ useEffect(() => {
               const expAvg = toNumberOrNull(r["squad_experience_avg_games"]);
               const turnover = toNumberOrNull(r["squad_turnover_players"]);
               const teamIdentity = resolveTeamIdentity(r["team_id"], r["Club"], r["league"]);
-              if (!club || seasonN === null || ageAvg === null || expAvg === null || !teamIdentity.team_id) return null;
+              if (!club || !isRecentSeasonValue(seasonN) || ageAvg === null || expAvg === null || !teamIdentity.team_id) return null;
               return {
                 Club: club,
                 season: seasonN,
@@ -3569,33 +3604,59 @@ useEffect(() => {
             }),
           ]).then((parts) => parts.flat()),
 
-          loadApiDataAsObjects<RankRow>("team_rank_timeseries.csv", (r) => {
-            const club = normalizeClubName(r["Club"] ?? "");
-            const yearN = toNumberOrNull(r["year"]);
-            if (!club || yearN === null) return null;
+          Promise.all([
+            loadApiDataAsObjects<RankRow>("team_rank_timeseries.csv", (r) => {
+              const club = normalizeClubName(r["Club"] ?? "");
+              const yearN = toNumberOrNull(r["year"]);
+              if (!club || !isRecentSeasonValue(yearN)) return null;
 
-            return {
-              Club: club,
-              year: yearN,
-              actual_rank: toNumberOrNull(r["actual_rank"]),
-              forecast_a_rank: toNumberOrNull(r["forecast_a_rank"]),
-              forecast_b_rank: toNumberOrNull(r["forecast_b_rank"]),
-              finish_1_p10: toNumberOrNull(r["finish_1_p10"]),
-              finish_1_p25: toNumberOrNull(r["finish_1_p25"]),
-              finish_1_p75: toNumberOrNull(r["finish_1_p75"]),
-              finish_1_p90: toNumberOrNull(r["finish_1_p90"]),
-              finish_2_p10: toNumberOrNull(r["finish_2_p10"]),
-              finish_2_p25: toNumberOrNull(r["finish_2_p25"]),
-              finish_2_p75: toNumberOrNull(r["finish_2_p75"]),
-              finish_2_p90: toNumberOrNull(r["finish_2_p90"]),
-            };
-          }),
+              return {
+                Club: club,
+                league: "AFL" as LeagueCode,
+                year: yearN,
+                actual_rank: toNumberOrNull(r["actual_rank"]),
+                forecast_a_rank: toNumberOrNull(r["forecast_a_rank"]),
+                forecast_b_rank: toNumberOrNull(r["forecast_b_rank"]),
+                finish_1_p10: toNumberOrNull(r["finish_1_p10"]),
+                finish_1_p25: toNumberOrNull(r["finish_1_p25"]),
+                finish_1_p75: toNumberOrNull(r["finish_1_p75"]),
+                finish_1_p90: toNumberOrNull(r["finish_1_p90"]),
+                finish_2_p10: toNumberOrNull(r["finish_2_p10"]),
+                finish_2_p25: toNumberOrNull(r["finish_2_p25"]),
+                finish_2_p75: toNumberOrNull(r["finish_2_p75"]),
+                finish_2_p90: toNumberOrNull(r["finish_2_p90"]),
+              };
+            }),
+            loadOptionalApiDataAsObjects<RankRow>("team_rank_timeseries_aflw.csv", (r) => {
+              const club = normalizeClubName(r["Club"] ?? "");
+              const yearN = toNumberOrNull(r["year"]);
+              if (!club || !isRecentSeasonValue(yearN)) return null;
+
+              return {
+                Club: club,
+                league: "AFLW" as LeagueCode,
+                year: yearN,
+                actual_rank: toNumberOrNull(r["actual_rank"]),
+                forecast_a_rank: toNumberOrNull(r["forecast_a_rank"]),
+                forecast_b_rank: toNumberOrNull(r["forecast_b_rank"]),
+                finish_1_p10: toNumberOrNull(r["finish_1_p10"]),
+                finish_1_p25: toNumberOrNull(r["finish_1_p25"]),
+                finish_1_p75: toNumberOrNull(r["finish_1_p75"]),
+                finish_1_p90: toNumberOrNull(r["finish_1_p90"]),
+                finish_2_p10: toNumberOrNull(r["finish_2_p10"]),
+                finish_2_p25: toNumberOrNull(r["finish_2_p25"]),
+                finish_2_p75: toNumberOrNull(r["finish_2_p75"]),
+                finish_2_p90: toNumberOrNull(r["finish_2_p90"]),
+              };
+            }),
+          ]).then((parts) => parts.flat()),
 
           Promise.all([
             loadApiDataAsObjects<SkillRadarRow>("team_skill_radar.csv", (r) => {
               const teamIdentity = resolveTeamIdentity(r["team_id"], r["squad.name"] ?? r["squad_name"], r["league"]);
               const seasonStr = toTrimmedString(r["season"] ?? r["season.id"]);
-              if (!teamIdentity.team || !teamIdentity.team_id || !seasonStr) return null;
+              const seasonN = toNumberOrNull(seasonStr);
+              if (!teamIdentity.team || !teamIdentity.team_id || !seasonStr || !isRecentSeasonValue(seasonN)) return null;
 
               const num = (k: string) => toNumberOrNull(r[k]) ?? 0;
 
@@ -3620,7 +3681,8 @@ useEffect(() => {
             loadOptionalApiDataAsObjects<SkillRadarRow>("team_skill_radar_aflw.csv", (r) => {
               const teamIdentity = resolveTeamIdentity(r["team_id"], r["squad.name"] ?? r["squad_name"], r["league"]);
               const seasonStr = toTrimmedString(r["season"] ?? r["season.id"]);
-              if (!teamIdentity.team || !teamIdentity.team_id || !seasonStr) return null;
+              const seasonN = toNumberOrNull(seasonStr);
+              if (!teamIdentity.team || !teamIdentity.team_id || !seasonStr || !isRecentSeasonValue(seasonN)) return null;
 
               const num = (k: string) => toNumberOrNull(r[k]) ?? 0;
 
@@ -3651,7 +3713,7 @@ useEffect(() => {
               const value = toNumberOrNull(r["value"]);
               const draft = toTrimmedString(r["Draft"]);
               const teamIdentity = resolveTeamIdentity(r["team_id"], r["Club"], r["league"]);
-              if (!club || year === null || value === null || !draft || !teamIdentity.team_id) return null;
+              if (!club || !isRecentSeasonValue(year) || value === null || !draft || !teamIdentity.team_id) return null;
               return { Club: club, Year: year, Draft: draft, value, team_id: teamIdentity.team_id, league: teamIdentity.league };
             }),
             loadOptionalApiDataAsObjects<AcquisitionRow>("player_acquisition_breakdown_aflw.csv", (r) => {
@@ -3660,7 +3722,7 @@ useEffect(() => {
               const value = toNumberOrNull(r["value"]);
               const draft = toTrimmedString(r["Draft"]);
               const teamIdentity = resolveTeamIdentity(r["team_id"], r["Club"], r["league"]);
-              if (!club || year === null || value === null || !draft || !teamIdentity.team_id) return null;
+              if (!club || !isRecentSeasonValue(year) || value === null || !draft || !teamIdentity.team_id) return null;
               return { Club: club, Year: year, Draft: draft, value, team_id: teamIdentity.team_id, league: teamIdentity.league };
             }),
           ]).then((parts) => parts.flat()),
@@ -3674,7 +3736,7 @@ useEffect(() => {
               const playerId = toTrimmedString(r["playerId"]);
               const playerName = toTrimmedString(r["player_name"]);
 
-              if (!teamIdentity.team || !teamIdentity.team_id || seasonN === null || rating === null || !playerId || !playerName) return null;
+              if (!teamIdentity.team || !teamIdentity.team_id || !isRecentSeasonValue(seasonN) || rating === null || !playerId || !playerName) return null;
 
               return {
                 team: teamIdentity.team,
@@ -3697,7 +3759,7 @@ useEffect(() => {
               const playerId = toTrimmedString(r["playerId"]);
               const playerName = toTrimmedString(r["player_name"]);
 
-              if (!teamIdentity.team || !teamIdentity.team_id || seasonN === null || rating === null || !playerId || !playerName) return null;
+              if (!teamIdentity.team || !teamIdentity.team_id || !isRecentSeasonValue(seasonN) || rating === null || !playerId || !playerName) return null;
 
               return {
                 team: teamIdentity.team,
@@ -3721,7 +3783,7 @@ useEffect(() => {
               const teamIdentity = resolveTeamIdentity(r["team_id"], r["team"], r["league"]);
               const playerId = toTrimmedString(r["playerId"]);
               const playerName = toTrimmedString(r["player_name"]);
-              if (seasonN === null || wavg === null || !teamIdentity.team || !teamIdentity.team_id || !playerId || !playerName) return null;
+              if (!isRecentSeasonValue(seasonN) || wavg === null || !teamIdentity.team || !teamIdentity.team_id || !playerId || !playerName) return null;
               return {
                 season: seasonN,
                 playerId,
@@ -3740,7 +3802,7 @@ useEffect(() => {
               const teamIdentity = resolveTeamIdentity(r["team_id"], r["team"], r["league"]);
               const playerId = toTrimmedString(r["playerId"]);
               const playerName = toTrimmedString(r["player_name"]);
-              if (seasonN === null || wavg === null || !teamIdentity.team || !teamIdentity.team_id || !playerId || !playerName) return null;
+              if (!isRecentSeasonValue(seasonN) || wavg === null || !teamIdentity.team || !teamIdentity.team_id || !playerId || !playerName) return null;
               return {
                 season: seasonN,
                 playerId,
@@ -3763,7 +3825,7 @@ useEffect(() => {
             const playerName = toTrimmedString(r["player_name"]);
             const teamIdentity = resolveTeamIdentity(r["team_id"], r["team"], r["league"]);
 
-            if (seasonN === null || wavg === null || !teamS || !playerId || !playerName) return null;
+            if (!isRecentSeasonValue(seasonN) || wavg === null || !teamS || !playerId || !playerName) return null;
 
             return {
               season: seasonN,
@@ -4180,11 +4242,8 @@ const toAgeLabel = (x: number) => String(Math.round(x));
     return rows[0] ?? null;
   }, [aflForm, team, season, selectedLeague]);
 const rankTrendMeta = useMemo(() => {
-  if (selectedLeague !== "AFL") {
-    return { rows: [] as any[], missingActualYears: [] as number[] };
-  }
   const clubRows = rankSeries
-    .filter((r) => normalizeClubName(r.Club) === clubKey)
+    .filter((r) => r.league === selectedLeague && normalizeClubName(r.Club) === clubKey)
     .sort((a, b) => a.year - b.year);
 
   if (clubRows.length === 0) {
@@ -4308,6 +4367,7 @@ const rankTrendMeta = useMemo(() => {
 }, [rankSeries, clubKey, selectedLeague]);
 const rankTrend = rankTrendMeta.rows;
 const rankMissingActualYears = rankTrendMeta.missingActualYears;
+const rankSourceFile = selectedLeague === "AFLW" ? "team_rank_timeseries_aflw.csv" : "team_rank_timeseries.csv";
 const rankLastActualYear = useMemo(() => {
   for (let i = rankTrend.length - 1; i >= 0; i--) {
     if (rankTrend[i].actual !== null && rankTrend[i].actual !== undefined) return rankTrend[i].year;
@@ -5046,7 +5106,7 @@ const mergedSkillRadar = useMemo(() => {
               <div style={{ marginTop: 10, fontSize: 14, color: "rgba(0,0,0,0.55)" }}>Black = actual. Grey dashed = forecast scenarios (only from the most recent season).</div>
               {rankMissingActualYears.length > 0 ? (
                 <div style={{ marginTop: 6, fontSize: 12, color: "rgba(0,0,0,0.5)" }}>
-                  Actual ladder rank is unavailable in `team_rank_timeseries.csv` for: {rankMissingActualYears.join(", ")}.
+                  Actual ladder rank is unavailable in <code>{rankSourceFile}</code> for: {rankMissingActualYears.join(", ")}.
                 </div>
               ) : null}
             </Card>
