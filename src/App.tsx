@@ -75,8 +75,8 @@ const ACQ_COLOR_MAP: Record<string, string> = {
   "Mid-Season": "#EC4899", // pink
   "Mid-Season Draft": "#EC4899", // pink
   Trade: "#EAB308", // yellow
-  "Free Agency": "#DC2626", // red
-  "Free Agent": "#DC2626", // red
+  "Free Agency": "#7C3AED", // purple (legacy label → Pre-list/Free Agency)
+  "Free Agent": "#7C3AED", // purple (legacy label)
   "Pre-Draft": "#16A34A", // green
   "Pre-Listing": "#16A34A", // green
   "Category B": "#EC4899", // pink
