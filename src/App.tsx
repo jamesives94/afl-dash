@@ -89,13 +89,14 @@ const ACQ_COLOR_MAP: Record<string, string> = {
   "Draft (Pick 1-5)": "#1D4ED8", // dark blue
   "Draft (Pick 6-10)": "#60A5FA", // light blue
   "Draft (Pick 11+)": "#93C5FD", // pale blue
-  "Marquee/Pre-list": "#7C3AED", // purple
+  "Marquee/Pre-list": "#7C3AED", // purple (legacy label)
+  "Pre-list/Free Agency": "#7C3AED", // purple
   "Cross-code": "#F97316", // orange
   "State League Recruit": "#0D9488", // teal
   Rookie: "#6B7280", // grey
   Priority: "#A855F7", // violet
-  Marquee: "#7C3AED", // purple
-  "Expansion signing": "#14B8A6", // teal-green
+  Marquee: "#7C3AED", // purple (legacy label)
+  "Expansion signing": "#7C3AED", // purple (legacy label)
   "Pre-season Draft": "#0EA5E9", // sky blue
 };
 
