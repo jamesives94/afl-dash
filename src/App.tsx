@@ -1875,28 +1875,23 @@ function CareerProjectionDashboard({
   }, [primaryTraj, compareTraj]);
 
   const chartTrajectory = useMemo(() => {
-    const useSalary = projectionMetric === "salary";
     return (trajectory as any[]).map((d) => ({
       ...d,
-      actual: useSalary ? d.salary_actual ?? null : d.actual_rating,
-      estimate: useSalary ? d.salary_estimate ?? null : d.estimate_rating,
-      optimistic: useSalary ? d.salary_optimistic ?? null : d.optimistic_rating,
-      pessimistic: useSalary ? d.salary_pessimistic ?? null : d.pessimistic_rating,
-      lower0: useSalary ? null : d.lower0_rating,
-      band: useSalary ? null : d.band_rating,
-      c_actual: useSalary ? d.c_salary_actual ?? null : d.c_actual_rating,
-      c_estimate: useSalary ? d.c_salary_estimate ?? null : d.c_estimate_rating,
-      c_lower0: useSalary ? null : d.c_lower0_rating,
-      c_band: useSalary ? null : d.c_band_rating,
-      bridge: useSalary ? d.bridge_salary ?? null : d.bridge_rating,
+      actual: d.actual_rating,
+      estimate: d.estimate_rating,
+      optimistic: d.optimistic_rating,
+      pessimistic: d.pessimistic_rating,
+      lower0: d.lower0_rating,
+      band: d.band_rating,
+      c_actual: d.c_actual_rating,
+      c_estimate: d.c_estimate_rating,
+      c_lower0: d.c_lower0_rating,
+      c_band: d.c_band_rating,
+      bridge: d.bridge_rating,
     }));
-  }, [trajectory, projectionMetric]);
+  }, [trajectory]);
 
   const ratingBenchmarks = useMemo(() => {
-    if (projectionMetric === "salary") {
-      return { leagueAvg: null as number | null, top10Avg: null as number | null };
-    }
-
     const seasonSet = new Set((trajectory as any[]).map((d) => d.season));
     if (!seasonSet.size) return { leagueAvg: null as number | null, top10Avg: null as number | null };
 
@@ -1922,9 +1917,10 @@ function CareerProjectionDashboard({
     const top10Avg = topSlice.reduce((a, b) => a + b, 0) / topSlice.length;
 
     return { leagueAvg, top10Avg };
-  }, [careerProjections, trajectory, projectionMetric]);
+  }, [careerProjections, trajectory]);
 
-  // Dynamic Y-axis domain: rating uses CI bounds, salary uses salary series values.
+  // Dynamic Y-axis domain is always based on the rating trajectory so the
+  // historical view remains stable when switching the chart labels to salary.
   const yDomain = useMemo<[number, number]>(() => {
     const lows: number[] = [];
     const highs: number[] = [];
@@ -1955,20 +1951,8 @@ function CareerProjectionDashboard({
       if (typeof vB === "number" && Number.isFinite(vB)) vals.push(vB);
     }
 
-    const salaryMode = projectionMetric === "salary";
-    const minBase = lows.length ? Math.min(...lows) : vals.length ? Math.min(...vals) : salaryMode ? 30000 : 4;
-    const maxBase = highs.length ? Math.max(...highs) : vals.length ? Math.max(...vals) : salaryMode ? 200000 : 20;
-
-    if (salaryMode) {
-      const span = Math.max(5000, maxBase - minBase);
-      const padding = Math.max(5000, span * 0.12);
-      const min = Math.max(0, minBase - padding);
-      const max = maxBase + padding;
-      const roundTo = 5000;
-      const minFinal = Math.max(0, Math.floor(min / roundTo) * roundTo);
-      const maxFinal = Math.max(minFinal + roundTo, Math.ceil(max / roundTo) * roundTo);
-      return [minFinal, maxFinal];
-    }
+    const minBase = lows.length ? Math.min(...lows) : vals.length ? Math.min(...vals) : 4;
+    const maxBase = highs.length ? Math.max(...highs) : vals.length ? Math.max(...vals) : 20;
 
     let min = minBase - 3;
     let max = maxBase + 3;
@@ -2002,7 +1986,7 @@ const minFinal = Math.max(1, minRounded);
 const maxFinal = Math.max(minFinal + 1, maxRounded);
 
 return [minFinal, maxFinal];
-  }, [chartTrajectory, ratingBenchmarks.top10Avg, projectionMetric]);
+  }, [chartTrajectory, ratingBenchmarks.top10Avg]);
 
 
   // ---------- KPI helpers ----------
@@ -3133,7 +3117,7 @@ return [minFinal, maxFinal];
                   tickFormatter={(v: any) => {
                     const n = typeof v === "number" ? v : Number(v);
                     if (!Number.isFinite(n)) return "";
-                    return projectionMetric === "salary" ? fmtAUDShort(n) : `${Math.round(n)}`;
+                    return `${Math.round(n)}`;
                   }}
                 />
                 <Tooltip
@@ -3169,7 +3153,11 @@ return [minFinal, maxFinal];
                           break;
                       }
                       const sval = typeof salaryVal === "number" ? salaryVal : Number(salaryVal);
-                      if (!Number.isFinite(sval)) return ["—", n];
+                      if (!Number.isFinite(sval)) {
+                        const fallbackVal = typeof v === "number" ? v : Number(v);
+                        if (!Number.isFinite(fallbackVal)) return ["—", n];
+                        return [fallbackVal.toFixed(1), n];
+                      }
                       return [fmtAUDShort(sval), n];
                     }
                     const val = typeof v === "number" ? v : Number(v);
@@ -3179,7 +3167,7 @@ return [minFinal, maxFinal];
                   labelFormatter={(l) => `Season ${l}`}
                 />
 
-                {projectionMetric === "rating" && ratingBenchmarks.leagueAvg != null ? (
+                {ratingBenchmarks.leagueAvg != null ? (
                   <ReferenceLine
                     y={ratingBenchmarks.leagueAvg}
                     stroke="#9CA3AF"
@@ -3190,7 +3178,7 @@ return [minFinal, maxFinal];
                   />
                 ) : null}
 
-                {projectionMetric === "rating" && ratingBenchmarks.top10Avg != null ? (
+                {ratingBenchmarks.top10Avg != null ? (
                   <ReferenceLine
                     y={ratingBenchmarks.top10Avg}
                     stroke="#9CA3AF"
@@ -3202,15 +3190,13 @@ return [minFinal, maxFinal];
                 ) : null}
 
                 {/* Primary CI band */}
-                {projectionMetric === "rating" ? (
-                  <>
-                    <Area type="monotone" dataKey="lower0" stackId="ci1" stroke="none" fill="transparent" isAnimationActive={false} />
-                    <Area type="monotone" dataKey="band" stackId="ci1" stroke="none" fill="rgba(0,0,0,0.12)" isAnimationActive={false} />
-                  </>
-                ) : null}
+                <>
+                  <Area type="monotone" dataKey="lower0" stackId="ci1" stroke="none" fill="transparent" isAnimationActive={false} />
+                  <Area type="monotone" dataKey="band" stackId="ci1" stroke="none" fill="rgba(0,0,0,0.12)" isAnimationActive={false} />
+                </>
 
                 {/* Compare CI band (lighter) */}
-                {projectionMetric === "rating" && comparePlayer ? (
+                {comparePlayer ? (
                   <>
                     <Area type="monotone" dataKey="c_lower0" stackId="ci2" stroke="none" fill="transparent" isAnimationActive={false} />
                     <Area type="monotone" dataKey="c_band" stackId="ci2" stroke="none" fill="rgba(0,0,0,0.07)" isAnimationActive={false} />
@@ -3344,7 +3330,7 @@ return [minFinal, maxFinal];
 
             <div style={{ marginTop: 8, fontSize: 12, color: "rgba(0,0,0,0.55)" }}>
               {projectionMetric === "salary"
-                ? "Salary mode plots projected salary directly. Softer overlays show optimistic and pessimistic salary paths; compare series is dashed."
+                ? "Salary mode keeps the rating trajectory and swaps the projected labels/tooltips to salary values. Compare series is dashed."
                 : "Shaded band = lower/upper confidence interval (when available). Dashed lines = league avg + top 10% avg rating. Compare series is dashed."}
               <span style={{ color: "rgba(0,0,0,0.34)" }}> Optimistic and pessimistic trend lines are always shown as softer overlays.</span>
             </div>
