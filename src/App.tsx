@@ -1248,13 +1248,48 @@ function CareerProjectionDashboard({
   initialPlayerId?: string;
   onPlayerIdChange?: (id: string) => void;
 }) {
-  // Primary club context comes from the top-level team selector (query param)
-  const teamOption = getTeamOptionById(defaultTeam);
-  const selectedLeague = teamOption?.league ?? "AFL";
-  const teamName = (teamOption?.name ?? defaultTeam) as string;
-  const teamKey = normalizeClubName(teamName);
-  const teamColor = TEAM_PRIMARY_COLOR[teamKey] ?? "#111827";
-  const logoSrc = getLogoUrlByClubName(teamName);
+  const resolvePlayerTeamId = useCallback((candidateId?: string | null, preferredSeason?: number) => {
+    const pid = normalizePlayerId(candidateId);
+    if (!pid) return "";
+
+    const rosterMatches = rosterPlayers
+      .filter((r) => normalizePlayerId(r.providerId) === pid)
+      .sort((a, b) => b.season - a.season);
+    const exactRoster = preferredSeason != null ? rosterMatches.find((r) => r.season === preferredSeason) : null;
+    const chosenRoster = exactRoster ?? rosterMatches[0] ?? null;
+    if (chosenRoster) {
+      const resolved = resolveTeamIdentity(chosenRoster.team_id, chosenRoster.team, chosenRoster.league);
+      if (resolved.team_id) return resolved.team_id;
+    }
+
+    const projectionMatches = playerProjections.filter((r) => normalizePlayerId(r.playerId) === pid);
+    const exactProjection = preferredSeason != null ? projectionMatches.find((r) => r.season === preferredSeason) : null;
+    const chosenProjection = exactProjection ?? projectionMatches[0] ?? null;
+    if (chosenProjection) {
+      const resolved = resolveTeamIdentity(chosenProjection.team_id, chosenProjection.team, chosenProjection.league);
+      if (resolved.team_id) return resolved.team_id;
+    }
+
+    const careerMatches = careerProjections
+      .filter((r) => normalizePlayerId(r.SourceproviderId) === pid)
+      .sort((a, b) => (b.SourceSeason ?? 0) - (a.SourceSeason ?? 0));
+    const exactCareer = preferredSeason != null ? careerMatches.find((r) => r.SourceSeason === preferredSeason) : null;
+    const chosenCareer = exactCareer ?? careerMatches[0] ?? null;
+    if (chosenCareer) {
+      const resolved = resolveTeamIdentity(chosenCareer.team_id, chosenCareer.team ?? chosenCareer.SourceClub, chosenCareer.league ?? "AFL");
+      if (resolved.team_id) return resolved.team_id;
+    }
+
+    return "";
+  }, [careerProjections, playerProjections, rosterPlayers]);
+
+  const inferredInitialTeamId = useMemo(
+    () => resolvePlayerTeamId(initialPlayerId, selectedSeason),
+    [initialPlayerId, resolvePlayerTeamId, selectedSeason]
+  );
+  const baseTeamId = inferredInitialTeamId || normalizeTeamId(defaultTeam);
+  const baseTeamOption = getTeamOptionById(baseTeamId);
+  const selectedLeague = baseTeamOption?.league ?? "AFL";
 
   const ordinalSuffix = (n: number) => {
     const v = Math.round(n);
@@ -1291,7 +1326,7 @@ function CareerProjectionDashboard({
     const map = new Map<string, { name: string; id: string; team?: string; pos?: string }>();
     for (const r of careerProjections) {
       const resolved = resolveTeamIdentity(r.team_id, r.team ?? r.SourceClub, r.league ?? "AFL");
-      if (normalizeTeamId(resolved.team_id) !== normalizeTeamId(defaultTeam)) continue;
+      if (normalizeTeamId(resolved.team_id) !== normalizeTeamId(baseTeamId)) continue;
       const id = normalizePlayerId(r.SourceproviderId);
       const name = toTrimmedString(r.SourcePlayer);
       if (!id || !name) continue;
@@ -1301,7 +1336,7 @@ function CareerProjectionDashboard({
 
     for (const r of rosterPlayers) {
       if (
-        normalizeTeamId(r.team_id) !== normalizeTeamId(defaultTeam) ||
+        normalizeTeamId(r.team_id) !== normalizeTeamId(baseTeamId) ||
         r.league !== selectedLeague
       ) {
         continue;
@@ -1315,7 +1350,7 @@ function CareerProjectionDashboard({
 
     for (const r of playerProjections) {
       if (
-        normalizeTeamId(r.team_id) !== normalizeTeamId(defaultTeam) ||
+        normalizeTeamId(r.team_id) !== normalizeTeamId(baseTeamId) ||
         r.league !== selectedLeague
       ) {
         continue;
@@ -1329,7 +1364,7 @@ function CareerProjectionDashboard({
 
     const out = Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
     return out.length ? out : [{ name: "Select a player", id: "" }];
-  }, [careerProjections, rosterPlayers, playerProjections, defaultTeam, selectedLeague]);
+  }, [careerProjections, rosterPlayers, playerProjections, baseTeamId, selectedLeague]);
 
   // Compare list: any player in the database
   const allPlayers = useMemo(() => {
@@ -1416,6 +1451,15 @@ function CareerProjectionDashboard({
   }, [playerId]);
 
   const player = useMemo(() => clubPlayers.find((p) => p.id === playerId) ?? clubPlayers[0], [clubPlayers, playerId]);
+  const displayTeamId = useMemo(
+    () => resolvePlayerTeamId(player?.id ?? initialPlayerId, selectedSeason) || baseTeamId,
+    [baseTeamId, initialPlayerId, player?.id, resolvePlayerTeamId, selectedSeason]
+  );
+  const teamOption = getTeamOptionById(displayTeamId);
+  const teamName = (teamOption?.name ?? baseTeamOption?.name ?? defaultTeam) as string;
+  const teamKey = normalizeClubName(teamName);
+  const teamColor = TEAM_PRIMARY_COLOR[teamKey] ?? "#111827";
+  const logoSrc = getLogoUrlByClubName(teamName);
   const comparePlayer = useMemo(
     () => (comparePlayerId ? allPlayers.find((p) => p.id === comparePlayerId) ?? null : null),
     [allPlayers, comparePlayerId]
@@ -5081,9 +5125,11 @@ const mergedSkillRadar = useMemo(() => {
                       />
                     ) : null}
                   </div>
-                  <div style={{ fontSize: 12, color: "rgba(0,0,0,0.55)" }}>
-                    {page === "team" ? `${selectedLeague} Team Profile | Season ${season}` : `${selectedLeague} career projection dashboard`}
-                  </div>
+                  {page === "team" ? (
+                    <div style={{ fontSize: 12, color: "rgba(0,0,0,0.55)" }}>
+                      {`${selectedLeague} Team Profile | Season ${season}`}
+                    </div>
+                  ) : null}
                 </div>
               </div>
 
