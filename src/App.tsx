@@ -713,6 +713,133 @@ function toNumberOrNull(x: any): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+function mapCareerProjectionRow(r: Record<string, any>, fallbackLeague: LeagueCode): CareerProjectionRow | null {
+  const seasonN = toNumberOrNull(r["Season"]);
+  const horizonN = toNumberOrNull(r["Horizon"]);
+  const srcSeasonN = toNumberOrNull(r["SourceSeason"]);
+
+  if (seasonN === null || horizonN === null) return null;
+
+  const league = normalizeLeague(r["league"] ?? r["League"] ?? fallbackLeague);
+  const sourceClub = normalizeClubName(r["SourceClub"] ?? r["team"] ?? "");
+  const teamIdentity = resolveTeamIdentity(r["team_id"], r["team"] ?? sourceClub, league);
+
+  return {
+    SourceproviderId: toTrimmedString(r["SourceproviderId"]),
+    SourcePlayer: toTrimmedString(r["SourcePlayer"]),
+    SourceClub: sourceClub,
+    SourceSeason: srcSeasonN ?? seasonN,
+    SourceRating: toNumberOrNull(r["SourceRating"]) ?? 0,
+    SourcePosition: toTrimmedString(r["SourcePosition"]),
+    Horizon: horizonN,
+    Season: seasonN,
+    estimate: toNumberOrNull(r["estimate"]),
+    lower: toNumberOrNull(r["lower"]),
+    upper: toNumberOrNull(r["upper"]),
+    salary: toNumberOrNull(r["salary"]),
+    Optimistic: toNumberOrNull(r["Optimistic"] ?? r["optimistic"]),
+    Pessimistic: toNumberOrNull(r["Pessimistic"] ?? r["pessimistic"]),
+    salary_opt: toNumberOrNull(r["salary_opt"] ?? r["salaryOpt"] ?? r["Salary_Opt"] ?? r["SalaryOpt"]),
+    salary_pes: toNumberOrNull(r["salary_pes"] ?? r["salaryPes"] ?? r["Salary_Pes"] ?? r["SalaryPes"]),
+    AA: toNumberOrNull(r["AA"] ?? r["AA "] ?? r["All Australian"] ?? r["AllAustralian"] ?? r["AA_prob"] ?? r["AAProb"] ?? r["AA Probability"] ?? r["AA_Prob"]),
+    Seasons: toNumberOrNull(r["Seasons"]),
+    Season_90: toNumberOrNull(
+      r["Season_90"] ??
+        r["season_90"] ??
+        r["Season90"] ??
+        r["season90"] ??
+        r["Season_90 "] ??
+        r["Season 90"]
+    ),
+    Games: toNumberOrNull(r["Games"] ?? r["Games100"] ?? r["Games_100"] ?? r["Games100+"] ?? r["Games100Plus"] ?? r["Games Probability"] ?? r["Games_prob"] ?? r["GamesProb"]),
+    Height:
+      toPresentString(
+        r["Height"] ??
+          r["height"] ??
+          r["Height.y"] ??
+          r["height.y"] ??
+          r["Height_x"] ??
+          r["Height.x"] ??
+          r["height_x"] ??
+          r["height.x"] ??
+          r["Height_cm"] ??
+          r["height_cm"] ??
+          r["height.cm"] ??
+          r["Height (cm)"]
+      ) || null,
+    Age:
+      toPresentString(
+        r["Age"] ??
+          r["age"] ??
+          r["Age.y"] ??
+          r["age.y"] ??
+          r["Age_x"] ??
+          r["Age.x"] ??
+          r["age_x"] ??
+          r["age.x"] ??
+          r["Age_Season"] ??
+          r["age.season"] ??
+          r["age_season"]
+      ) || null,
+    Drafted:
+      toPresentString(
+        r["Drafted"] ??
+          r["drafted"] ??
+          r["Drafted.y"] ??
+          r["drafted.y"] ??
+          r["Drafted_x"] ??
+          r["Drafted.x"] ??
+          r["drafted_x"] ??
+          r["drafted.x"] ??
+          r["Draft"] ??
+          r["draft"]
+      ) || null,
+    draftYear:
+      toPresentString(
+        r["draftYear"] ??
+          r["DraftYear"] ??
+          r["draftYear.y"] ??
+          r["DraftYear.y"] ??
+          r["draftYear_x"] ??
+          r["DraftYear_x"] ??
+          r["draft_year"] ??
+          r["Draft Year"]
+      ) || null,
+    Type: toTrimmedString(r["Type"]) || undefined,
+    team: teamIdentity.team || undefined,
+    team_id: teamIdentity.team_id || undefined,
+    league,
+    rank_all: toNumberOrNull(r["rank_all"] ?? r["Rank_all"] ?? r["rankAll"] ?? r["rank_all "]),
+    rank_pos: toNumberOrNull(r["rank_pos"] ?? r["Rank_pos"] ?? r["rankPos"] ?? r["rank_pos "]),
+    Kicks: toNumberOrNull(r["Kicks"]),
+    Hitouts: toNumberOrNull(r["Hitouts"]),
+    Intercepts: toNumberOrNull(r["Intercepts"]),
+    Spoils: toNumberOrNull(r["Spoils"]),
+    Transition: toNumberOrNull(r["Transition"]),
+    Shots: toNumberOrNull(r["Shots"]),
+    Stoppage: toNumberOrNull(r["Stoppage"]),
+    Ball_Use: toNumberOrNull(r["Ball_Use"]),
+    Ball_Winning: toNumberOrNull(r["Ball_Winning"]),
+    Pressure: toNumberOrNull(r["Pressure"]),
+    Kicking: toNumberOrNull(r["Kicking"]),
+    Handballing: toNumberOrNull(r["Handballing"]),
+    Transition_Ball_Use: toNumberOrNull(r["Transition_Ball_Use"] ?? r["Transition_BallUse"] ?? r["Transition Ball Use"]),
+    Post_Clearance_Ball_Use: toNumberOrNull(r["Post_Clearance_Ball_Use"] ?? r["Post Clearance Ball Use"]),
+    Clearance_Ball_Use: toNumberOrNull(r["Clearance_Ball_Use"] ?? r["Clearance Ball Use"]),
+    Aerial: toNumberOrNull(r["Aerial"]),
+    Ground: toNumberOrNull(r["Ground"]),
+    Run_Carry: toNumberOrNull(r["Run_Carry"] ?? r["Run Carry"]),
+    Turnover_Transition_Ball_Winning: toNumberOrNull(
+      r["Turnover_Transition_Ball_Winning"] ?? r["Turnover Transition Ball Winning"]
+    ),
+    Stoppage_Transition_Ball_Winning: toNumberOrNull(
+      r["Stoppage_Transition_Ball_Winning"] ?? r["Stoppage Transition Ball Winning"]
+    ),
+    Pre_Clearance_Ball_Winning: toNumberOrNull(r["Pre_Clearance_Ball_Winning"] ?? r["Pre Clearance Ball Winning"]),
+    Spoiling: toNumberOrNull(r["Spoiling"] ?? r["Spoil"] ?? r["Spoils"] ?? r["Spoiling"]),
+  };
+}
+
 function clampUiSeason(input: number): number {
   return UI_SEASONS.includes(input) ? input : DEFAULT_SEASON;
 }
@@ -778,17 +905,21 @@ async function loadOptionalApiDataAsObjects<T>(
     return await loadApiDataAsObjects(file, mapper);
   } catch (err: any) {
     const message = String(err?.message ?? err ?? "");
-    if (
-      /invalid file/i.test(message) ||
-      /failed to load .*local snapshots \(404\)/i.test(message) ||
-      /blobnotfound/i.test(message) ||
-      /the specified blob does not exist/i.test(message) ||
-      /failed to load .* via api \(404\)/i.test(message)
-    ) {
+    if (isOptionalDataLoadError(message)) {
       return [];
     }
     throw err;
   }
+}
+
+function isOptionalDataLoadError(message: string): boolean {
+  return (
+    /invalid file/i.test(message) ||
+    /failed to load .*local snapshots \(404\)/i.test(message) ||
+    /blobnotfound/i.test(message) ||
+    /the specified blob does not exist/i.test(message) ||
+    /failed to load .* via api \(404\)/i.test(message)
+  );
 }
 
 function parseLastUpdatedLabel(value: string | null): string {
@@ -816,7 +947,7 @@ async function fetchLocalManifest(): Promise<any | null> {
   return localDataManifestPromise;
 }
 
-async function fetchApiRows(file: string): Promise<{ rows: Record<string, any>[]; lastUpdatedLabel: string }> {
+async function fetchApiRows(file: string): Promise<{ rows: Record<string, any>[]; lastUpdatedLabel: string; lastUpdatedValue: string }> {
   if (USE_LOCAL_DATA) {
     const url = `${LOCAL_DATA_BASE}/${file}.json`;
     const res = await fetch(url, { cache: "no-store" });
@@ -826,8 +957,9 @@ async function fetchApiRows(file: string): Promise<{ rows: Record<string, any>[]
     const rows = Array.isArray(json) ? json : [];
     const manifest = await fetchLocalManifest();
     const entry = Array.isArray(manifest?.files) ? manifest.files.find((f: any) => f?.file === file) : null;
-    const lastUpdatedLabel = parseLastUpdatedLabel(entry?.lastModified ?? manifest?.generatedAt ?? null);
-    return { rows, lastUpdatedLabel };
+    const lastUpdatedValue = toTrimmedString(entry?.lastModified ?? manifest?.generatedAt ?? "");
+    const lastUpdatedLabel = parseLastUpdatedLabel(lastUpdatedValue);
+    return { rows, lastUpdatedLabel, lastUpdatedValue };
   }
 
   const url = `/api/data?file=${encodeURIComponent(file)}`;
@@ -852,26 +984,60 @@ async function fetchApiRows(file: string): Promise<{ rows: Record<string, any>[]
 
   const json = await res.json();
   const rows = Array.isArray(json) ? json : [];
-  const lastUpdatedLabel = parseLastUpdatedLabel(
+  const lastUpdatedValue = toTrimmedString(
     res.headers.get("x-file-last-modified") ??
       res.headers.get("x-last-modified") ??
       res.headers.get("last-modified")
   );
+  const lastUpdatedLabel = parseLastUpdatedLabel(lastUpdatedValue);
 
-  return { rows, lastUpdatedLabel };
+  return { rows, lastUpdatedLabel, lastUpdatedValue };
 }
 
 async function loadApiDataAsObjectsWithMeta<T>(
   file: string,
   mapper: (r: Record<string, any>) => T | null
-): Promise<{ rows: T[]; lastUpdatedLabel: string }> {
-  const { rows, lastUpdatedLabel } = await fetchApiRows(file);
+): Promise<{ rows: T[]; lastUpdatedLabel: string; lastUpdatedValue: string }> {
+  const { rows, lastUpdatedLabel, lastUpdatedValue } = await fetchApiRows(file);
   const out: T[] = [];
   for (const r of rows) {
     const obj = mapper((r ?? {}) as Record<string, any>);
     if (obj) out.push(obj);
   }
-  return { rows: out, lastUpdatedLabel };
+  return { rows: out, lastUpdatedLabel, lastUpdatedValue };
+}
+
+async function loadOptionalApiDataAsObjectsWithMeta<T>(
+  file: string,
+  mapper: (r: Record<string, any>) => T | null
+): Promise<{ rows: T[]; lastUpdatedLabel: string; lastUpdatedValue: string }> {
+  try {
+    return await loadApiDataAsObjectsWithMeta(file, mapper);
+  } catch (err: any) {
+    const message = String(err?.message ?? err ?? "");
+    if (isOptionalDataLoadError(message)) {
+      return { rows: [], lastUpdatedLabel: "", lastUpdatedValue: "" };
+    }
+    throw err;
+  }
+}
+
+function pickLatestLastUpdatedLabel(entries: Array<{ lastUpdatedLabel: string; lastUpdatedValue: string }>): string {
+  let bestLabel = "";
+  let bestValue = Number.NEGATIVE_INFINITY;
+
+  for (const entry of entries) {
+    const label = toTrimmedString(entry.lastUpdatedLabel);
+    if (!label) continue;
+    const parsed = Date.parse(toTrimmedString(entry.lastUpdatedValue));
+    const value = Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
+    if (!bestLabel || value > bestValue) {
+      bestLabel = label;
+      bestValue = value;
+    }
+  }
+
+  return bestLabel;
 }
 
 // Try multiple possible blob filenames (helps when you rename a CSV in Azure Blob)
@@ -3992,130 +4158,13 @@ useEffect(() => {
           }),
 
           // Career projections
-          loadApiDataAsObjectsWithMeta<CareerProjectionRow>("career_projections.csv", (r) => {
-            const seasonN = toNumberOrNull(r["Season"]);
-            const horizonN = toNumberOrNull(r["Horizon"]);
-            const srcSeasonN = toNumberOrNull(r["SourceSeason"]);
-
-            if (seasonN === null || horizonN === null) return null;
-
-            return {
-              SourceproviderId: toTrimmedString(r["SourceproviderId"]),
-              SourcePlayer: toTrimmedString(r["SourcePlayer"]),
-              SourceClub: normalizeClubName(r["SourceClub"] ?? r["team"] ?? ""),
-              SourceSeason: srcSeasonN ?? seasonN,
-              SourceRating: toNumberOrNull(r["SourceRating"]) ?? 0,
-              SourcePosition: toTrimmedString(r["SourcePosition"]),
-              Horizon: horizonN,
-              Season: seasonN,
-              estimate: toNumberOrNull(r["estimate"]),
-              lower: toNumberOrNull(r["lower"]),
-              upper: toNumberOrNull(r["upper"]),
-              salary: toNumberOrNull(r["salary"]),
-              Optimistic: toNumberOrNull(r["Optimistic"] ?? r["optimistic"]),
-              Pessimistic: toNumberOrNull(r["Pessimistic"] ?? r["pessimistic"]),
-              salary_opt: toNumberOrNull(r["salary_opt"] ?? r["salaryOpt"] ?? r["Salary_Opt"] ?? r["SalaryOpt"]),
-              salary_pes: toNumberOrNull(r["salary_pes"] ?? r["salaryPes"] ?? r["Salary_Pes"] ?? r["SalaryPes"]),
-              AA: toNumberOrNull(r["AA"] ?? r["AA "] ?? r["All Australian"] ?? r["AllAustralian"] ?? r["AA_prob"] ?? r["AAProb"] ?? r["AA Probability"] ?? r["AA_Prob"]),
-              Seasons: toNumberOrNull(r["Seasons"]),
-              Season_90: toNumberOrNull(
-                r["Season_90"] ??
-                  r["season_90"] ??
-                  r["Season90"] ??
-                  r["season90"] ??
-                  r["Season_90 "] ??
-                  r["Season 90"]
-              ),
-              Games: toNumberOrNull(r["Games"] ?? r["Games100"] ?? r["Games_100"] ?? r["Games100+"] ?? r["Games100Plus"] ?? r["Games Probability"] ?? r["Games_prob"] ?? r["GamesProb"]),
-              Height:
-                toPresentString(
-                  r["Height"] ??
-                    r["height"] ??
-                    r["Height.y"] ??
-                    r["height.y"] ??
-                    r["Height_x"] ??
-                    r["Height.x"] ??
-                    r["height_x"] ??
-                    r["height.x"] ??
-                    r["Height_cm"] ??
-                    r["height_cm"] ??
-                    r["height.cm"] ??
-                    r["Height (cm)"]
-                ) || null,
-              Age:
-                toPresentString(
-                  r["Age"] ??
-                    r["age"] ??
-                    r["Age.y"] ??
-                    r["age.y"] ??
-                    r["Age_x"] ??
-                    r["Age.x"] ??
-                    r["age_x"] ??
-                    r["age.x"] ??
-                    r["Age_Season"] ??
-                    r["age.season"] ??
-                    r["age_season"]
-                ) || null,
-              Drafted:
-                toPresentString(
-                  r["Drafted"] ??
-                    r["drafted"] ??
-                    r["Drafted.y"] ??
-                    r["drafted.y"] ??
-                    r["Drafted_x"] ??
-                    r["Drafted.x"] ??
-                    r["drafted_x"] ??
-                    r["drafted.x"] ??
-                    r["Draft"] ??
-                    r["draft"]
-                ) || null,
-              draftYear:
-                toPresentString(
-                  r["draftYear"] ??
-                    r["DraftYear"] ??
-                    r["draftYear.y"] ??
-                    r["DraftYear.y"] ??
-                    r["draftYear_x"] ??
-                    r["DraftYear_x"] ??
-                    r["draft_year"] ??
-                    r["Draft Year"]
-                ) || null,
-                            Type: toTrimmedString(r["Type"]) || undefined,
-              team: toTrimmedString(r["team"]) || undefined,
-              rank_all: toNumberOrNull(r["rank_all"] ?? r["Rank_all"] ?? r["rankAll"] ?? r["rank_all "]),
-              rank_pos: toNumberOrNull(r["rank_pos"] ?? r["Rank_pos"] ?? r["rankPos"] ?? r["rank_pos "]),
-
-              // Performance components (safe even if missing)
-              Kicks: toNumberOrNull(r["Kicks"]),
-              Hitouts: toNumberOrNull(r["Hitouts"]),
-              Intercepts: toNumberOrNull(r["Intercepts"]),
-              Spoils: toNumberOrNull(r["Spoils"]),
-              Transition: toNumberOrNull(r["Transition"]),
-              Shots: toNumberOrNull(r["Shots"]),
-              Stoppage: toNumberOrNull(r["Stoppage"]),
-              Ball_Use: toNumberOrNull(r["Ball_Use"]),
-              Ball_Winning: toNumberOrNull(r["Ball_Winning"]),
-              Pressure: toNumberOrNull(r["Pressure"]),
-
-              // New advanced stats (safe even if missing)
-              Kicking: toNumberOrNull(r["Kicking"]),
-              Handballing: toNumberOrNull(r["Handballing"]),
-              Transition_Ball_Use: toNumberOrNull(r["Transition_Ball_Use"] ?? r["Transition_BallUse"] ?? r["Transition Ball Use"]),
-              Post_Clearance_Ball_Use: toNumberOrNull(r["Post_Clearance_Ball_Use"] ?? r["Post Clearance Ball Use"]),
-              Clearance_Ball_Use: toNumberOrNull(r["Clearance_Ball_Use"] ?? r["Clearance Ball Use"]),
-              Aerial: toNumberOrNull(r["Aerial"]),
-              Ground: toNumberOrNull(r["Ground"]),
-              Run_Carry: toNumberOrNull(r["Run_Carry"] ?? r["Run Carry"]),
-              Turnover_Transition_Ball_Winning: toNumberOrNull(
-                r["Turnover_Transition_Ball_Winning"] ?? r["Turnover Transition Ball Winning"]
-              ),
-              Stoppage_Transition_Ball_Winning: toNumberOrNull(
-                r["Stoppage_Transition_Ball_Winning"] ?? r["Stoppage Transition Ball Winning"]
-              ),
-              Pre_Clearance_Ball_Winning: toNumberOrNull(r["Pre_Clearance_Ball_Winning"] ?? r["Pre Clearance Ball Winning"]),
-              Spoiling: toNumberOrNull(r["Spoiling"] ?? r["Spoil"] ?? r["Spoils"] ?? r["Spoiling"]),
-            };
-          }),
+          Promise.all([
+            loadApiDataAsObjectsWithMeta<CareerProjectionRow>("career_projections.csv", (r) => mapCareerProjectionRow(r, "AFL")),
+            loadOptionalApiDataAsObjectsWithMeta<CareerProjectionRow>("career_projections_aflw.csv", (r) => mapCareerProjectionRow(r, "AFLW")),
+          ]).then((parts) => ({
+            rows: parts.flatMap((part) => part.rows),
+            lastUpdatedLabel: pickLatestLastUpdatedLabel(parts),
+          })),
 
           loadApiDataAsObjects<PlayerStatsAggRow>("CD_player_stats_agg.csv", (r) => {
             const seasonN = toNumberOrNull(r["season"] ?? r["Season"] ?? "");

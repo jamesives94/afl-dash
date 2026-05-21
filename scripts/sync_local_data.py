@@ -24,6 +24,7 @@ REQUIRED_FILES = [
     "form_player_aflw.csv",
     "form_player_vfl.csv",
     "career_projections.csv",
+    "career_projections_aflw.csv",
     "CD_player_stats_agg.csv",
     "comparable_players.csv",
 ]

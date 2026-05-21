@@ -22,6 +22,7 @@ const ALLOWED_FILES = new Set([
   "roster_players_aflw.csv",
   "team_kpis_aflw.csv",
   "career_projections.csv",
+  "career_projections_aflw.csv",
   "CD_player_stats_agg.csv",
   "comparable_players.csv"
 ]);
