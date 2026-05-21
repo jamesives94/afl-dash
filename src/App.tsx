@@ -519,6 +519,16 @@ const CAREER_EXPORT_CAPTURE_WIDTH = 1088;
 const CAREER_EXPORT_CAPTURE_MIN_HEIGHT = 920;
 const CAREER_EXPORT_CAPTURE_SPLIT = "0.30fr 0.70fr";
 const CAREER_EXPORT_CAPTURE_ZOOM = 0.94;
+const EMBED_LAYOUT_SCALE = 0.82;
+
+function isEmbeddedContext() {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.self !== window.top;
+  } catch {
+    return true;
+  }
+}
 
 // Back-compat: accept older abbreviation-style team codes in URLs (?team=COLL or /team/COLL) and coerce to numeric ids.
 const LEGACY_TEAM_CODE_TO_ID: Record<string, string> = {
@@ -3230,7 +3240,19 @@ function AppCore({ routeMode, routeTeamId, routePlayerId }: { routeMode: "team" 
   const location = useLocation();
   const navigate = useNavigate();
   const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const rawEmbedParam = (searchParams.get("embed") || "").trim();
+  const normalizedEmbedParam = rawEmbedParam.toLowerCase();
+  const isEmbed = useMemo(() => {
+    if (normalizedEmbedParam === "0" || normalizedEmbedParam === "false" || normalizedEmbedParam === "no") return false;
+    if (normalizedEmbedParam === "1" || normalizedEmbedParam === "true" || normalizedEmbedParam === "yes") return true;
+    return isEmbeddedContext();
+  }, [normalizedEmbedParam]);
+  const persistentEmbedSearch = useMemo(
+    () => (rawEmbedParam ? `&embed=${encodeURIComponent(rawEmbedParam)}` : ""),
+    [rawEmbedParam]
+  );
   const didInitSeasonRef = useRef(false);
+  const appShellRef = useRef<HTMLDivElement | null>(null);
   const [team, setTeam] = useState(() => resolveIncomingTeamId(routeMode === "team" ? routeTeamId : null, searchParams));
   const [season, setSeason] = useState<number>(DEFAULT_SEASON);
 const [compareTeam, setCompareTeam] = useState<string>(""); // "" = no comparison
@@ -3300,7 +3322,7 @@ useEffect(() => {
 
     if (page === "team") {
       const nextPath = `/team/${team || DEFAULT_TEAM_ID}`;
-      const nextSearch = `?season=${encodeURIComponent(String(baseSeason))}`;
+      const nextSearch = `?season=${encodeURIComponent(String(baseSeason))}${persistentEmbedSearch}`;
       const next = nextPath + nextSearch;
       const cur = location.pathname + location.search;
       if (cur !== next) navigate(next, { replace: true });
@@ -3314,13 +3336,47 @@ useEffect(() => {
     const explicitTeam = (new URLSearchParams(location.search).get("team") || "").trim();
     const includeTeam = playerTeamResolved || !!explicitTeam;
     const nextSearch = includeTeam
-      ? `?team=${encodeURIComponent(String(team || ""))}&season=${encodeURIComponent(String(baseSeason))}`
-      : `?season=${encodeURIComponent(String(baseSeason))}`;
+      ? `?team=${encodeURIComponent(String(team || ""))}&season=${encodeURIComponent(String(baseSeason))}${persistentEmbedSearch}`
+      : `?season=${encodeURIComponent(String(baseSeason))}${persistentEmbedSearch}`;
 
     const next = nextPath + nextSearch;
     const cur = location.pathname + location.search;
     if (cur !== next) navigate(next, { replace: true });
-  }, [page, team, season, currentPlayerId, playerTeamResolved, location.pathname, location.search, navigate]);
+  }, [page, team, season, currentPlayerId, playerTeamResolved, location.pathname, location.search, navigate, persistentEmbedSearch]);
+
+  useEffect(() => {
+    if (!isEmbed || typeof window === "undefined") return;
+    const node = appShellRef.current;
+    if (!node) return;
+
+    const postSize = () => {
+      const rect = node.getBoundingClientRect();
+      window.parent?.postMessage(
+        {
+          type: "afl-dash:embed-size",
+          height: Math.ceil(rect.height),
+          width: Math.ceil(rect.width),
+          path: location.pathname,
+          search: location.search,
+        },
+        "*"
+      );
+    };
+
+    const schedulePost = () => window.requestAnimationFrame(postSize);
+
+    schedulePost();
+    const timeoutId = window.setTimeout(postSize, 250);
+    window.addEventListener("resize", schedulePost);
+    const resizeObserver = typeof ResizeObserver !== "undefined" ? new ResizeObserver(schedulePost) : null;
+    resizeObserver?.observe(node);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      window.removeEventListener("resize", schedulePost);
+      resizeObserver?.disconnect();
+    };
+  }, [isEmbed, location.pathname, location.search]);
 
   const clubName = useMemo(() => selectedTeamOption?.name ?? team, [selectedTeamOption, team]);
   const clubLabel = useMemo(() => selectedTeamOption?.label ?? clubName, [selectedTeamOption, clubName]);
@@ -4859,28 +4915,33 @@ const mergedSkillRadar = useMemo(() => {
   const isTeamPage = page === "team";
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f5f5f6", fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" }}>
-      <style>
-        {`
-          .layoutGrid { display: grid; grid-template-columns: 1fr; gap: 14px; padding: 14px; min-height: 100vh; }
-          .mainWrap { display: flex; flex-direction: column; gap: 14px; max-width: 1440px; width: 100%; margin: 0 auto; }
-          .kpiGrid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
-          .midGrid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 14px; }
-          .botGrid { display: grid; grid-template-columns: 1fr 1fr 0.9fr; gap: 14px; }
+    <div style={{ minHeight: isEmbed ? "auto" : "100vh", background: "#f5f5f6", fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial", overflowX: "hidden" }}>
+      <div ref={appShellRef} style={isEmbed ? { zoom: EMBED_LAYOUT_SCALE } : undefined}>
+        <style>
+          {`
+          .layoutGrid { display: grid; grid-template-columns: 1fr; gap: ${isEmbed ? 10 : 14}px; padding: ${isEmbed ? 10 : 14}px; min-height: ${isEmbed ? "auto" : "100vh"}; }
+          .mainWrap { display: flex; flex-direction: column; gap: ${isEmbed ? 10 : 14}px; max-width: ${isEmbed ? 1320 : 1440}px; width: 100%; margin: 0 auto; }
+          .kpiGrid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: ${isEmbed ? 10 : 12}px; }
+          .midGrid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: ${isEmbed ? 10 : 14}px; }
+          .botGrid { display: grid; grid-template-columns: 1fr 1fr 0.9fr; gap: ${isEmbed ? 10 : 14}px; }
 
-          @media (max-width: 1200px) {
+          @media (max-width: 1400px) {
             .kpiGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
             .botGrid { grid-template-columns: 1fr 1fr; }
           }
-          @media (max-width: 900px) {
-            .layoutGrid { grid-template-columns: 1fr; }
+          @media (max-width: 1120px) {
             .midGrid { grid-template-columns: 1fr; }
             .botGrid { grid-template-columns: 1fr; }
+            .kpiGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          }
+          @media (max-width: 760px) {
+            .layoutGrid { padding: 10px; }
+            .kpiGrid { grid-template-columns: 1fr; }
           }
         
 .compareToggleBtn {
   position: fixed;
-  right: 14px;
+  right: ${isEmbed ? 10 : 14}px;
   top: 50%;
   transform: translateY(-50%);
   z-index: 50;
@@ -4897,11 +4958,11 @@ const mergedSkillRadar = useMemo(() => {
 
 .comparePanel {
   position: fixed;
-  right: 14px;
-  top: 14px;
-  bottom: 14px;
-  width: 560px;
-  max-width: calc(100vw - 28px);
+  right: ${isEmbed ? 10 : 14}px;
+  top: ${isEmbed ? 10 : 14}px;
+  bottom: ${isEmbed ? 10 : 14}px;
+  width: ${isEmbed ? 500 : 560}px;
+  max-width: calc(100vw - ${isEmbed ? 20 : 28}px);
   z-index: 60;
   background: rgba(255,255,255,0.96);
   border: 1px solid rgba(0,0,0,0.10);
@@ -4954,11 +5015,11 @@ const mergedSkillRadar = useMemo(() => {
   .comparePanel { width: 100%; right: 0; left: 0; top: 0; bottom: 0; border-radius: 0; }
   .compareToggleBtn { right: 10px; }
 }`}
-      </style>
+        </style>
 
-      <div className="layoutGrid">
+        <div className="layoutGrid">
 
-        <div className="mainWrap">
+          <div className="mainWrap">
           {/* Header */}
           <div
             style={{
@@ -5579,6 +5640,7 @@ const mergedSkillRadar = useMemo(() => {
           )}
 
 
+          </div>
         </div>
       </div>
     </div>
