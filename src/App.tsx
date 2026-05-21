@@ -2145,7 +2145,9 @@ return [minFinal, maxFinal];
     if (!player?.id || snapSeason == null)
       return { all: null as number | null, pos: null as number | null, totalAll: null as number | null, totalPos: null as number | null };
 
-    const seasonRows = careerProjections.filter((r) => r.Season === snapSeason);
+    const seasonRows = careerProjections.filter(
+      (r) => r.Season === snapSeason && normalizeLeague(r.league ?? "AFL") === selectedLeague
+    );
     const hasActual = seasonRows.some((r) => ["actual", "hist", "history"].includes((r.Type ?? "").toLowerCase()));
     const usable = hasActual ? seasonRows.filter((r) => ["actual", "hist", "history"].includes((r.Type ?? "").toLowerCase())) : seasonRows;
 
@@ -2174,13 +2176,8 @@ return [minFinal, maxFinal];
     const posSorted = playerPos ? allSorted.filter((x) => toTrimmedString(x.pos) === playerPos) : [];
     const totalPos = posSorted.length || null;
 
-    // Prefer direct ranks from the export if available
-    const directAll = playerRow?.rank_all ?? null;
-    const directPos = playerRow?.rank_pos ?? null;
-
-    if (directAll != null || directPos != null) return { all: directAll, pos: directPos, totalAll, totalPos };
-
-    // Fallback: compute ranks from season estimate
+    // Always compute league-specific ranks here because the merged export can
+    // contain cross-league rank columns.
     const allIdx = allSorted.findIndex((x) => x.id === player.id);
     const all = allIdx >= 0 ? allIdx + 1 : null;
 
@@ -2188,7 +2185,7 @@ return [minFinal, maxFinal];
     const pos = posIdx >= 0 ? posIdx + 1 : null;
 
     return { all, pos, totalAll, totalPos };
-  }, [careerProjections, player, lastActual]);
+  }, [careerProjections, player, lastActual, selectedLeague]);
 
   const kpis = useMemo(() => {
     const mv = nextProj?.salary ?? lastActual?.salary ?? null;
@@ -2256,14 +2253,14 @@ return [minFinal, maxFinal];
         sub: careerValue != null && Number.isFinite(careerValue) ? `Career value: ${fmtAUD(careerValue)}` : "",
       },
       {
-        label: "Rank (AFL)",
+        label: `Rank (${selectedLeague})`,
         value: rankAll != null ? ordinalSuffix(rankAll) : "—",
-        sub: totalAll != null ? `out of ${totalAll} players` : "",
+        sub: totalAll != null ? `out of ${totalAll} ${selectedLeague} players` : "",
       },
       {
         label: "Rank (Position)",
         value: rankPos != null ? ordinalSuffix(rankPos) : "—",
-        sub: totalPos != null ? `out of ${totalPos} position players` : "",
+        sub: totalPos != null ? `out of ${totalPos} ${selectedLeague} position players` : "",
       },
       {
         label: "Vitals",
@@ -2271,7 +2268,7 @@ return [minFinal, maxFinal];
         sub: vitals.height ? `${vitals.age ? `Age ${vitals.age}` : "Age —"} • ${vitals.drafted ?? "Draft —"}` : (vitals.drafted ?? "Draft —"),
       },
     ];
-  }, [lastActual, nextProj, rankInfo, primaryTraj, outlook, careerProjections, player?.id, seasonFixed, rosterPlayers, selectedSeason]);
+  }, [lastActual, nextProj, rankInfo, primaryTraj, outlook, careerProjections, player?.id, seasonFixed, rosterPlayers, selectedLeague, selectedSeason]);
 
   // ----------------------------------------
   // Advanced stats (left panel)
