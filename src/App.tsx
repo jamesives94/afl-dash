@@ -398,6 +398,8 @@ type CareerProjectionRow = {
   // Optional columns that may exist in your CSV (safe to ignore if missing)
   Type?: string;
   team?: string;
+  team_id?: string;
+  league?: LeagueCode | string;
 
   // Ranks (often present in your export)
   rank_all?: number | null;
@@ -1288,16 +1290,13 @@ function CareerProjectionDashboard({
   const clubPlayers = useMemo(() => {
     const map = new Map<string, { name: string; id: string; team?: string; pos?: string }>();
     for (const r of careerProjections) {
-      const t = toTrimmedString(r.team);
-      if (t) {
-        const resolved = resolveTeamIdentity(t, t, "AFL");
-        if (normalizeTeamId(resolved.team_id) !== normalizeTeamId(defaultTeam)) continue;
-      }
+      const resolved = resolveTeamIdentity(r.team_id, r.team ?? r.SourceClub, r.league ?? "AFL");
+      if (normalizeTeamId(resolved.team_id) !== normalizeTeamId(defaultTeam)) continue;
       const id = normalizePlayerId(r.SourceproviderId);
       const name = toTrimmedString(r.SourcePlayer);
       if (!id || !name) continue;
       const key = `${id}__${name}`;
-      if (!map.has(key)) map.set(key, { name, id, team: r.team, pos: r.SourcePosition });
+      if (!map.has(key)) map.set(key, { name, id, team: resolved.team || r.SourceClub || r.team, pos: r.SourcePosition });
     }
 
     for (const r of rosterPlayers) {
@@ -3537,6 +3536,42 @@ useEffect(() => {
   const [playerStatsAgg, setPlayerStatsAgg] = useState<PlayerStatsAggRow[]>([]);
   const [comparablePlayers, setComparablePlayers] = useState<ComparablePlayerRow[]>([]);
 
+  const resolveBestTeamIdForPlayer = useCallback((playerId: string, preferredSeason?: number) => {
+    const pid = normalizePlayerId(playerId);
+    if (!pid) return "";
+
+    const rosterMatches = rosterPlayers
+      .filter((r) => normalizePlayerId(r.providerId) === pid)
+      .sort((a, b) => b.season - a.season);
+
+    const exactRoster = preferredSeason != null ? rosterMatches.find((r) => r.season === preferredSeason) : null;
+    const chosenRoster = exactRoster ?? rosterMatches[0] ?? null;
+    if (chosenRoster) {
+      const resolved = resolveTeamIdentity(chosenRoster.team_id, chosenRoster.team, chosenRoster.league);
+      if (resolved.team_id) return resolved.team_id;
+    }
+
+    const projectionMatches = playerProjections.filter((r) => normalizePlayerId(r.playerId) === pid);
+    const exactProjection = preferredSeason != null ? projectionMatches.find((r) => r.season === preferredSeason) : null;
+    const chosenProjection = exactProjection ?? projectionMatches[0] ?? null;
+    if (chosenProjection) {
+      const resolved = resolveTeamIdentity(chosenProjection.team_id, chosenProjection.team, chosenProjection.league);
+      if (resolved.team_id) return resolved.team_id;
+    }
+
+    const careerMatches = careerProjections
+      .filter((r) => normalizePlayerId(r.SourceproviderId) === pid)
+      .sort((a, b) => (b.SourceSeason ?? 0) - (a.SourceSeason ?? 0));
+    const exactCareer = preferredSeason != null ? careerMatches.find((r) => r.SourceSeason === preferredSeason) : null;
+    const chosenCareer = exactCareer ?? careerMatches[0] ?? null;
+    if (chosenCareer) {
+      const resolved = resolveTeamIdentity(chosenCareer.team_id, chosenCareer.team ?? chosenCareer.SourceClub, chosenCareer.league ?? "AFL");
+      if (resolved.team_id) return resolved.team_id;
+    }
+
+    return "";
+  }, [careerProjections, playerProjections, rosterPlayers]);
+
   useEffect(() => {
     if (page !== "career") {
       setExportPlayerName("");
@@ -3573,17 +3608,12 @@ useEffect(() => {
     if (routeMode !== "player") return;
     if (!currentPlayerId) return;
 
-    const row = rosterPlayers.find(
-      (r) => normalizePlayerId(r.providerId) === normalizePlayerId(currentPlayerId) && r.season === season
-    );
-    if (!row) return;
-
-    const resolvedTeamId = normalizeTeamId(row.team_id);
+    const resolvedTeamId = normalizeTeamId(resolveBestTeamIdForPlayer(currentPlayerId, season));
     if (resolvedTeamId) {
       if (resolvedTeamId !== team) setTeam(resolvedTeamId);
       if (!playerTeamResolved) setPlayerTeamResolved(true);
     }
-  }, [routeMode, currentPlayerId, rosterPlayers, season, team, searchParams, playerTeamResolved]);
+  }, [routeMode, currentPlayerId, season, team, playerTeamResolved, resolveBestTeamIdForPlayer]);
 
 
 
@@ -5626,12 +5656,7 @@ const mergedSkillRadar = useMemo(() => {
                 setCurrentPlayerId(nextId);
 
                 // Immediately update teamId too (so the URL becomes /player/:id?team=...&season=... without a stale team).
-                const row = rosterPlayers.find(
-                  (r) =>
-                    normalizePlayerId(r.providerId) === nextId &&
-                    r.season === season
-                );
-                const resolvedTeamId = normalizeTeamId(row?.team_id);
+                const resolvedTeamId = normalizeTeamId(resolveBestTeamIdForPlayer(nextId, season));
                 if (resolvedTeamId) {
                   if (resolvedTeamId !== team) setTeam(resolvedTeamId);
                   if (!playerTeamResolved) setPlayerTeamResolved(true);
