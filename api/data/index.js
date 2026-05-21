@@ -23,6 +23,7 @@ const ALLOWED_FILES = new Set([
   "team_kpis_aflw.csv",
   "career_projections.csv",
   "career_projections_aflw.csv",
+  "player_stats_wide_avg_aflw_sen_league3_level1_2019_to_2026.csv",
   "CD_player_stats_agg.csv",
   "comparable_players.csv"
 ]);
@@ -43,6 +44,7 @@ const RECENT_SEASON_FIELDS_BY_FILE = {
   "form_player_afl.csv": ["season"],
   "form_player_aflw.csv": ["season"],
   "form_player_vfl.csv": ["season"],
+  "player_stats_wide_avg_aflw_sen_league3_level1_2019_to_2026.csv": ["Season"],
 };
 
 module.exports = async function (context, req) {

@@ -25,6 +25,7 @@ REQUIRED_FILES = [
     "form_player_vfl.csv",
     "career_projections.csv",
     "career_projections_aflw.csv",
+    "player_stats_wide_avg_aflw_sen_league3_level1_2019_to_2026.csv",
     "CD_player_stats_agg.csv",
     "comparable_players.csv",
 ]
@@ -38,6 +39,9 @@ TRUE_TALENT_OUTPUTS_SOURCE = Path(
     "/Users/jamesives/Library/Mobile Documents/com~apple~CloudDocs/Analytics Projects/outputs/afl_player_true_talent"
 )
 DEFAULT_OUTPUTS_SOURCE = Path("/Users/jamesives/Library/Mobile Documents/com~apple~CloudDocs/Analytics Projects/01 Projects/Tasmania Production/outputs/current")
+AFLW_ADVANCED_STATS_SOURCE = Path(
+    "/Users/jamesives/Library/Mobile Documents/com~apple~CloudDocs/Analytics Projects/01 Projects/Tas Job - Second Tier Ratings Build/outputs_04_player_stats_wide_averages"
+)
 
 
 def find_source_dirs(cli_source: str | None, repo_root: Path) -> list[Path]:
@@ -49,6 +53,7 @@ def find_source_dirs(cli_source: str | None, repo_root: Path) -> list[Path]:
         candidates.append(Path(env_source).expanduser())
     candidates.append(DEFAULT_OUTPUTS_SOURCE)
     candidates.append(TRUE_TALENT_OUTPUTS_SOURCE)
+    candidates.append(AFLW_ADVANCED_STATS_SOURCE)
     candidates.append(repo_root / "public" / "data")
 
     out = []

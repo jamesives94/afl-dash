@@ -418,6 +418,30 @@ type CareerProjectionRow = {
   Spoiling?: number | null;
 };
 
+type AdvancedStatsSeasonRow = {
+  playerId: string;
+  playerName: string;
+  season: number;
+  league: LeagueCode;
+  team: string;
+  team_id?: string;
+  Ball_Use?: number | null;
+  Ball_Winning?: number | null;
+  Kicking?: number | null;
+  Handballing?: number | null;
+  Transition_Ball_Use?: number | null;
+  Post_Clearance_Ball_Use?: number | null;
+  Clearance_Ball_Use?: number | null;
+  Intercepts?: number | null;
+  Aerial?: number | null;
+  Ground?: number | null;
+  Run_Carry?: number | null;
+  Turnover_Transition_Ball_Winning?: number | null;
+  Stoppage_Transition_Ball_Winning?: number | null;
+  Pre_Clearance_Ball_Winning?: number | null;
+  Spoiling?: number | null;
+};
+
 type ComparablePlayerRow = {
   SourceproviderId: string;
   SourcePlayer: string;
@@ -837,6 +861,39 @@ function mapCareerProjectionRow(r: Record<string, any>, fallbackLeague: LeagueCo
     ),
     Pre_Clearance_Ball_Winning: toNumberOrNull(r["Pre_Clearance_Ball_Winning"] ?? r["Pre Clearance Ball Winning"]),
     Spoiling: toNumberOrNull(r["Spoiling"] ?? r["Spoil"] ?? r["Spoils"] ?? r["Spoiling"]),
+  };
+}
+
+function mapAdvancedStatsSeasonRow(r: Record<string, any>, fallbackLeague: LeagueCode): AdvancedStatsSeasonRow | null {
+  const seasonN = toNumberOrNull(r["Season"] ?? r["season"] ?? r["season.id"]);
+  const playerId = normalizePlayerId(r["PlayerId"] ?? r["player.id"] ?? r["playerId"]);
+  const playerName = toTrimmedString(r["Player"] ?? r["player.display"] ?? r["player.name"]);
+  const league = normalizeLeague(r["LeagueCode"] ?? r["League"] ?? r["league"] ?? fallbackLeague);
+  const teamIdentity = resolveTeamIdentity(r["team_id"] ?? r["TeamId"] ?? r["teamId"], r["Team"] ?? r["team"], league);
+  if (seasonN === null || !playerId) return null;
+
+  return {
+    playerId,
+    playerName,
+    season: seasonN,
+    league,
+    team: teamIdentity.team || normalizeClubName(r["Team"] ?? r["team"] ?? ""),
+    team_id: teamIdentity.team_id || undefined,
+    Ball_Use: toNumberOrNull(r["PLAYER_RATING_BALL_USE"]),
+    Ball_Winning: toNumberOrNull(r["PLAYER_RATING_BALL_WINNING"]),
+    Kicking: toNumberOrNull(r["PLAYER_RATING_BALL_USE_FIELD_KICK"]),
+    Handballing: toNumberOrNull(r["PLAYER_RATING_BALL_USE_HANDBALL"]),
+    Transition_Ball_Use: toNumberOrNull(r["CHAIN_LAUNCH"]),
+    Post_Clearance_Ball_Use: toNumberOrNull(r["PostClearanceContestedPossessions"]),
+    Clearance_Ball_Use: toNumberOrNull(r["CLEARANCE_EFFECTIVE"]),
+    Intercepts: toNumberOrNull(r["Intercepts"]),
+    Aerial: toNumberOrNull(r["POSSESSION_CONTESTED_GP_AIR"]),
+    Ground: toNumberOrNull(r["GroundBallGets"]),
+    Run_Carry: toNumberOrNull(r["NetMetresGained"]),
+    Turnover_Transition_Ball_Winning: toNumberOrNull(r["PLAYER_RATING_BALL_WINNING_INTERCEPT"]),
+    Stoppage_Transition_Ball_Winning: toNumberOrNull(r["PLAYER_RATING_BALL_WINNING_STOPPAGE"]),
+    Pre_Clearance_Ball_Winning: toNumberOrNull(r["FirstPossessions"]),
+    Spoiling: toNumberOrNull(r["PLAYER_RATING_DEFENCE_SPOIL"]),
   };
 }
 
@@ -1389,6 +1446,7 @@ function CareerProjectionDashboard({
   defaultTeam,
   careerProjections,
   careerProjectionsLastUpdated,
+  advancedStatsRows,
   comparablePlayers,
   playerStatsAgg,
   playerProjections,
@@ -1400,6 +1458,7 @@ function CareerProjectionDashboard({
   defaultTeam: string;
   careerProjections: CareerProjectionRow[];
   careerProjectionsLastUpdated?: string;
+  advancedStatsRows: AdvancedStatsSeasonRow[];
   comparablePlayers: ComparablePlayerRow[];
   playerStatsAgg: PlayerStatsAggRow[];
   playerProjections: PlayerProjectionRow[];
@@ -1450,6 +1509,10 @@ function CareerProjectionDashboard({
   const baseTeamId = inferredInitialTeamId || normalizeTeamId(defaultTeam);
   const baseTeamOption = getTeamOptionById(baseTeamId);
   const selectedLeague = baseTeamOption?.league ?? "AFL";
+  const advancedStatsRowsForLeague = useMemo(
+    () => advancedStatsRows.filter((r) => r.league === selectedLeague),
+    [advancedStatsRows, selectedLeague]
+  );
 
   const ordinalSuffix = (n: number) => {
     const v = Math.round(n);
@@ -1812,23 +1875,28 @@ function CareerProjectionDashboard({
   }, [primaryTraj, compareTraj]);
 
   const chartTrajectory = useMemo(() => {
+    const useSalary = projectionMetric === "salary";
     return (trajectory as any[]).map((d) => ({
       ...d,
-      actual: d.actual_rating,
-      estimate: d.estimate_rating,
-      optimistic: d.optimistic_rating,
-      pessimistic: d.pessimistic_rating,
-      lower0: d.lower0_rating,
-      band: d.band_rating,
-      c_actual: d.c_actual_rating,
-      c_estimate: d.c_estimate_rating,
-      c_lower0: d.c_lower0_rating,
-      c_band: d.c_band_rating,
-      bridge: d.bridge_rating,
+      actual: useSalary ? d.salary_actual ?? null : d.actual_rating,
+      estimate: useSalary ? d.salary_estimate ?? null : d.estimate_rating,
+      optimistic: useSalary ? d.salary_optimistic ?? null : d.optimistic_rating,
+      pessimistic: useSalary ? d.salary_pessimistic ?? null : d.pessimistic_rating,
+      lower0: useSalary ? null : d.lower0_rating,
+      band: useSalary ? null : d.band_rating,
+      c_actual: useSalary ? d.c_salary_actual ?? null : d.c_actual_rating,
+      c_estimate: useSalary ? d.c_salary_estimate ?? null : d.c_estimate_rating,
+      c_lower0: useSalary ? null : d.c_lower0_rating,
+      c_band: useSalary ? null : d.c_band_rating,
+      bridge: useSalary ? d.bridge_salary ?? null : d.bridge_rating,
     }));
-  }, [trajectory]);
+  }, [trajectory, projectionMetric]);
 
   const ratingBenchmarks = useMemo(() => {
+    if (projectionMetric === "salary") {
+      return { leagueAvg: null as number | null, top10Avg: null as number | null };
+    }
+
     const seasonSet = new Set((trajectory as any[]).map((d) => d.season));
     if (!seasonSet.size) return { leagueAvg: null as number | null, top10Avg: null as number | null };
 
@@ -1854,9 +1922,9 @@ function CareerProjectionDashboard({
     const top10Avg = topSlice.reduce((a, b) => a + b, 0) / topSlice.length;
 
     return { leagueAvg, top10Avg };
-  }, [careerProjections, trajectory]);
+  }, [careerProjections, trajectory, projectionMetric]);
 
-  // Dynamic Y-axis domain: min(lower) - 3, max(upper) + 3 (includes compare series when present)
+  // Dynamic Y-axis domain: rating uses CI bounds, salary uses salary series values.
   const yDomain = useMemo<[number, number]>(() => {
     const lows: number[] = [];
     const highs: number[] = [];
@@ -1887,8 +1955,20 @@ function CareerProjectionDashboard({
       if (typeof vB === "number" && Number.isFinite(vB)) vals.push(vB);
     }
 
-    const minBase = lows.length ? Math.min(...lows) : vals.length ? Math.min(...vals) : 4;
-    const maxBase = highs.length ? Math.max(...highs) : vals.length ? Math.max(...vals) : 20;
+    const salaryMode = projectionMetric === "salary";
+    const minBase = lows.length ? Math.min(...lows) : vals.length ? Math.min(...vals) : salaryMode ? 30000 : 4;
+    const maxBase = highs.length ? Math.max(...highs) : vals.length ? Math.max(...vals) : salaryMode ? 200000 : 20;
+
+    if (salaryMode) {
+      const span = Math.max(5000, maxBase - minBase);
+      const padding = Math.max(5000, span * 0.12);
+      const min = Math.max(0, minBase - padding);
+      const max = maxBase + padding;
+      const roundTo = 5000;
+      const minFinal = Math.max(0, Math.floor(min / roundTo) * roundTo);
+      const maxFinal = Math.max(minFinal + roundTo, Math.ceil(max / roundTo) * roundTo);
+      return [minFinal, maxFinal];
+    }
 
     let min = minBase - 3;
     let max = maxBase + 3;
@@ -1922,7 +2002,7 @@ const minFinal = Math.max(1, minRounded);
 const maxFinal = Math.max(minFinal + 1, maxRounded);
 
 return [minFinal, maxFinal];
-  }, [chartTrajectory, ratingBenchmarks.top10Avg]);
+  }, [chartTrajectory, ratingBenchmarks.top10Avg, projectionMetric]);
 
 
   // ---------- KPI helpers ----------
@@ -2234,8 +2314,35 @@ return [minFinal, maxFinal];
   ];
 
   // Build season+metric distributions once.
-  // We dedupe to 1 row per player per season (take the first encountered row).
+  // Prefer dedicated advanced-stats rows when available; otherwise fall back to
+  // the legacy career_projections-based values.
   const advDistributions = useMemo(() => {
+    if (advancedStatsRowsForLeague.length) {
+      const out = new Map<number, Record<string, number[]>>();
+
+      for (const row of advancedStatsRowsForLeague) {
+        const season = row.season;
+        let buckets = out.get(season);
+        if (!buckets) {
+          buckets = {};
+          for (const m of ADV_METRICS) buckets[String(m.key)] = [];
+          out.set(season, buckets);
+        }
+
+        for (const m of ADV_METRICS) {
+          const v: any = (row as any)[m.key];
+          const n = typeof v === "number" ? v : v == null ? NaN : Number(String(v).trim());
+          if (Number.isFinite(n)) buckets[String(m.key)].push(n);
+        }
+      }
+
+      for (const buckets of out.values()) {
+        for (const k of Object.keys(buckets)) buckets[k].sort((a, b) => a - b);
+      }
+
+      return out;
+    }
+
     const seasonPlayerRow = new Map<number, Map<string, any>>();
 
     const isActualType = (t: any) => {
@@ -2285,7 +2392,7 @@ return [minFinal, maxFinal];
     }
 
     return out;
-  }, [careerProjections]);
+  }, [advancedStatsRowsForLeague, careerProjections]);
 
   const percentileFromSorted = (val: number, sorted: number[]) => {
     if (!sorted.length) return null;
@@ -2316,8 +2423,20 @@ return [minFinal, maxFinal];
     return ((less + 0.5 * eq) / n) * 100;
   };
 
+  const advancedStatsSnap = useMemo(() => {
+    if (!advancedStatsRowsForLeague.length || !player?.id) return null;
+    const playerRows = advancedStatsRowsForLeague.filter(
+      (r) => normalizePlayerId(r.playerId) === normalizePlayerId(player.id)
+    );
+    if (!playerRows.length) return null;
+
+    const targetSeason = seasonFixed ?? lastActual?.season ?? selectedSeason;
+    if (targetSeason == null) return playerRows[playerRows.length - 1] ?? null;
+    return pickSeasonRow(playerRows, targetSeason).row;
+  }, [advancedStatsRowsForLeague, player?.id, seasonFixed, lastActual, selectedSeason]);
+
   const skillRows = useMemo(() => {
-    const snap: any = lastActual ?? nextProj ?? null;
+    const snap: any = advancedStatsSnap ?? lastActual ?? nextProj ?? null;
     const season = snap?.season ?? null;
     const seasonBuckets = season != null ? advDistributions.get(season) : null;
 
@@ -2329,7 +2448,7 @@ return [minFinal, maxFinal];
       const p = percentileFromSorted(v, dist);
       return { label: m.label, p };
     });
-  }, [lastActual, nextProj, advDistributions]);
+  }, [advancedStatsSnap, lastActual, nextProj, advDistributions]);
 
   // ---- Player compare sidebar (similar to team compare panel)
   const [comparePanelOpen, setComparePanelOpen] = useState(false);
@@ -3006,7 +3125,17 @@ return [minFinal, maxFinal];
               <ComposedChart data={chartTrajectory} margin={{ top: 10, right: 26, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.35} />
                 <XAxis dataKey="season" tick={{ fontSize: 11 }} />
-                <YAxis domain={yDomain} tick={{ fontSize: 11 }} allowDecimals={false} tickCount={6} />
+                <YAxis
+                  domain={yDomain}
+                  tick={{ fontSize: 11 }}
+                  allowDecimals={false}
+                  tickCount={6}
+                  tickFormatter={(v: any) => {
+                    const n = typeof v === "number" ? v : Number(v);
+                    if (!Number.isFinite(n)) return "";
+                    return projectionMetric === "salary" ? fmtAUDShort(n) : `${Math.round(n)}`;
+                  }}
+                />
                 <Tooltip
                   formatter={(v: any, n: any, props: any) => {
                     if (v == null) return ["—", n];
@@ -3050,7 +3179,7 @@ return [minFinal, maxFinal];
                   labelFormatter={(l) => `Season ${l}`}
                 />
 
-                {ratingBenchmarks.leagueAvg != null ? (
+                {projectionMetric === "rating" && ratingBenchmarks.leagueAvg != null ? (
                   <ReferenceLine
                     y={ratingBenchmarks.leagueAvg}
                     stroke="#9CA3AF"
@@ -3061,7 +3190,7 @@ return [minFinal, maxFinal];
                   />
                 ) : null}
 
-                {ratingBenchmarks.top10Avg != null ? (
+                {projectionMetric === "rating" && ratingBenchmarks.top10Avg != null ? (
                   <ReferenceLine
                     y={ratingBenchmarks.top10Avg}
                     stroke="#9CA3AF"
@@ -3073,11 +3202,15 @@ return [minFinal, maxFinal];
                 ) : null}
 
                 {/* Primary CI band */}
-                <Area type="monotone" dataKey="lower0" stackId="ci1" stroke="none" fill="transparent" isAnimationActive={false} />
-                <Area type="monotone" dataKey="band" stackId="ci1" stroke="none" fill="rgba(0,0,0,0.12)" isAnimationActive={false} />
+                {projectionMetric === "rating" ? (
+                  <>
+                    <Area type="monotone" dataKey="lower0" stackId="ci1" stroke="none" fill="transparent" isAnimationActive={false} />
+                    <Area type="monotone" dataKey="band" stackId="ci1" stroke="none" fill="rgba(0,0,0,0.12)" isAnimationActive={false} />
+                  </>
+                ) : null}
 
                 {/* Compare CI band (lighter) */}
-                {comparePlayer ? (
+                {projectionMetric === "rating" && comparePlayer ? (
                   <>
                     <Area type="monotone" dataKey="c_lower0" stackId="ci2" stroke="none" fill="transparent" isAnimationActive={false} />
                     <Area type="monotone" dataKey="c_band" stackId="ci2" stroke="none" fill="rgba(0,0,0,0.07)" isAnimationActive={false} />
@@ -3210,7 +3343,9 @@ return [minFinal, maxFinal];
           </div>
 
             <div style={{ marginTop: 8, fontSize: 12, color: "rgba(0,0,0,0.55)" }}>
-              Shaded band = lower/upper confidence interval (when available). Dashed lines = league avg + top 10% avg rating. Compare series is dashed.
+              {projectionMetric === "salary"
+                ? "Salary mode plots projected salary directly. Softer overlays show optimistic and pessimistic salary paths; compare series is dashed."
+                : "Shaded band = lower/upper confidence interval (when available). Dashed lines = league avg + top 10% avg rating. Compare series is dashed."}
               <span style={{ color: "rgba(0,0,0,0.34)" }}> Optimistic and pessimistic trend lines are always shown as softer overlays.</span>
             </div>
         </Card>
@@ -3737,6 +3872,7 @@ useEffect(() => {
   const [vflForm, setVflForm] = useState<VflFormRow[]>([]);
   const [careerProjections, setCareerProjections] = useState<CareerProjectionRow[]>([]);
   const [careerProjectionsLastUpdated, setCareerProjectionsLastUpdated] = useState<string>("");
+  const [advancedStatsRows, setAdvancedStatsRows] = useState<AdvancedStatsSeasonRow[]>([]);
   const [playerStatsAgg, setPlayerStatsAgg] = useState<PlayerStatsAggRow[]>([]);
   const [comparablePlayers, setComparablePlayers] = useState<ComparablePlayerRow[]>([]);
 
@@ -3830,7 +3966,7 @@ useEffect(() => {
         setLoading(true);
         setLoadErr(null);
 
-        const [roster, kpis, ranks, radar, acq, proj, aflFormRows, vflFormRows, careerProjResult, playerStatsAggRows, comparableRows] = await Promise.all([
+        const [roster, kpis, ranks, radar, acq, proj, aflFormRows, vflFormRows, careerProjResult, advancedStatsAvgRows, playerStatsAggRows, comparableRows] = await Promise.all([
           Promise.all([
             loadApiDataAsObjects<RosterPlayerRow>("roster_players.csv", (r) => {
               const seasonN = toNumberOrNull(r["season"]);
@@ -4166,6 +4302,11 @@ useEffect(() => {
             lastUpdatedLabel: pickLatestLastUpdatedLabel(parts),
           })),
 
+          loadOptionalApiDataAsObjects<AdvancedStatsSeasonRow>(
+            "player_stats_wide_avg_aflw_sen_league3_level1_2019_to_2026.csv",
+            (r) => mapAdvancedStatsSeasonRow(r, "AFLW")
+          ),
+
           loadApiDataAsObjects<PlayerStatsAggRow>("CD_player_stats_agg.csv", (r) => {
             const seasonN = toNumberOrNull(r["season"] ?? r["Season"] ?? "");
             const playerId = (r["player.id"] ?? r["player_id"] ?? r["playerId"] ?? "").toString().trim();
@@ -4222,6 +4363,7 @@ useEffect(() => {
         setVflForm(vflFormRows);
         setCareerProjections(careerProjResult.rows);
         setCareerProjectionsLastUpdated(careerProjResult.lastUpdatedLabel);
+        setAdvancedStatsRows(advancedStatsAvgRows);
         setPlayerStatsAgg(playerStatsAggRows);
         setComparablePlayers(comparableRows);
 
@@ -5740,7 +5882,7 @@ const mergedSkillRadar = useMemo(() => {
 
             </>
           ) : (
-            <CareerProjectionDashboard defaultTeam={team} careerProjections={careerProjections} careerProjectionsLastUpdated={careerProjectionsLastUpdated} comparablePlayers={comparablePlayers} playerStatsAgg={playerStatsAgg} playerProjections={playerProjections} rosterPlayers={rosterPlayers} selectedSeason={season} initialPlayerId={currentPlayerId || undefined} onPlayerIdChange={(id) => {
+            <CareerProjectionDashboard defaultTeam={team} careerProjections={careerProjections} careerProjectionsLastUpdated={careerProjectionsLastUpdated} advancedStatsRows={advancedStatsRows} comparablePlayers={comparablePlayers} playerStatsAgg={playerStatsAgg} playerProjections={playerProjections} rosterPlayers={rosterPlayers} selectedSeason={season} initialPlayerId={currentPlayerId || undefined} onPlayerIdChange={(id) => {
                 const nextId = normalizePlayerId(id);
                 setCurrentPlayerId(nextId);
 
