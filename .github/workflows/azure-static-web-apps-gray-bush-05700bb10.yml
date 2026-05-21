@@ -22,7 +22,6 @@ jobs:
         run: npm run build
         env:
           VITE_DATA_API_KEY: ${{ secrets.VITE_DATA_API_KEY }}
-          VITE_PLAYER_IMAGE_BASE_URL: ${{ vars.VITE_PLAYER_IMAGE_BASE_URL }}
 
       - name: Verify dist exists
         run: |

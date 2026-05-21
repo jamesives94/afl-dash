@@ -22,7 +22,6 @@ import {
 } from "recharts";
 import { RefreshCcw, RotateCcw, Home, BarChart3, Gauge, Users } from "lucide-react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
-import { PLAYER_IMAGE_MANIFEST } from "./playerImageManifest";
 
 function fmtAUD(n: number) {
   return n.toLocaleString("en-AU", {
@@ -118,6 +117,12 @@ const LOGOS = import.meta.glob("/src/AFL_Logos_Official/*.{png,svg,jpg,jpeg,webp
   import: "default",
 }) as Record<string, string>;
 
+const PLAYER_IMAGES = import.meta.glob("/src/players/*.{png,jpg,jpeg,webp}", {
+  eager: true,
+  query: "?url",
+  import: "default",
+}) as Record<string, string>;
+
 
 
 function getLogoUrlByClubName(clubName: string) {
@@ -194,36 +199,17 @@ function getLogoUrlByClubName(clubName: string) {
   return bestUrl;
 }
 
-// --- Player images hosted outside the bundle and resolved by player ID.
-const PLAYER_IMAGE_BASE_URL = toTrimmedString(import.meta.env.VITE_PLAYER_IMAGE_BASE_URL);
-
 const PLAYER_IMAGE_LOOKUP = (() => {
   const map = new Map<string, string>();
-  for (const [playerId, fileName] of Object.entries(PLAYER_IMAGE_MANIFEST)) {
-    const trimmed = playerId.trim();
-    if (!trimmed || !fileName) continue;
-    map.set(trimmed.toLowerCase(), fileName);
-    map.set(normalizePlayerId(trimmed).toLowerCase(), fileName);
+  for (const [path, url] of Object.entries(PLAYER_IMAGES)) {
+    const base = path.split("/").pop() ?? "";
+    const stem = base.replace(/\.(png|jpg|jpeg|webp)$/i, "").trim();
+    if (!stem) continue;
+    map.set(stem.toLowerCase(), url);
+    map.set(normalizePlayerId(stem).toLowerCase(), url);
   }
   return map;
 })();
-
-function buildPlayerImageUrl(fileName: string): string | null {
-  if (!PLAYER_IMAGE_BASE_URL || !fileName) return null;
-
-  const [basePath, query = ""] = PLAYER_IMAGE_BASE_URL.split("?");
-  const cleanBasePath = basePath.replace(/\/+$/, "");
-  if (!cleanBasePath) return null;
-
-  const encodedFileName = fileName
-    .split("/")
-    .filter(Boolean)
-    .map((segment) => encodeURIComponent(segment))
-    .join("/");
-
-  if (!encodedFileName) return null;
-  return query ? `${cleanBasePath}/${encodedFileName}?${query}` : `${cleanBasePath}/${encodedFileName}`;
-}
 
 function getPlayerImgUrl(playerId: string | number | null | undefined, playerName?: string | null) {
   const rawId = toTrimmedString(playerId);
@@ -244,11 +230,11 @@ function getPlayerImgUrl(playerId: string | number | null | undefined, playerNam
 
   for (const c of candidates) {
     const direct = PLAYER_IMAGE_LOOKUP.get(c.toLowerCase());
-    if (direct) return buildPlayerImageUrl(direct);
+    if (direct) return direct;
     const normalized = PLAYER_IMAGE_LOOKUP.get(normalizePlayerId(c).toLowerCase());
-    if (normalized) return buildPlayerImageUrl(normalized);
+    if (normalized) return normalized;
     const keyified = PLAYER_IMAGE_LOOKUP.get(keyify(c));
-    if (keyified) return buildPlayerImageUrl(keyified);
+    if (keyified) return keyified;
   }
   return null;
 }
