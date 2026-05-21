@@ -612,6 +612,14 @@ function normalizeLeague(x: any): LeagueCode {
   return raw === "AFLW" ? "AFLW" : "AFL";
 }
 
+function getClubLabelFontSize(clubName: string, baseSize: number): number {
+  const len = normalizeClubName(clubName).length;
+  if (len >= 18) return baseSize - 6;
+  if (len >= 14) return baseSize - 4;
+  if (len >= 10) return baseSize - 2;
+  return baseSize;
+}
+
 function normalizeTeamId(x: any): string {
   return toTrimmedString(x);
 }
@@ -1460,6 +1468,7 @@ function CareerProjectionDashboard({
   const teamKey = normalizeClubName(teamName);
   const teamColor = TEAM_PRIMARY_COLOR[teamKey] ?? "#111827";
   const logoSrc = getLogoUrlByClubName(teamName);
+  const playerTeamFontSize = getClubLabelFontSize(teamName, 12);
   const comparePlayer = useMemo(
     () => (comparePlayerId ? allPlayers.find((p) => p.id === comparePlayerId) ?? null : null),
     [allPlayers, comparePlayerId]
@@ -2311,7 +2320,7 @@ return [minFinal, maxFinal];
             <div style={{ fontSize: 22, fontWeight: 950, letterSpacing: -0.4, lineHeight: 1.05, color: "#111" }}>
               {player?.name ?? "Career Trajectory"}
             </div>
-            <div style={{ fontSize: 12, color: "rgba(0,0,0,0.55)" }}>{teamName}</div>
+            <div style={{ fontSize: playerTeamFontSize, color: "rgba(0,0,0,0.55)" }}>{teamName}</div>
           </div>
         </div>
 
@@ -3423,6 +3432,7 @@ useEffect(() => {
 
   const clubName = useMemo(() => selectedTeamOption?.name ?? team, [selectedTeamOption, team]);
   const clubLabel = useMemo(() => selectedTeamOption?.label ?? clubName, [selectedTeamOption, clubName]);
+  const clubLabelFontSize = useMemo(() => getClubLabelFontSize(clubLabel, 28), [clubLabel]);
   const clubKey = useMemo(() => normalizeClubName(clubName), [clubName]);
   const teamColor = useMemo(() => TEAM_PRIMARY_COLOR[clubKey] ?? "#111111", [clubKey]);
 
@@ -5108,7 +5118,7 @@ const mergedSkillRadar = useMemo(() => {
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{ fontSize: 28, fontWeight: 950, color: "#111", letterSpacing: -0.6, lineHeight: 1.05 }}>{clubLabel}</div>
+                    <div style={{ fontSize: clubLabelFontSize, fontWeight: 950, color: "#111", letterSpacing: -0.6, lineHeight: 1.05 }}>{clubLabel}</div>
                     {logoSrc ? (
                       <img
                         src={logoSrc}
