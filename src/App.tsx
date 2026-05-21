@@ -1454,7 +1454,6 @@ function CareerProjectionDashboard({
   const teamKey = normalizeClubName(teamName);
   const teamColor = TEAM_PRIMARY_COLOR[teamKey] ?? "#111827";
   const logoSrc = getLogoUrlByClubName(teamName);
-  const playerTeamFontSize = getClubLabelFontSize(teamName, 12);
   const comparePlayer = useMemo(
     () => (comparePlayerId ? allPlayers.find((p) => p.id === comparePlayerId) ?? null : null),
     [allPlayers, comparePlayerId]
@@ -2306,7 +2305,6 @@ return [minFinal, maxFinal];
             <div style={{ fontSize: 22, fontWeight: 950, letterSpacing: -0.4, lineHeight: 1.05, color: "#111" }}>
               {player?.name ?? "Career Trajectory"}
             </div>
-            <div style={{ fontSize: playerTeamFontSize, color: "rgba(0,0,0,0.55)" }}>{teamName}</div>
           </div>
         </div>
 
