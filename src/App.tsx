@@ -531,7 +531,7 @@ const CAREER_EXPORT_CAPTURE_WIDTH = 1088;
 const CAREER_EXPORT_CAPTURE_MIN_HEIGHT = 920;
 const CAREER_EXPORT_CAPTURE_SPLIT = "0.30fr 0.70fr";
 const CAREER_EXPORT_CAPTURE_ZOOM = 0.94;
-const EMBED_LAYOUT_SCALE = 0.82;
+const EMBED_LAYOUT_SCALE = 0.98;
 
 function isEmbeddedContext() {
   if (typeof window === "undefined") return false;
