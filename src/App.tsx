@@ -23,6 +23,9 @@ import {
 import { RefreshCcw, RotateCcw, Home, BarChart3, Gauge, Users } from "lucide-react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 
+const LEAGUE_TRENDS_EMBED_URL =
+  (import.meta as any).env?.VITE_LEAGUE_TRENDS_URL || "http://127.0.0.1:5175/?embed=1&league=afl";
+
 function fmtAUD(n: number) {
   return n.toLocaleString("en-AU", {
     style: "currency",
@@ -3538,6 +3541,10 @@ function PlayerRoute() {
   return <AppCore routeMode="player" routeTeamId={null} routePlayerId={String((params as any).playerId || "")} />;
 }
 
+function LeagueTrendsRoute() {
+  return <AppCore routeMode="trends" routeTeamId={null} routePlayerId={null} />;
+}
+
 
 // Default export wraps the existing single-page UI in a router so deep links work:
 //   /team/40?season=2026
@@ -3549,6 +3556,7 @@ export default function App() {
         <Route path="/" element={<Navigate to="/team/40" replace />} />
         <Route path="/team/:teamId" element={<TeamRoute />} />
         <Route path="/player/:playerId" element={<PlayerRoute />} />
+        <Route path="/league-trends" element={<LeagueTrendsRoute />} />
         {/* Back-compat: old query-string-only links */}
         <Route path="*" element={<Navigate to="/team/40" replace />} />
       </Routes>
@@ -3556,7 +3564,19 @@ export default function App() {
   );
 }
 
-function AppCore({ routeMode, routeTeamId, routePlayerId }: { routeMode: "team" | "player"; routeTeamId: string | null; routePlayerId: string | null; }) {
+function LeagueTrendsEmbed() {
+  return (
+    <section className="leagueTrendsPanel" aria-label="AFL League Trends">
+      <iframe
+        className="leagueTrendsFrame"
+        title="AFL League Trends"
+        src={LEAGUE_TRENDS_EMBED_URL}
+      />
+    </section>
+  );
+}
+
+function AppCore({ routeMode, routeTeamId, routePlayerId }: { routeMode: "team" | "player" | "trends"; routeTeamId: string | null; routePlayerId: string | null; }) {
   const location = useLocation();
   const navigate = useNavigate();
   const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
@@ -3578,7 +3598,11 @@ function AppCore({ routeMode, routeTeamId, routePlayerId }: { routeMode: "team" 
 const [compareTeam, setCompareTeam] = useState<string>(""); // "" = no comparison
 const [comparePanelOpen, setComparePanelOpen] = useState(false);
 const [exporting, setExporting] = useState<"png" | "pdf" | null>(null);
-const [page, setPage] = useState<"team" | "career">(() => (routeMode === "player" ? "career" : "team"));
+const [page, setPage] = useState<"team" | "career" | "trends">(() => {
+  if (routeMode === "player") return "career";
+  if (routeMode === "trends") return "trends";
+  return "team";
+});
 const [currentPlayerId, setCurrentPlayerId] = useState<string>(() => (routeMode === "player" ? normalizePlayerId(routePlayerId) : ""));
 const [exportPlayerName, setExportPlayerName] = useState<string>("");
 const [playerTeamResolved, setPlayerTeamResolved] = useState(false);
@@ -3615,7 +3639,7 @@ useEffect(() => {
       const nextTeam = resolveIncomingTeamId(routeTeamId, sp);
       setTeam((prev) => (nextTeam !== prev ? nextTeam : prev));
       setPage((prev) => (prev !== "team" ? "team" : prev));
-    } else {
+    } else if (routeMode === "player") {
       // /player/:playerId route
       setPage((prev) => (prev !== "career" ? "career" : prev));
 
@@ -3632,6 +3656,8 @@ useEffect(() => {
         setCurrentPlayerId((prev) => (rid !== prev ? rid : prev));
         if (!qTeam) setPlayerTeamResolved(false);
       }
+    } else {
+      setPage((prev) => (prev !== "trends" ? "trends" : prev));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeMode, routeTeamId, routePlayerId, location.search]);
@@ -3643,6 +3669,15 @@ useEffect(() => {
     if (page === "team") {
       const nextPath = `/team/${team || DEFAULT_TEAM_ID}`;
       const nextSearch = `?season=${encodeURIComponent(String(baseSeason))}${persistentEmbedSearch}`;
+      const next = nextPath + nextSearch;
+      const cur = location.pathname + location.search;
+      if (cur !== next) navigate(next, { replace: true });
+      return;
+    }
+
+    if (page === "trends") {
+      const nextPath = "/league-trends";
+      const nextSearch = persistentEmbedSearch ? `?${persistentEmbedSearch.slice(1)}` : "";
       const next = nextPath + nextSearch;
       const cur = location.pathname + location.search;
       if (cur !== next) navigate(next, { replace: true });
@@ -5166,6 +5201,20 @@ const mergedSkillRadar = useMemo(() => {
           .kpiGrid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: ${isEmbed ? 10 : 12}px; }
           .midGrid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: ${isEmbed ? 10 : 14}px; }
           .botGrid { display: grid; grid-template-columns: 1fr 1fr 0.9fr; gap: ${isEmbed ? 10 : 14}px; }
+          .leagueTrendsPanel {
+            border: 1px solid rgba(0,0,0,0.08);
+            border-radius: 18px;
+            overflow: hidden;
+            background: #fff;
+            min-height: ${isEmbed ? "760px" : "900px"};
+            box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+          }
+          .leagueTrendsFrame {
+            width: 100%;
+            min-height: ${isEmbed ? "760px" : "900px"};
+            border: 0;
+            display: block;
+          }
 
           @media (max-width: 1400px) {
             .kpiGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -5276,8 +5325,10 @@ const mergedSkillRadar = useMemo(() => {
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{ fontSize: clubLabelFontSize, fontWeight: 950, color: "#111", letterSpacing: -0.6, lineHeight: 1.05 }}>{clubLabel}</div>
-                    {logoSrc ? (
+                    <div style={{ fontSize: clubLabelFontSize, fontWeight: 950, color: "#111", letterSpacing: -0.6, lineHeight: 1.05 }}>
+                      {page === "trends" ? "League Trends" : clubLabel}
+                    </div>
+                    {page !== "trends" && logoSrc ? (
                       <img
                         src={logoSrc}
                         alt={`${clubLabel} logo`}
@@ -5297,6 +5348,14 @@ const mergedSkillRadar = useMemo(() => {
                     <div style={{ fontSize: 12, color: "rgba(0,0,0,0.55)" }}>
                       {`${selectedLeague} Team Profile | Season ${season}`}
                     </div>
+                  ) : page === "career" ? (
+                    <div style={{ fontSize: 12, color: "rgba(0,0,0,0.55)" }}>
+                      {`${selectedLeague} Career Projection | Season ${season}`}
+                    </div>
+                  ) : page === "trends" ? (
+                    <div style={{ fontSize: 12, color: "rgba(0,0,0,0.55)" }}>
+                      AFL view | League trend dashboard
+                    </div>
                   ) : null}
                 </div>
               </div>
@@ -5306,8 +5365,11 @@ const mergedSkillRadar = useMemo(() => {
                   <div style={{ fontSize: 12, color: "rgba(0,0,0,0.55)" }}>View</div>
                   <Pill active={page === "team"} onClick={() => setPage("team")}>Team</Pill>
                   <Pill active={page === "career"} onClick={() => setPage("career")}>Career</Pill>
+                  <Pill active={page === "trends"} onClick={() => setPage("trends")}>League Trends</Pill>
                 </div>
 
+                {page !== "trends" ? (
+                  <>
                 <div style={{ fontSize: 12, color: "rgba(0,0,0,0.55)", marginRight: 4 }}>Year</div>
 
                 {years.map((y) => (
@@ -5331,6 +5393,8 @@ const mergedSkillRadar = useMemo(() => {
 
                   <RotateCcw size={14} style={{ verticalAlign: "-2px", marginRight: 6 }} /> Reset
                 </Pill>
+                  </>
+                ) : null}
 
                 <Pill onClick={() => navigator.clipboard.writeText(window.location.href)}>
                   <RefreshCcw size={14} style={{ verticalAlign: "-2px", marginRight: 6 }} /> Copy link
@@ -5864,6 +5928,8 @@ const mergedSkillRadar = useMemo(() => {
 )} 
 
             </>
+          ) : page === "trends" ? (
+            <LeagueTrendsEmbed />
           ) : (
             <CareerProjectionDashboard defaultTeam={team} careerProjections={careerProjections} careerProjectionsLastUpdated={careerProjectionsLastUpdated} advancedStatsRows={advancedStatsRows} comparablePlayers={comparablePlayers} playerStatsAgg={playerStatsAgg} playerProjections={playerProjections} rosterPlayers={rosterPlayers} selectedSeason={season} initialPlayerId={currentPlayerId || undefined} onPlayerIdChange={(id) => {
                 const nextId = normalizePlayerId(id);
