@@ -359,11 +359,12 @@ function TrendCard({ metric, trendMode, isEmbed = false }) {
 }
 
 export default function LeagueTrendsDashboard() {
-  const [payload, setPayload] = useState(null);
   const [leagueFilter, setLeagueFilter] = useState(() => {
     const league = new URLSearchParams(window.location.search).get("league")?.toLowerCase();
     return league === "aflw" ? "aflw" : "afl";
   });
+  const [payloadsByLeague, setPayloadsByLeague] = useState({});
+  const [loadError, setLoadError] = useState(null);
   const [query, setQuery] = useState("");
   const [trendMode, setTrendMode] = useState("rolling");
   const [squadFilter, setSquadFilter] = useState("All squads");
@@ -373,14 +374,32 @@ export default function LeagueTrendsDashboard() {
   );
 
   useEffect(() => {
-    loadApiData("league_trends.json")
-      .then(setPayload)
-      .catch((error) => console.error("Failed to load league trends", error));
-  }, []);
+    if (payloadsByLeague[leagueFilter]) return;
+
+    let cancelled = false;
+    setLoadError(null);
+    loadApiData("league_trends.json", { league: leagueFilter })
+      .then((payload) => {
+        if (cancelled) return;
+        setPayloadsByLeague((current) => ({
+          ...current,
+          [leagueFilter]: payload,
+        }));
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.error("Failed to load league trends", error);
+        setLoadError(error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [leagueFilter, payloadsByLeague]);
 
   const activePayload = useMemo(
-    () => payload?.leagues?.[leagueFilter] ?? payload,
-    [payload, leagueFilter],
+    () => payloadsByLeague[leagueFilter] ?? null,
+    [payloadsByLeague, leagueFilter],
   );
 
   useEffect(() => {
@@ -460,11 +479,17 @@ export default function LeagueTrendsDashboard() {
         </label>
       </section>
 
-      <div className="chart-grid">
-        {filtered.map((card) => (
-          <TrendCard key={card.id} metric={card} trendMode={trendMode} isEmbed={isEmbed} />
-        ))}
-      </div>
+      {loadError ? (
+        <div className="league-trends-status">Unable to load league trends.</div>
+      ) : !activePayload ? (
+        <div className="league-trends-status">Loading league trends...</div>
+      ) : (
+        <div className="chart-grid">
+          {filtered.map((card) => (
+            <TrendCard key={card.id} metric={card} trendMode={trendMode} isEmbed={isEmbed} />
+          ))}
+        </div>
+      )}
     </main>
   );
 }

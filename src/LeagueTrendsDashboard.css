@@ -136,6 +136,18 @@
   gap: 14px;
 }
 
+.leagueTrendsDashboard .league-trends-status {
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #e1e5ea;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #6a6f76;
+  font-size: 15px;
+  font-weight: 760;
+}
+
 .leagueTrendsDashboard .trend-card {
   display: flex;
   flex-direction: column;

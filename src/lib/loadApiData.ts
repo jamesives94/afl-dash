@@ -1,9 +1,11 @@
-export async function loadApiData<T = any>(file: string): Promise<T[]> {
-  const res = await fetch(`/api/data?file=${encodeURIComponent(file)}`, {
-    headers: {
-      "x-data-key": import.meta.env.VITE_DATA_API_KEY
-    }
-  });
+export async function loadApiData<T = any>(file: string, params: Record<string, string> = {}): Promise<T> {
+  const search = new URLSearchParams({ file, ...params });
+  const headers: Record<string, string> = {};
+  if (import.meta.env.VITE_DATA_API_KEY) {
+    headers["x-data-key"] = import.meta.env.VITE_DATA_API_KEY;
+  }
+
+  const res = await fetch(`/api/data?${search.toString()}`, { headers });
 
   if (!res.ok) {
     const text = await res.text();

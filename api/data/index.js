@@ -4,6 +4,11 @@ const Papa = require("papaparse");
 const CURRENT_SEASON = 2026;
 const RECENT_SEASON_WINDOW = 3;
 const MIN_RECENT_SEASON = CURRENT_SEASON - (RECENT_SEASON_WINDOW - 1);
+const RESPONSE_CACHE_SECONDS = Number(process.env.DATA_RESPONSE_CACHE_SECONDS || 300);
+const MEMORY_CACHE_MAX_ITEMS = Number(process.env.DATA_MEMORY_CACHE_MAX_ITEMS || 24);
+
+const memoryCache = global.__DATA_API_MEMORY_CACHE__ || new Map();
+global.__DATA_API_MEMORY_CACHE__ = memoryCache;
 
 const ALLOWED_FILES = new Set([
   "roster_players.csv",
@@ -79,20 +84,33 @@ module.exports = async function (context, req) {
 
     const blobServiceClient = BlobServiceClient.fromConnectionString(conn);
     const containerClient = blobServiceClient.getContainerClient(containerName);
-    const blobClient = containerClient.getBlobClient(file);
+    const league = String(req.query.league || "").trim().toLowerCase();
+    const resolvedBlob = await resolveBlobClient(containerClient, file, league);
+    const blobClient = resolvedBlob.blobClient;
+    const blobName = resolvedBlob.blobName;
+    const props = resolvedBlob.props;
+    const cacheKey = [
+      blobName,
+      league,
+      props.etag || "",
+      props.lastModified ? props.lastModified.toISOString() : ""
+    ].join("|");
+    const cached = memoryCache.get(cacheKey);
+    if (cached) {
+      cached.hits += 1;
+      cached.lastAccessed = Date.now();
+      context.res = buildJsonResponse(cached.body, props, "HIT", blobName);
+      return;
+    }
 
     const download = await blobClient.download();
     const rawText = await streamToString(download.readableStreamBody);
+    let body;
 
     if (file.endsWith(".json")) {
-      context.res = {
-        status: 200,
-        headers: {
-          "content-type": "application/json",
-          "cache-control": "no-store"
-        },
-        body: JSON.parse(rawText)
-      };
+      body = filterJsonPayload(blobName, JSON.parse(rawText), { league });
+      setMemoryCache(cacheKey, body);
+      context.res = buildJsonResponse(body, props, "MISS", blobName);
       return;
     }
 
@@ -107,20 +125,77 @@ module.exports = async function (context, req) {
       return;
     }
 
-    const rows = filterRecentRows(file, parsed.data);
+    body = filterRecentRows(file, parsed.data);
+    setMemoryCache(cacheKey, body);
 
-    context.res = {
-      status: 200,
-      headers: {
-        "content-type": "application/json",
-        "cache-control": "no-store"
-      },
-      body: rows
-    };
+    context.res = buildJsonResponse(body, props, "MISS", blobName);
   } catch (err) {
     context.res = { status: 500, body: String(err?.stack || err) };
   }
 };
+
+async function resolveBlobClient(containerClient, file, league) {
+  if (file === "league_trends.json" && (league === "afl" || league === "aflw")) {
+    const splitName = `league_trends_${league}.json`;
+    const splitClient = containerClient.getBlobClient(splitName);
+    try {
+      const splitProps = await splitClient.getProperties();
+      return { blobClient: splitClient, blobName: splitName, props: splitProps };
+    } catch (err) {
+      if (err?.statusCode && err.statusCode !== 404) throw err;
+    }
+  }
+
+  const blobClient = containerClient.getBlobClient(file);
+  const props = await blobClient.getProperties();
+  return { blobClient, blobName: file, props };
+}
+
+function buildJsonResponse(body, props, cacheStatus, sourceFile) {
+  const lastModified = props.lastModified ? props.lastModified.toUTCString() : undefined;
+  return {
+    status: 200,
+    headers: {
+      "content-type": "application/json",
+      "cache-control": `private, max-age=${RESPONSE_CACHE_SECONDS}`,
+      "vary": "x-data-key",
+      "etag": props.etag || "",
+      "last-modified": lastModified || "",
+      "x-file-last-modified": lastModified || "",
+      "x-data-cache": cacheStatus,
+      "x-data-source-file": sourceFile
+    },
+    body
+  };
+}
+
+function setMemoryCache(cacheKey, body) {
+  memoryCache.set(cacheKey, {
+    body,
+    hits: 0,
+    createdAt: Date.now(),
+    lastAccessed: Date.now()
+  });
+
+  if (memoryCache.size <= MEMORY_CACHE_MAX_ITEMS) return;
+
+  const entries = Array.from(memoryCache.entries()).sort((a, b) => a[1].lastAccessed - b[1].lastAccessed);
+  while (entries.length && memoryCache.size > MEMORY_CACHE_MAX_ITEMS) {
+    const [oldestKey] = entries.shift();
+    memoryCache.delete(oldestKey);
+  }
+}
+
+function filterJsonPayload(file, payload, options) {
+  if (file !== "league_trends.json") return payload;
+  const league = options.league;
+  if (!league || !payload?.leagues?.[league]) return payload;
+
+  return {
+    ...payload.leagues[league],
+    selectedLeague: league
+  };
+}
 
 function filterRecentRows(file, rows) {
   const seasonFields = RECENT_SEASON_FIELDS_BY_FILE[file];
