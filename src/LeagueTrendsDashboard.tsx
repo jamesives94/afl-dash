@@ -245,7 +245,7 @@ function TrendCard({ metric, trendMode, isEmbed = false }) {
         <div className="card-title-row">
           <h2>{metric.label}</h2>
         </div>
-        <ResponsiveContainer width="100%" height={isEmbed ? 158 : 190}>
+        <ResponsiveContainer width="100%" height={isEmbed ? 220 : 250}>
           <ComposedChart data={chartPoints} margin={{ top: 8, right: 8, bottom: 18, left: 4 }}>
             <defs>
               <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">

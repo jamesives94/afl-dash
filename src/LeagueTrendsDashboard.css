@@ -11,11 +11,11 @@
 }
 
 .leagueTrendsDashboard {
-  width: min(1900px, calc(100vw - 24px));
+  width: min(1480px, calc(100vw - 120px));
   margin: 0 auto;
   padding: 14px 0 28px;
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
 .leagueTrendsDashboard .app-header {
@@ -132,16 +132,16 @@
 
 .leagueTrendsDashboard .chart-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
 }
 
 .leagueTrendsDashboard .trend-card {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  min-height: 286px;
-  padding: 10px;
+  min-height: 360px;
+  padding: 12px;
   border: 1px solid #e1e5ea;
   border-radius: 8px;
   background: #ffffff;
@@ -156,13 +156,14 @@
 .leagueTrendsDashboard .card-title-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  min-height: 22px;
+  min-height: 36px;
+  align-items: start;
 }
 
 .leagueTrendsDashboard .card-title-row h2 {
   margin: 0;
   text-align: center;
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.2;
   font-weight: 720;
   letter-spacing: 0;
@@ -170,9 +171,9 @@
 }
 
 .leagueTrendsDashboard .latest-note {
-  margin-top: -7px;
+  margin-top: 0;
   color: #6d737a;
-  font-size: 10px;
+  font-size: 14px;
   text-align: center;
 }
 
@@ -195,7 +196,7 @@
 
 .leagueTrendsDashboard .metric span {
   display: block;
-  font-size: 10px;
+  font-size: 14px;
   line-height: 1.25;
   color: #3d3f43;
 }
@@ -203,7 +204,7 @@
 .leagueTrendsDashboard .metric strong {
   display: block;
   margin-top: 2px;
-  font-size: 15px;
+  font-size: 17px;
   line-height: 1.15;
 }
 
@@ -316,12 +317,16 @@
 }
 
 @media (max-width: 1200px) {
+  .leagueTrendsDashboard {
+    width: min(100vw - 40px, 1120px);
+  }
+
   .leagueTrendsDashboard .filter-bar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .leagueTrendsDashboard .chart-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -347,9 +352,5 @@
 
   .leagueTrendsDashboard .chart-grid {
     grid-template-columns: 1fr;
-  }
-
-  .embed-mode .leagueTrendsDashboard .chart-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
