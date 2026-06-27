@@ -1,5 +1,6 @@
 // src/App.tsx
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import LeagueTrendsDashboard from "./LeagueTrendsDashboard";
 import {
   ResponsiveContainer,
   Area,
@@ -22,9 +23,6 @@ import {
 } from "recharts";
 import { RefreshCcw, RotateCcw, Home, BarChart3, Gauge, Users } from "lucide-react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
-
-const LEAGUE_TRENDS_EMBED_URL =
-  (import.meta as any).env?.VITE_LEAGUE_TRENDS_URL || "http://127.0.0.1:5175/?embed=1&league=afl";
 
 function fmtAUD(n: number) {
   return n.toLocaleString("en-AU", {
@@ -3565,15 +3563,7 @@ export default function App() {
 }
 
 function LeagueTrendsEmbed() {
-  return (
-    <section className="leagueTrendsPanel" aria-label="AFL League Trends">
-      <iframe
-        className="leagueTrendsFrame"
-        title="AFL League Trends"
-        src={LEAGUE_TRENDS_EMBED_URL}
-      />
-    </section>
-  );
+  return <LeagueTrendsDashboard />;
 }
 
 function AppCore({ routeMode, routeTeamId, routePlayerId }: { routeMode: "team" | "player" | "trends"; routeTeamId: string | null; routePlayerId: string | null; }) {

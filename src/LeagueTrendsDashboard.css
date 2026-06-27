@@ -1,0 +1,355 @@
+.leagueTrendsDashboard {
+  color: #30343a;
+  background: #f7f8fa;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: geometricPrecision;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.leagueTrendsDashboard {
+  width: min(1900px, calc(100vw - 24px));
+  margin: 0 auto;
+  padding: 14px 0 28px;
+  display: grid;
+  gap: 12px;
+}
+
+.leagueTrendsDashboard .app-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 8px 0 6px;
+}
+
+.leagueTrendsDashboard .app-header h1 {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.15;
+  font-weight: 760;
+  letter-spacing: 0;
+}
+
+.leagueTrendsDashboard .filter-bar {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.35fr) repeat(2, minmax(140px, 0.72fr)) minmax(220px, 1fr);
+  gap: 10px;
+  align-items: stretch;
+  padding: 12px 14px;
+  border: 1px solid rgba(16, 24, 40, 0.08);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  position: relative;
+  z-index: 2;
+}
+
+.leagueTrendsDashboard .search-box,
+.leagueTrendsDashboard .select-box {
+  min-width: 0;
+}
+
+.leagueTrendsDashboard .filter-field {
+  min-height: 52px;
+  border: 1px solid rgba(16, 24, 40, 0.14);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.82);
+  padding: 6px 10px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 2px 8px;
+  color: #555b62;
+  transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+.leagueTrendsDashboard .filter-field:focus-within {
+  border-color: rgba(16, 24, 40, 0.28);
+  box-shadow: 0 0 0 2px rgba(16, 24, 40, 0.06);
+  background: #ffffff;
+}
+
+.leagueTrendsDashboard .filter-field > span {
+  grid-column: 1;
+  grid-row: 1;
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 850;
+  color: #6a6f76;
+}
+
+.leagueTrendsDashboard .filter-field > svg {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  color: rgba(85, 91, 98, 0.72);
+}
+
+.leagueTrendsDashboard .search-box input,
+.leagueTrendsDashboard .select-box select {
+  grid-column: 1;
+  grid-row: 2;
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #30343a;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 0;
+  appearance: none;
+}
+
+.leagueTrendsDashboard .search-box input {
+  height: 22px;
+}
+
+.leagueTrendsDashboard .search-box input::placeholder {
+  color: rgba(85, 91, 98, 0.56);
+  font-weight: 700;
+}
+
+.leagueTrendsDashboard .select-box select {
+  height: 22px;
+}
+
+.leagueTrendsDashboard .result-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #6a6f76;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.leagueTrendsDashboard .chart-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.leagueTrendsDashboard .trend-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-height: 286px;
+  padding: 10px;
+  border: 1px solid #e1e5ea;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+
+.leagueTrendsDashboard .chart-wrap {
+  position: relative;
+  min-width: 0;
+}
+
+.leagueTrendsDashboard .card-title-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 22px;
+}
+
+.leagueTrendsDashboard .card-title-row h2 {
+  margin: 0;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.2;
+  font-weight: 720;
+  letter-spacing: 0;
+  color: #30343a;
+}
+
+.leagueTrendsDashboard .latest-note {
+  margin-top: -7px;
+  color: #6d737a;
+  font-size: 10px;
+  text-align: center;
+}
+
+.leagueTrendsDashboard .latest-note strong {
+  color: #30343a;
+}
+
+.leagueTrendsDashboard .stat-panel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: 4px;
+  padding-top: 2px;
+  min-width: 0;
+}
+
+.leagueTrendsDashboard .metric {
+  text-align: center;
+}
+
+.leagueTrendsDashboard .metric span {
+  display: block;
+  font-size: 10px;
+  line-height: 1.25;
+  color: #3d3f43;
+}
+
+.leagueTrendsDashboard .metric strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 15px;
+  line-height: 1.15;
+}
+
+.leagueTrendsDashboard .current-value {
+  color: #dc2626;
+}
+
+.leagueTrendsDashboard .previous-value {
+  color: #4169e1;
+}
+
+.leagueTrendsDashboard .up-value {
+  color: #12845c;
+}
+
+.leagueTrendsDashboard .down-value {
+  color: #c24141;
+}
+
+.leagueTrendsDashboard .tooltip {
+  max-width: 280px;
+  border: 1px solid #dde2e8;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.97);
+  padding: 9px 10px;
+  color: #31353a;
+  font-size: 12px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+}
+
+.leagueTrendsDashboard .leagueTrendsDashboard .tooltip-title {
+  font-weight: 760;
+  margin-bottom: 4px;
+}
+
+.muted strong,
+.muted span {
+  color: #9aa2ac;
+}
+
+.leagueTrendsDashboard.embed-mode {
+  width: 100%;
+  min-width: 900px;
+  max-width: 3020px;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 10px 12px 16px;
+  gap: 10px;
+  align-content: start;
+}
+
+.embed-mode .leagueTrendsDashboard .app-header {
+  display: none;
+}
+
+.embed-mode .leagueTrendsDashboard .filter-bar {
+  position: relative;
+  top: auto;
+  z-index: 10;
+  grid-template-columns: minmax(240px, 1.3fr) repeat(3, minmax(170px, 0.75fr));
+  padding: 8px 10px;
+  border-radius: 14px;
+}
+
+.embed-mode .leagueTrendsDashboard .filter-field {
+  min-height: 44px;
+  border-radius: 10px;
+  padding: 5px 9px;
+}
+
+.embed-mode .leagueTrendsDashboard .filter-field > span {
+  font-size: 9px;
+}
+
+.embed-mode .leagueTrendsDashboard .search-box input,
+.embed-mode .leagueTrendsDashboard .select-box select {
+  height: 18px;
+  font-size: 12px;
+}
+
+.embed-mode .leagueTrendsDashboard .chart-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.embed-mode .leagueTrendsDashboard .trend-card {
+  min-height: 242px;
+  padding: 9px;
+}
+
+.embed-mode .leagueTrendsDashboard .card-title-row {
+  min-height: 20px;
+}
+
+.embed-mode .leagueTrendsDashboard .card-title-row h2 {
+  font-size: 12px;
+}
+
+.embed-mode .leagueTrendsDashboard .latest-note {
+  margin-top: -6px;
+  font-size: 9px;
+}
+
+.embed-mode .leagueTrendsDashboard .metric span {
+  font-size: 9px;
+}
+
+.embed-mode .leagueTrendsDashboard .metric strong {
+  font-size: 14px;
+}
+
+@media (max-width: 1200px) {
+  .leagueTrendsDashboard .filter-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .leagueTrendsDashboard .chart-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .leagueTrendsDashboard {
+    width: min(100vw - 20px, 760px);
+    padding-top: 16px;
+  }
+
+  .leagueTrendsDashboard .app-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .leagueTrendsDashboard .filter-bar {
+    grid-template-columns: 1fr;
+    border-radius: 18px;
+  }
+
+  .embed-mode .leagueTrendsDashboard .filter-bar {
+    grid-template-columns: minmax(240px, 1.3fr) repeat(3, minmax(170px, 0.75fr));
+  }
+
+  .leagueTrendsDashboard .chart-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .embed-mode .leagueTrendsDashboard .chart-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

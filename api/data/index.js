@@ -25,7 +25,8 @@ const ALLOWED_FILES = new Set([
   "career_projections_aflw.csv",
   "player_stats_wide_avg_aflw_sen_league3_level1_2019_to_2026.csv",
   "CD_player_stats_agg.csv",
-  "comparable_players.csv"
+  "comparable_players.csv",
+  "league_trends.json"
 ]);
 
 const RECENT_SEASON_FIELDS_BY_FILE = {
@@ -81,9 +82,21 @@ module.exports = async function (context, req) {
     const blobClient = containerClient.getBlobClient(file);
 
     const download = await blobClient.download();
-    const csvText = await streamToString(download.readableStreamBody);
+    const rawText = await streamToString(download.readableStreamBody);
 
-    const parsed = Papa.parse(csvText, {
+    if (file.endsWith(".json")) {
+      context.res = {
+        status: 200,
+        headers: {
+          "content-type": "application/json",
+          "cache-control": "no-store"
+        },
+        body: JSON.parse(rawText)
+      };
+      return;
+    }
+
+    const parsed = Papa.parse(rawText, {
       header: true,
       dynamicTyping: true,
       skipEmptyLines: true
