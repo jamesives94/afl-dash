@@ -961,7 +961,7 @@ function isOptionalDataLoadError(message: string): boolean {
     /failed to load .*local snapshots \(404\)/i.test(message) ||
     /blobnotfound/i.test(message) ||
     /the specified blob does not exist/i.test(message) ||
-    /failed to load .* via api \(404\)/i.test(message)
+    /failed to load .* via api \((404|500|502|503|504)\)/i.test(message)
   );
 }
 
