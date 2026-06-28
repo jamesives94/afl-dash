@@ -31,6 +31,8 @@ const ALLOWED_FILES = new Set([
   "player_stats_wide_avg_aflw_sen_league3_level1_2019_to_2026.csv",
   "CD_player_stats_agg.csv",
   "comparable_players.csv",
+  "team_dashboard_2026.json",
+  "career_dashboard_2026.json",
   "league_trends.json"
 ]);
 

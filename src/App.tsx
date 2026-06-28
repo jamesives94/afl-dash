@@ -955,21 +955,6 @@ async function loadApiDataAsObjects<T>(file: string, mapper: (r: Record<string, 
   return out;
 }
 
-async function loadOptionalApiDataAsObjects<T>(
-  file: string,
-  mapper: (r: Record<string, any>) => T | null
-): Promise<T[]> {
-  try {
-    return await loadApiDataAsObjects(file, mapper);
-  } catch (err: any) {
-    const message = String(err?.message ?? err ?? "");
-    if (isOptionalDataLoadError(message)) {
-      return [];
-    }
-    throw err;
-  }
-}
-
 function isOptionalDataLoadError(message: string): boolean {
   return (
     /invalid file/i.test(message) ||
@@ -988,6 +973,123 @@ function parseLastUpdatedLabel(value: string | null): string {
     return d.toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "numeric" });
   }
   return "";
+}
+
+type DashboardPayload = {
+  payloadType?: string;
+  season?: number;
+  generatedAt?: string;
+  files?: Record<string, Record<string, any>[]>;
+  fileMeta?: Record<string, { lastModified?: string; bytes?: number } | null>;
+};
+
+async function fetchDashboardPayload(file: string): Promise<DashboardPayload | null> {
+  try {
+    if (USE_LOCAL_DATA) return null;
+
+    const url = `/api/data?file=${encodeURIComponent(file)}`;
+    const headers: Record<string, string> = {};
+    if (DATA_API_KEY) headers["x-data-key"] = DATA_API_KEY;
+
+    const res = await fetch(url, { headers });
+    if (!res.ok) return null;
+
+    const json = await res.json();
+    return json && typeof json === "object" && !Array.isArray(json) ? (json as DashboardPayload) : null;
+  } catch {
+    return null;
+  }
+}
+
+function getDashboardPayloadRows(
+  payload: DashboardPayload | null,
+  file: string
+): { rows: Record<string, any>[]; lastUpdatedLabel: string; lastUpdatedValue: string } | null {
+  if (!payload?.files || !Object.prototype.hasOwnProperty.call(payload.files, file)) return null;
+
+  const rows = Array.isArray(payload.files[file]) ? payload.files[file] : [];
+  const lastUpdatedValue = toTrimmedString(payload.fileMeta?.[file]?.lastModified ?? payload.generatedAt ?? "");
+  const lastUpdatedLabel = parseLastUpdatedLabel(lastUpdatedValue);
+  return { rows, lastUpdatedLabel, lastUpdatedValue };
+}
+
+function mapRowsAsObjects<T>(rows: Record<string, any>[], mapper: (r: Record<string, any>) => T | null): T[] {
+  const out: T[] = [];
+  for (const r of rows) {
+    const obj = mapper((r ?? {}) as Record<string, any>);
+    if (obj) out.push(obj);
+  }
+  return out;
+}
+
+async function loadDashboardDataAsObjects<T>(
+  payload: DashboardPayload | null,
+  file: string,
+  mapper: (r: Record<string, any>) => T | null
+): Promise<T[]> {
+  const entry = getDashboardPayloadRows(payload, file);
+  if (entry) return mapRowsAsObjects(entry.rows, mapper);
+  return await loadApiDataAsObjects(file, mapper);
+}
+
+async function loadOptionalDashboardDataAsObjects<T>(
+  payload: DashboardPayload | null,
+  file: string,
+  mapper: (r: Record<string, any>) => T | null
+): Promise<T[]> {
+  try {
+    return await loadDashboardDataAsObjects(payload, file, mapper);
+  } catch (err: any) {
+    const message = String(err?.message ?? err ?? "");
+    if (isOptionalDataLoadError(message)) {
+      return [];
+    }
+    throw err;
+  }
+}
+
+async function loadDashboardDataAsObjectsWithMeta<T>(
+  payload: DashboardPayload | null,
+  file: string,
+  mapper: (r: Record<string, any>) => T | null
+): Promise<{ rows: T[]; lastUpdatedLabel: string; lastUpdatedValue: string }> {
+  const entry = getDashboardPayloadRows(payload, file);
+  if (entry) {
+    return {
+      rows: mapRowsAsObjects(entry.rows, mapper),
+      lastUpdatedLabel: entry.lastUpdatedLabel,
+      lastUpdatedValue: entry.lastUpdatedValue,
+    };
+  }
+  return await loadApiDataAsObjectsWithMeta(file, mapper);
+}
+
+async function loadOptionalDashboardDataAsObjectsWithMeta<T>(
+  payload: DashboardPayload | null,
+  file: string,
+  mapper: (r: Record<string, any>) => T | null
+): Promise<{ rows: T[]; lastUpdatedLabel: string; lastUpdatedValue: string }> {
+  try {
+    return await loadDashboardDataAsObjectsWithMeta(payload, file, mapper);
+  } catch (err: any) {
+    const message = String(err?.message ?? err ?? "");
+    if (isOptionalDataLoadError(message)) {
+      return { rows: [], lastUpdatedLabel: "", lastUpdatedValue: "" };
+    }
+    throw err;
+  }
+}
+
+async function loadDashboardDataAsObjectsWithFallback<T>(
+  payload: DashboardPayload | null,
+  files: string[],
+  mapper: (r: Record<string, any>) => T | null
+): Promise<T[]> {
+  for (const file of files) {
+    const entry = getDashboardPayloadRows(payload, file);
+    if (entry) return mapRowsAsObjects(entry.rows, mapper);
+  }
+  return await loadApiDataAsObjectsWithFallback(files, mapper);
 }
 
 async function fetchLocalManifest(): Promise<any | null> {
@@ -1063,21 +1165,6 @@ async function loadApiDataAsObjectsWithMeta<T>(
     if (obj) out.push(obj);
   }
   return { rows: out, lastUpdatedLabel, lastUpdatedValue };
-}
-
-async function loadOptionalApiDataAsObjectsWithMeta<T>(
-  file: string,
-  mapper: (r: Record<string, any>) => T | null
-): Promise<{ rows: T[]; lastUpdatedLabel: string; lastUpdatedValue: string }> {
-  try {
-    return await loadApiDataAsObjectsWithMeta(file, mapper);
-  } catch (err: any) {
-    const message = String(err?.message ?? err ?? "");
-    if (isOptionalDataLoadError(message)) {
-      return { rows: [], lastUpdatedLabel: "", lastUpdatedValue: "" };
-    }
-    throw err;
-  }
 }
 
 function pickLatestLastUpdatedLabel(entries: Array<{ lastUpdatedLabel: string; lastUpdatedValue: string }>): string {
@@ -3974,9 +4061,29 @@ useEffect(() => {
         setLoading(true);
         setLoadErr(null);
 
+        const [teamDashboardPayload, careerDashboardPayload] = await Promise.all([
+          fetchDashboardPayload(`team_dashboard_${DEFAULT_SEASON}.json`),
+          fetchDashboardPayload(`career_dashboard_${DEFAULT_SEASON}.json`),
+        ]);
+
+        const loadTeam = <T,>(file: string, mapper: (r: Record<string, any>) => T | null) =>
+          loadDashboardDataAsObjects<T>(teamDashboardPayload, file, mapper);
+        const loadOptionalTeam = <T,>(file: string, mapper: (r: Record<string, any>) => T | null) =>
+          loadOptionalDashboardDataAsObjects<T>(teamDashboardPayload, file, mapper);
+        const loadTeamWithFallback = <T,>(files: string[], mapper: (r: Record<string, any>) => T | null) =>
+          loadDashboardDataAsObjectsWithFallback<T>(teamDashboardPayload, files, mapper);
+        const loadCareer = <T,>(file: string, mapper: (r: Record<string, any>) => T | null) =>
+          loadDashboardDataAsObjects<T>(careerDashboardPayload, file, mapper);
+        const loadOptionalCareer = <T,>(file: string, mapper: (r: Record<string, any>) => T | null) =>
+          loadOptionalDashboardDataAsObjects<T>(careerDashboardPayload, file, mapper);
+        const loadCareerWithMeta = <T,>(file: string, mapper: (r: Record<string, any>) => T | null) =>
+          loadDashboardDataAsObjectsWithMeta<T>(careerDashboardPayload, file, mapper);
+        const loadOptionalCareerWithMeta = <T,>(file: string, mapper: (r: Record<string, any>) => T | null) =>
+          loadOptionalDashboardDataAsObjectsWithMeta<T>(careerDashboardPayload, file, mapper);
+
         const [roster, kpis, ranks, radar, acq, proj, aflFormRows, vflFormRows, careerProjResult, advancedStatsAvgRows, playerStatsAggRows, comparableRows] = await Promise.all([
           Promise.all([
-            loadApiDataAsObjects<RosterPlayerRow>("roster_players.csv", (r) => {
+            loadTeam<RosterPlayerRow>("roster_players.csv", (r) => {
               const seasonN = toNumberOrNull(r["season"]);
               const ageN = toNumberOrNull(r["age"]);
               const gamesN = toNumberOrNull(r["games"]);
@@ -3998,7 +4105,7 @@ useEffect(() => {
                 age_cat: ageCat,
               };
             }),
-            loadOptionalApiDataAsObjects<RosterPlayerRow>("roster_players_aflw.csv", (r) => {
+            loadOptionalTeam<RosterPlayerRow>("roster_players_aflw.csv", (r) => {
               const seasonN = toNumberOrNull(r["season"]);
               const ageN = toNumberOrNull(r["age"]);
               const gamesN = toNumberOrNull(r["games"]);
@@ -4023,7 +4130,7 @@ useEffect(() => {
           ]).then((parts) => parts.flat()),
 
           Promise.all([
-            loadApiDataAsObjects<TeamKpiRow>("team_kpis.csv", (r) => {
+            loadTeam<TeamKpiRow>("team_kpis.csv", (r) => {
               const club = normalizeClubName(r["Club"] ?? "");
               const seasonN = toNumberOrNull(r["season"]);
               const ageAvg = toNumberOrNull(r["squad_age_avg"]);
@@ -4044,7 +4151,7 @@ useEffect(() => {
                 squad_turnover_yoy: toNumberOrNull(r["squad_turnover_yoy"]),
               };
             }),
-            loadOptionalApiDataAsObjects<TeamKpiRow>("team_kpis_aflw.csv", (r) => {
+            loadOptionalTeam<TeamKpiRow>("team_kpis_aflw.csv", (r) => {
               const club = normalizeClubName(r["Club"] ?? "");
               const seasonN = toNumberOrNull(r["season"]);
               const ageAvg = toNumberOrNull(r["squad_age_avg"]);
@@ -4068,7 +4175,7 @@ useEffect(() => {
           ]).then((parts) => parts.flat()),
 
           Promise.all([
-            loadApiDataAsObjects<RankRow>("team_rank_timeseries.csv", (r) => {
+            loadTeam<RankRow>("team_rank_timeseries.csv", (r) => {
               const club = normalizeClubName(r["Club"] ?? "");
               const yearN = toNumberOrNull(r["year"]);
               if (!club || yearN == null || !Number.isFinite(yearN)) return null;
@@ -4090,7 +4197,7 @@ useEffect(() => {
                 finish_2_p90: toNumberOrNull(r["finish_2_p90"]),
               };
             }),
-            loadOptionalApiDataAsObjects<RankRow>("team_rank_timeseries_aflw.csv", (r) => {
+            loadOptionalTeam<RankRow>("team_rank_timeseries_aflw.csv", (r) => {
               const club = normalizeClubName(r["Club"] ?? "");
               const yearN = toNumberOrNull(r["year"]);
               if (!club || yearN == null || !Number.isFinite(yearN)) return null;
@@ -4115,7 +4222,7 @@ useEffect(() => {
           ]).then((parts) => parts.flat()),
 
           Promise.all([
-            loadApiDataAsObjects<SkillRadarRow>("team_skill_radar.csv", (r) => {
+            loadTeam<SkillRadarRow>("team_skill_radar.csv", (r) => {
               const teamIdentity = resolveTeamIdentity(r["team_id"], r["squad.name"] ?? r["squad_name"], r["league"]);
               const seasonStr = toTrimmedString(r["season"] ?? r["season.id"]);
               const seasonN = toNumberOrNull(seasonStr);
@@ -4141,7 +4248,7 @@ useEffect(() => {
                 Time_in_Poss_Pct: num("Time_in_Poss_Pct"),
               };
             }),
-            loadOptionalApiDataAsObjects<SkillRadarRow>("team_skill_radar_aflw.csv", (r) => {
+            loadOptionalTeam<SkillRadarRow>("team_skill_radar_aflw.csv", (r) => {
               const teamIdentity = resolveTeamIdentity(r["team_id"], r["squad.name"] ?? r["squad_name"], r["league"]);
               const seasonStr = toTrimmedString(r["season"] ?? r["season.id"]);
               const seasonN = toNumberOrNull(seasonStr);
@@ -4170,7 +4277,7 @@ useEffect(() => {
           ]).then((parts) => parts.flat()),
 
           Promise.all([
-            loadApiDataAsObjects<AcquisitionRow>("player_acquisition_breakdown.csv", (r) => {
+            loadTeam<AcquisitionRow>("player_acquisition_breakdown.csv", (r) => {
               const club = normalizeClubName(r["Club"] ?? "");
               const year = toNumberOrNull(r["Year"]);
               const value = toNumberOrNull(r["value"]);
@@ -4179,7 +4286,7 @@ useEffect(() => {
               if (!club || !isRecentSeasonValue(year) || value === null || !draft || !teamIdentity.team_id) return null;
               return { Club: club, Year: year, Draft: draft, value, team_id: teamIdentity.team_id, league: teamIdentity.league };
             }),
-            loadOptionalApiDataAsObjects<AcquisitionRow>("player_acquisition_breakdown_aflw.csv", (r) => {
+            loadOptionalTeam<AcquisitionRow>("player_acquisition_breakdown_aflw.csv", (r) => {
               const club = normalizeClubName(r["Club"] ?? "");
               const year = toNumberOrNull(r["Year"]);
               const value = toNumberOrNull(r["value"]);
@@ -4191,7 +4298,7 @@ useEffect(() => {
           ]).then((parts) => parts.flat()),
 
           Promise.all([
-            loadApiDataAsObjectsWithFallback<PlayerProjectionRow>(["player_projection.csv", "player_projections.csv"], (r) => {
+            loadTeamWithFallback<PlayerProjectionRow>(["player_projection.csv", "player_projections.csv"], (r) => {
               const teamIdentity = resolveTeamIdentity(r["team_id"], r["team"], r["league"]);
               const seasonN = toNumberOrNull(r["season"]);
               const rating = toNumberOrNull(r["rating"]);
@@ -4214,7 +4321,7 @@ useEffect(() => {
                 Games: games,
               };
             }),
-            loadOptionalApiDataAsObjects<PlayerProjectionRow>("player_projections_aflw.csv", (r) => {
+            loadOptionalTeam<PlayerProjectionRow>("player_projections_aflw.csv", (r) => {
               const teamIdentity = resolveTeamIdentity(r["team_id"], r["team"], r["league"]);
               const seasonN = toNumberOrNull(r["season"]);
               const rating = toNumberOrNull(r["rating"]);
@@ -4240,7 +4347,7 @@ useEffect(() => {
           ]).then((parts) => parts.flat()),
 
           Promise.all([
-            loadApiDataAsObjects<AflFormRow>("form_player_afl.csv", (r) => {
+            loadTeam<AflFormRow>("form_player_afl.csv", (r) => {
               const seasonN = toNumberOrNull(r["season"]);
               const wavg = toNumberOrNull(r["weighted_avg"]);
               const teamIdentity = resolveTeamIdentity(r["team_id"], r["team"], r["league"]);
@@ -4259,7 +4366,7 @@ useEffect(() => {
                 form_change: toNumberOrNull(r["form_change"]),
               };
             }),
-            loadOptionalApiDataAsObjects<AflFormRow>("form_player_aflw.csv", (r) => {
+            loadOptionalTeam<AflFormRow>("form_player_aflw.csv", (r) => {
               const seasonN = toNumberOrNull(r["season"]);
               const wavg = toNumberOrNull(r["weighted_avg"]);
               const teamIdentity = resolveTeamIdentity(r["team_id"], r["team"], r["league"]);
@@ -4280,7 +4387,7 @@ useEffect(() => {
             }),
           ]).then((parts) => parts.flat()),
 
-          loadApiDataAsObjects<VflFormRow>("form_player_vfl.csv", (r) => {
+          loadTeam<VflFormRow>("form_player_vfl.csv", (r) => {
             const seasonN = toNumberOrNull(r["season"]);
             const wavg = toNumberOrNull(r["weighted_avg"]);
             const teamS = toTrimmedString(r["team"]);
@@ -4303,19 +4410,19 @@ useEffect(() => {
 
           // Career projections
           Promise.all([
-            loadApiDataAsObjectsWithMeta<CareerProjectionRow>("career_projections.csv", (r) => mapCareerProjectionRow(r, "AFL")),
-            loadOptionalApiDataAsObjectsWithMeta<CareerProjectionRow>("career_projections_aflw.csv", (r) => mapCareerProjectionRow(r, "AFLW")),
+            loadCareerWithMeta<CareerProjectionRow>("career_projections.csv", (r) => mapCareerProjectionRow(r, "AFL")),
+            loadOptionalCareerWithMeta<CareerProjectionRow>("career_projections_aflw.csv", (r) => mapCareerProjectionRow(r, "AFLW")),
           ]).then((parts) => ({
             rows: parts.flatMap((part) => part.rows),
             lastUpdatedLabel: pickLatestLastUpdatedLabel(parts),
           })),
 
-          loadOptionalApiDataAsObjects<AdvancedStatsSeasonRow>(
+          loadOptionalCareer<AdvancedStatsSeasonRow>(
             "player_stats_wide_avg_aflw_sen_league3_level1_2019_to_2026.csv",
             (r) => mapAdvancedStatsSeasonRow(r, "AFLW")
           ),
 
-          loadApiDataAsObjects<PlayerStatsAggRow>("CD_player_stats_agg.csv", (r) => {
+          loadCareer<PlayerStatsAggRow>("CD_player_stats_agg.csv", (r) => {
             const seasonN = toNumberOrNull(r["season"] ?? r["Season"] ?? "");
             const playerId = (r["player.id"] ?? r["player_id"] ?? r["playerId"] ?? "").toString().trim();
             const playerName = (r["player.name"] ?? r["player_name"] ?? r["playerName"] ?? "").toString().trim();
@@ -4326,7 +4433,7 @@ useEffect(() => {
             return { season: seasonN, player_id: playerId, player_name: playerName, metric_name: metricName, category: cat, metric_value: valN };
           }),
 
-          loadApiDataAsObjects<ComparablePlayerRow>("comparable_players.csv", (r) => {
+          loadCareer<ComparablePlayerRow>("comparable_players.csv", (r) => {
             const spid = normalizePlayerId(r["SourceproviderId"]);
             const srcSeason = toNumberOrNull(r["SourceSeason"]);
             const simSeason = toNumberOrNull(r["SimilarSeason"]);
