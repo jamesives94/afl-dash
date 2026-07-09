@@ -244,8 +244,13 @@ function TrendCard({ metric, trendMode, isEmbed = false }) {
       <div className="chart-wrap">
         <div className="card-title-row">
           <h2>{metric.label}</h2>
+          {latest && (
+            <div className="latest-note">
+              {rollingLabel}: <strong>{formatValue(latest.rolling, metric.format)}</strong>
+            </div>
+          )}
         </div>
-        <ResponsiveContainer width="100%" height={isEmbed ? 112 : 250}>
+        <ResponsiveContainer width="100%" height={isEmbed ? 132 : 250}>
           <ComposedChart
             data={chartPoints}
             margin={isEmbed ? { top: 4, right: 4, bottom: 10, left: 0 } : { top: 8, right: 8, bottom: 18, left: 4 }}
@@ -335,11 +340,6 @@ function TrendCard({ metric, trendMode, isEmbed = false }) {
             />
           </ComposedChart>
         </ResponsiveContainer>
-        {latest && (
-          <div className="latest-note">
-            {rollingLabel}: <strong>{formatValue(latest.rolling, metric.format)}</strong>
-          </div>
-        )}
       </div>
       <aside className="stat-panel">
         <div className="metric">
