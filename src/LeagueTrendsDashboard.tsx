@@ -245,8 +245,11 @@ function TrendCard({ metric, trendMode, isEmbed = false }) {
         <div className="card-title-row">
           <h2>{metric.label}</h2>
         </div>
-        <ResponsiveContainer width="100%" height={isEmbed ? 220 : 250}>
-          <ComposedChart data={chartPoints} margin={{ top: 8, right: 8, bottom: 18, left: 4 }}>
+        <ResponsiveContainer width="100%" height={isEmbed ? 112 : 250}>
+          <ComposedChart
+            data={chartPoints}
+            margin={isEmbed ? { top: 4, right: 4, bottom: 10, left: 0 } : { top: 8, right: 8, bottom: 18, left: 4 }}
+          >
             <defs>
               <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor={primaryLineColor} stopOpacity={0.18} />
@@ -260,7 +263,7 @@ function TrendCard({ metric, trendMode, isEmbed = false }) {
               type="number"
               domain={["dataMin", "dataMax"]}
               ticks={seasonTicks}
-              tick={{ fill: "#777", fontSize: 10 }}
+              tick={{ fill: "#777", fontSize: isEmbed ? 8 : 10 }}
               axisLine={{ stroke: "#f2f2f2" }}
               tickLine={false}
               interval={0}
@@ -269,10 +272,10 @@ function TrendCard({ metric, trendMode, isEmbed = false }) {
             />
             <YAxis
               dataKey="rolling"
-              tick={{ fill: "#777", fontSize: 11 }}
+              tick={{ fill: "#777", fontSize: isEmbed ? 8 : 11 }}
               axisLine={{ stroke: "#f2f2f2" }}
               tickLine={false}
-              width={42}
+              width={isEmbed ? 30 : 42}
               tickFormatter={(value) => formatValue(value, metric.format).replace("%", "")}
               domain={yScale.domain}
               ticks={yScale.ticks}
@@ -283,7 +286,7 @@ function TrendCard({ metric, trendMode, isEmbed = false }) {
               <ReferenceLine
                 x={start2026}
                 stroke="#9a6b00"
-                strokeWidth={2}
+                strokeWidth={isEmbed ? 1.5 : 2}
                 strokeDasharray="4 4"
                 label={<SeasonLineLabel />}
               />
@@ -294,7 +297,7 @@ function TrendCard({ metric, trendMode, isEmbed = false }) {
                 dataKey="leagueRolling"
                 stroke={LEAGUE_REFERENCE_COLOR}
                 strokeOpacity={0.5}
-                strokeWidth={3}
+                strokeWidth={isEmbed ? 2 : 3}
                 dot={false}
                 activeDot={false}
                 isAnimationActive={false}
@@ -316,7 +319,7 @@ function TrendCard({ metric, trendMode, isEmbed = false }) {
               type="monotone"
               dataKey={(point) => point.season < 2026 ? point.rolling : null}
               stroke={primaryLineColor}
-              strokeWidth={3}
+              strokeWidth={isEmbed ? 2 : 3}
               dot={false}
               isAnimationActive={false}
               connectNulls
@@ -325,7 +328,7 @@ function TrendCard({ metric, trendMode, isEmbed = false }) {
               type="monotone"
               dataKey={(point) => point.season >= 2026 ? point.rolling : null}
               stroke={POST_2026_LINE_COLOR}
-              strokeWidth={3}
+              strokeWidth={isEmbed ? 2 : 3}
               dot={false}
               isAnimationActive={false}
               connectNulls
@@ -358,7 +361,7 @@ function TrendCard({ metric, trendMode, isEmbed = false }) {
   );
 }
 
-export default function LeagueTrendsDashboard() {
+export default function LeagueTrendsDashboard({ embedded = false } = {}) {
   const [leagueFilter, setLeagueFilter] = useState(() => {
     const league = new URLSearchParams(window.location.search).get("league")?.toLowerCase();
     return league === "aflw" ? "aflw" : "afl";
@@ -369,8 +372,8 @@ export default function LeagueTrendsDashboard() {
   const [trendMode, setTrendMode] = useState("rolling");
   const [squadFilter, setSquadFilter] = useState("All squads");
   const isEmbed = useMemo(
-    () => new URLSearchParams(window.location.search).get("embed") === "1",
-    [],
+    () => embedded || new URLSearchParams(window.location.search).get("embed") === "1",
+    [embedded],
   );
 
   useEffect(() => {

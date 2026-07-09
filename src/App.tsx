@@ -3650,7 +3650,7 @@ export default function App() {
 }
 
 function LeagueTrendsEmbed() {
-  return <LeagueTrendsDashboard />;
+  return <LeagueTrendsDashboard embedded />;
 }
 
 function AppCore({ routeMode, routeTeamId, routePlayerId }: { routeMode: "team" | "player" | "trends"; routeTeamId: string | null; routePlayerId: string | null; }) {
