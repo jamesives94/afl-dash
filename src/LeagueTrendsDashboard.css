@@ -315,6 +315,7 @@
   min-height: 16px;
   gap: 6px;
   align-items: center;
+  margin-bottom: 4px;
 }
 
 .leagueTrendsDashboard.embed-mode .card-title-row h2 {
@@ -333,6 +334,7 @@
 .leagueTrendsDashboard.embed-mode .stat-panel {
   gap: 2px;
   padding-top: 0;
+  margin-top: -7px;
 }
 
 .leagueTrendsDashboard.embed-mode .metric span {
