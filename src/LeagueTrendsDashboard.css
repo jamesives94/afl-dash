@@ -167,14 +167,15 @@
 
 .leagueTrendsDashboard .card-title-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
   min-height: 36px;
   align-items: start;
 }
 
 .leagueTrendsDashboard .card-title-row h2 {
   margin: 0;
-  text-align: center;
+  text-align: left;
   font-size: 15px;
   line-height: 1.2;
   font-weight: 720;
@@ -186,7 +187,8 @@
   margin-top: 0;
   color: #6d737a;
   font-size: 14px;
-  text-align: center;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .leagueTrendsDashboard .latest-note strong {
@@ -304,23 +306,28 @@
 }
 
 .leagueTrendsDashboard.embed-mode .trend-card {
-  min-height: 174px;
+  min-height: 188px;
   padding: 7px;
   gap: 2px;
 }
 
 .leagueTrendsDashboard.embed-mode .card-title-row {
-  min-height: 18px;
+  min-height: 16px;
+  gap: 6px;
+  align-items: center;
 }
 
 .leagueTrendsDashboard.embed-mode .card-title-row h2 {
   font-size: 11px;
   line-height: 1.1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .leagueTrendsDashboard.embed-mode .latest-note {
-  margin-top: -4px;
   font-size: 8px;
+  line-height: 1;
 }
 
 .leagueTrendsDashboard.embed-mode .stat-panel {
@@ -329,11 +336,14 @@
 }
 
 .leagueTrendsDashboard.embed-mode .metric span {
-  font-size: 8px;
+  font-size: 7px;
+  line-height: 1;
 }
 
 .leagueTrendsDashboard.embed-mode .metric strong {
-  font-size: 12px;
+  margin-top: 1px;
+  font-size: 10px;
+  line-height: 1;
 }
 
 .leagueTrendsDashboard.embed-mode .tooltip {
