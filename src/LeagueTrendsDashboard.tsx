@@ -107,39 +107,100 @@ function roundedRollingScale(points, metric) {
   return { domain: [roundedMin / scale, roundedMax / scale], ticks };
 }
 
+function numericOrNull(value) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
 function rollingPoints(points, window) {
   const queue = [];
-  let total = 0;
+  let valueTotal = 0;
+  let valueCount = 0;
+  let numeratorTotal = 0;
+  let denominatorTotal = 0;
+  let ratioCount = 0;
+
   return points.map((point) => {
-    const value = Number(point.value);
-    if (!Number.isFinite(value)) {
+    const value = numericOrNull(point.value);
+    const numerator = numericOrNull(point.numerator);
+    const denominator = numericOrNull(point.denominator);
+    const hasRatioParts = numerator !== null && denominator !== null && denominator !== 0;
+
+    if (value === null && !hasRatioParts) {
       return { ...point, rolling: null };
     }
-    queue.push(value);
-    total += value;
-    while (queue.length > window) {
-      total -= queue.shift();
+
+    const item = { value, numerator, denominator, hasRatioParts };
+    queue.push(item);
+    if (value !== null) {
+      valueTotal += value;
+      valueCount += 1;
     }
-    return { ...point, rolling: total / queue.length };
+    if (hasRatioParts) {
+      numeratorTotal += numerator;
+      denominatorTotal += denominator;
+      ratioCount += 1;
+    }
+
+    while (queue.length > window) {
+      const removed = queue.shift();
+      if (removed.value !== null) {
+        valueTotal -= removed.value;
+        valueCount -= 1;
+      }
+      if (removed.hasRatioParts) {
+        numeratorTotal -= removed.numerator;
+        denominatorTotal -= removed.denominator;
+        ratioCount -= 1;
+      }
+    }
+
+    const rolling = ratioCount > 0 && denominatorTotal !== 0
+      ? numeratorTotal / denominatorTotal
+      : valueCount > 0
+        ? valueTotal / valueCount
+        : null;
+
+    return { ...point, rolling };
   });
 }
 
 function seasonAveragePoints(points) {
   const totals = new Map();
   points.forEach((point) => {
-    const value = Number(point.value);
-    if (!Number.isFinite(value)) return;
-    const current = totals.get(point.season) ?? { total: 0, count: 0 };
+    const value = numericOrNull(point.value);
+    const numerator = numericOrNull(point.numerator);
+    const denominator = numericOrNull(point.denominator);
+    const hasRatioParts = numerator !== null && denominator !== null && denominator !== 0;
+    if (value === null && !hasRatioParts) return;
+
+    const current = totals.get(point.season) ?? {
+      valueTotal: 0,
+      valueCount: 0,
+      numeratorTotal: 0,
+      denominatorTotal: 0,
+      ratioCount: 0,
+    };
+
     totals.set(point.season, {
-      total: current.total + value,
-      count: current.count + 1,
+      valueTotal: current.valueTotal + (value ?? 0),
+      valueCount: current.valueCount + (value !== null ? 1 : 0),
+      numeratorTotal: current.numeratorTotal + (hasRatioParts ? numerator : 0),
+      denominatorTotal: current.denominatorTotal + (hasRatioParts ? denominator : 0),
+      ratioCount: current.ratioCount + (hasRatioParts ? 1 : 0),
     });
   });
   return points.map((point) => {
     const total = totals.get(point.season);
+    const rolling = total?.ratioCount > 0 && total.denominatorTotal !== 0
+      ? total.numeratorTotal / total.denominatorTotal
+      : total?.valueCount
+        ? total.valueTotal / total.valueCount
+        : null;
+
     return {
       ...point,
-      rolling: total?.count ? total.total / total.count : null,
+      rolling,
     };
   });
 }
