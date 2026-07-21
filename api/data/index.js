@@ -33,7 +33,9 @@ const ALLOWED_FILES = new Set([
   "comparable_players.csv",
   "team_dashboard_2026.json",
   "career_dashboard_2026.json",
-  "league_trends.json"
+  "league_trends.json",
+  "second_tier_ratings_payload.json",
+  "tier2_champion_ratings_2026.json"
 ]);
 
 const RECENT_SEASON_FIELDS_BY_FILE = {

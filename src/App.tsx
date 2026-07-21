@@ -1,6 +1,7 @@
 // src/App.tsx
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import LeagueTrendsDashboard from "./LeagueTrendsDashboard";
+import DraftProspectProfileDashboard from "./DraftProspectProfileDashboard";
 import {
   ResponsiveContainer,
   Area,
@@ -3642,6 +3643,7 @@ export default function App() {
         <Route path="/team/:teamId" element={<TeamRoute />} />
         <Route path="/player/:playerId" element={<PlayerRoute />} />
         <Route path="/league-trends" element={<LeagueTrendsRoute />} />
+        <Route path="/draft-prospect-profile" element={<DraftProspectProfileDashboard />} />
         {/* Back-compat: old query-string-only links */}
         <Route path="*" element={<Navigate to="/team/40" replace />} />
       </Routes>
@@ -5287,6 +5289,22 @@ const mergedSkillRadar = useMemo(() => {
 }, [clubKpi, clubKpiSelection.usedSeason, teamKpis, aflFormPick, vflForm, clubKey, season, rosterTurnoverByTeamSeason, team, selectedLeague]);
 
   const isTeamPage = page === "team";
+  const routePlayerIdNormalized = routeMode === "player" ? normalizePlayerId(routePlayerId) : "";
+  const routePlayerHasCareerProjection = useMemo(() => {
+    if (!routePlayerIdNormalized) return true;
+    return careerProjections.some((row) => normalizePlayerId(row.SourceproviderId) === routePlayerIdNormalized);
+  }, [careerProjections, routePlayerIdNormalized]);
+  const shouldRenderDraftProspectFallback =
+    routeMode === "player" &&
+    page === "career" &&
+    !loading &&
+    !loadErr &&
+    !!routePlayerIdNormalized &&
+    !routePlayerHasCareerProjection;
+
+  if (shouldRenderDraftProspectFallback) {
+    return <DraftProspectProfileDashboard initialPlayerId={routePlayerIdNormalized} initialSeason={season} />;
+  }
 
   return (
     <div style={{ minHeight: isEmbed ? "auto" : "100vh", background: "#f5f5f6", fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial", overflowX: "hidden" }}>
