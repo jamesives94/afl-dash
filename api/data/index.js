@@ -112,7 +112,7 @@ module.exports = async function (context, req) {
     let body;
 
     if (file.endsWith(".json")) {
-      body = filterJsonPayload(blobName, JSON.parse(rawText), { league });
+      body = filterJsonPayload(blobName, rawText, { league });
       setMemoryCache(cacheKey, body);
       context.res = buildJsonResponse(body, props, "MISS", blobName);
       return;
@@ -190,8 +190,10 @@ function setMemoryCache(cacheKey, body) {
   }
 }
 
-function filterJsonPayload(file, payload, options) {
-  if (file !== "league_trends.json") return payload;
+function filterJsonPayload(file, rawText, options) {
+  if (file !== "league_trends.json") return rawText;
+
+  const payload = JSON.parse(rawText);
   const league = options.league;
   if (!league || !payload?.leagues?.[league]) return payload;
 

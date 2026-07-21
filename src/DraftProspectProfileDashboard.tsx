@@ -193,30 +193,48 @@ const DATA_API_KEY = (import.meta as any).env?.VITE_DATA_API_KEY as string | und
 const USE_LOCAL_DATA = String((import.meta as any).env?.VITE_USE_LOCAL_DATA ?? "").toLowerCase() === "true";
 const LOCAL_DATA_BASE = String((import.meta as any).env?.VITE_LOCAL_DATA_BASE ?? "/local-data").replace(/\/+$/, "") || "/local-data";
 
+async function parseJsonResponse(response: Response, file: string) {
+  const contentType = response.headers.get("content-type") ?? "";
+  const text = await response.text();
+
+  if (!contentType.toLowerCase().includes("application/json")) {
+    throw new Error(
+      `Expected JSON for ${file}, got ${contentType || "unknown content type"}: ${text.slice(0, 120)}`
+    );
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Invalid JSON in ${file}: ${message}`);
+  }
+}
+
 async function fetchJsonFile(file: string, required = true) {
-  const localUrl = `${LOCAL_DATA_BASE}/${file}`;
-
-  if (!USE_LOCAL_DATA) {
-    try {
-      const headers: Record<string, string> = {};
-      if (DATA_API_KEY) headers["x-data-key"] = DATA_API_KEY;
-      const response = await fetch(`/api/data?file=${encodeURIComponent(file)}`, { headers, cache: "no-store" });
-      if (response.ok) return await response.json();
-      if (required && response.status !== 400 && response.status !== 404) {
-        const text = await response.text().catch(() => "");
-        throw new Error(text ? `Failed to load ${file} via API (${response.status}): ${text}` : `Failed to load ${file} via API (${response.status})`);
-      }
-    } catch (error) {
-      if (required && USE_LOCAL_DATA) throw error;
+  if (USE_LOCAL_DATA) {
+    const response = await fetch(`${LOCAL_DATA_BASE}/${file}`, { cache: "no-store" });
+    if (!response.ok) {
+      if (!required) return null;
+      throw new Error(`Failed to load ${file} from local snapshots (${response.status})`);
     }
+    return await parseJsonResponse(response, file);
   }
 
-  const response = await fetch(localUrl, { cache: "no-store" });
+  const headers: Record<string, string> = {};
+  if (DATA_API_KEY) headers["x-data-key"] = DATA_API_KEY;
+  const response = await fetch(`/api/data?file=${encodeURIComponent(file)}`, { headers, cache: "no-store" });
   if (!response.ok) {
+    if (!required && (response.status === 400 || response.status === 404)) return null;
+    const text = await response.text().catch(() => "");
     if (!required) return null;
-    throw new Error(`Failed to load ${file} (${response.status})`);
+    throw new Error(
+      text
+        ? `Failed to load ${file} via API (${response.status}): ${text}`
+        : `Failed to load ${file} via API (${response.status})`
+    );
   }
-  return await response.json();
+  return await parseJsonResponse(response, file);
 }
 const ALL_FILTER = "__ALL__";
 const DEFAULT_LEAGUE_SCOPE = "MENS_U18";
