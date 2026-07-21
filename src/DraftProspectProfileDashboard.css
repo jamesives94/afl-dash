@@ -122,8 +122,8 @@
 }
 
 .draftProspectPlayerSelect {
-  min-width: 280px;
-  width: min(340px, 28vw);
+  min-width: 150px;
+  width: 150px;
 }
 
 .draftProspectHero,

@@ -1800,7 +1800,6 @@ export default function DraftProspectProfileDashboard({
       <header className="draftProspectTopbar">
         <div className="draftProspectBrandBlock">
           <div className="draftProspectTitle">Draft Prospect Profile</div>
-          <div className="draftProspectSubtitle">League-scoped cohort | position-aware profile | career game trend</div>
         </div>
         <div className="draftProspectActions">
           <div className="draftProspectViewCluster">
@@ -1835,20 +1834,6 @@ export default function DraftProspectProfileDashboard({
             {positionOptions.map((positionGroupOption) => (
               <option key={positionGroupOption} value={positionGroupOption}>
                 {positionGroupLabel(positionGroupOption)}
-              </option>
-            ))}
-          </select>
-          <label className="draftProspectControlLabel" htmlFor="draft-team-select">Team</label>
-          <select
-            className="draftProspectSelect draftProspectTeamSelect"
-            id="draft-team-select"
-            value={selectedTeam}
-            onChange={(event) => setSelectedTeam(event.target.value)}
-          >
-            <option value={ALL_FILTER}>All</option>
-            {teamOptions.map((team) => (
-              <option key={team} value={team}>
-                {team}
               </option>
             ))}
           </select>
