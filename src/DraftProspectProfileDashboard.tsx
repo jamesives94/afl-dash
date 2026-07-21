@@ -1399,6 +1399,7 @@ export default function DraftProspectProfileDashboard({
   const [selectedMinimumGames, setSelectedMinimumGames] = useState(ALL_FILTER);
   const [selectedRatingBasis, setSelectedRatingBasis] = useState<RatingBasis>(DEFAULT_RATING_BASIS);
   const cohortWrapRef = useRef<HTMLDivElement | null>(null);
+  const draftYearAutoDefaultRef = useRef(true);
   const payloadCacheRef = useRef<Map<string, SecondTierPayload>>(new Map());
   const championPayloadCacheRef = useRef<ChampionRatingsPayload | null | undefined>(undefined);
 
@@ -1626,6 +1627,7 @@ export default function DraftProspectProfileDashboard({
   useEffect(() => {
     if (selectedDraftYear !== ALL_FILTER && !draftYearOptions.includes(Number(selectedDraftYear))) {
       setSelectedDraftYear(ALL_FILTER);
+      draftYearAutoDefaultRef.current = true;
     }
   }, [draftYearOptions, selectedDraftYear]);
 
@@ -1653,6 +1655,13 @@ export default function DraftProspectProfileDashboard({
     () => prospects.find((item) => item.playerId === selectedPlayerId) ?? prospects[0] ?? null,
     [prospects, selectedPlayerId]
   );
+
+  useEffect(() => {
+    if (!player || !draftYearAutoDefaultRef.current) return;
+    const playerDraftYear = inferDraftYear(player);
+    if (playerDraftYear == null) return;
+    setSelectedDraftYear((prev) => (prev === String(playerDraftYear) ? prev : String(playerDraftYear)));
+  }, [player]);
 
   useEffect(() => {
     if (player) setPlayerSearch(playerLabel(player));
@@ -1907,7 +1916,10 @@ export default function DraftProspectProfileDashboard({
             className="draftProspectSelect draftProspectBirthYearSelect"
             id="draft-year-select"
             value={selectedDraftYear}
-            onChange={(event) => setSelectedDraftYear(event.target.value)}
+            onChange={(event) => {
+              draftYearAutoDefaultRef.current = false;
+              setSelectedDraftYear(event.target.value);
+            }}
           >
             <option value={ALL_FILTER}>All</option>
             {draftYearOptions.map((draftYear) => (
@@ -1950,7 +1962,13 @@ export default function DraftProspectProfileDashboard({
               const nextValue = event.target.value;
               setPlayerSearch(nextValue);
               const exactMatch = prospects.find((option) => playerLabel(option) === nextValue);
-              if (exactMatch) setSelectedPlayerId(exactMatch.playerId);
+              if (exactMatch) {
+                if (draftYearAutoDefaultRef.current) {
+                  const draftYear = inferDraftYear(exactMatch);
+                  if (draftYear != null) setSelectedDraftYear(String(draftYear));
+                }
+                setSelectedPlayerId(exactMatch.playerId);
+              }
             }}
             onBlur={() => {
               if (player) setPlayerSearch(playerLabel(player));
@@ -1965,6 +1983,7 @@ export default function DraftProspectProfileDashboard({
             className="draftProspectPill"
             type="button"
             onClick={() => {
+              draftYearAutoDefaultRef.current = true;
               setSelectedLeagueScope(DEFAULT_LEAGUE_SCOPE);
               setSelectedPositionGroup(ALL_FILTER);
               setSelectedTeam(ALL_FILTER);
