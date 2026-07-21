@@ -35,6 +35,10 @@ const ALLOWED_FILES = new Set([
   "career_dashboard_2026.json",
   "league_trends.json",
   "second_tier_ratings_payload.json",
+  "second_tier_ratings_payload_mens_u18.json",
+  "second_tier_ratings_payload_second_tier_senior.json",
+  "second_tier_ratings_payload_womens.json",
+  "second_tier_ratings_payload_other.json",
   "tier2_champion_ratings_2026.json"
 ]);
 

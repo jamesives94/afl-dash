@@ -188,6 +188,9 @@ type AgeAdjustmentContext = {
 };
 
 const DATA_FILE = "second_tier_ratings_payload.json";
+const MENS_U18_DATA_FILE = "second_tier_ratings_payload_mens_u18.json";
+const SECOND_TIER_SENIOR_DATA_FILE = "second_tier_ratings_payload_second_tier_senior.json";
+const WOMENS_DATA_FILE = "second_tier_ratings_payload_womens.json";
 const CHAMPION_RATINGS_FILE = "tier2_champion_ratings_2026.json";
 const DATA_API_KEY = (import.meta as any).env?.VITE_DATA_API_KEY as string | undefined;
 const USE_LOCAL_DATA = String((import.meta as any).env?.VITE_USE_LOCAL_DATA ?? "").toLowerCase() === "true";
@@ -235,6 +238,15 @@ async function fetchJsonFile(file: string, required = true) {
     );
   }
   return await parseJsonResponse(response, file);
+}
+
+function payloadFileForLeagueScope(scope: string) {
+  if (scope === DEFAULT_LEAGUE_SCOPE) return MENS_U18_DATA_FILE;
+  if (scope === SECOND_TIER_SENIOR_SCOPE || scope === "VFL" || scope === "SANFL" || scope === "WAFL") {
+    return SECOND_TIER_SENIOR_DATA_FILE;
+  }
+  if (scope === "WOMENS") return WOMENS_DATA_FILE;
+  return DATA_FILE;
 }
 const ALL_FILTER = "__ALL__";
 const DEFAULT_LEAGUE_SCOPE = "MENS_U18";
@@ -1387,6 +1399,8 @@ export default function DraftProspectProfileDashboard({
   const [selectedMinimumGames, setSelectedMinimumGames] = useState(ALL_FILTER);
   const [selectedRatingBasis, setSelectedRatingBasis] = useState<RatingBasis>(DEFAULT_RATING_BASIS);
   const cohortWrapRef = useRef<HTMLDivElement | null>(null);
+  const payloadCacheRef = useRef<Map<string, SecondTierPayload>>(new Map());
+  const championPayloadCacheRef = useRef<ChampionRatingsPayload | null | undefined>(undefined);
 
   useEffect(() => {
     if (!requestedSeason || requestedSeason === ALL_FILTER) return;
@@ -1403,15 +1417,52 @@ export default function DraftProspectProfileDashboard({
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([
-      fetchJsonFile(DATA_FILE, true),
-      fetchJsonFile(CHAMPION_RATINGS_FILE, false).catch(() => null),
-    ])
-      .then(([json, championJson]) => {
+
+    async function loadPayloadForFile(file: string) {
+      const cached = payloadCacheRef.current.get(file);
+      if (cached) return cached;
+      const json = (await fetchJsonFile(file, true)) as SecondTierPayload;
+      payloadCacheRef.current.set(file, json);
+      return json;
+    }
+
+    async function loadChampionPayload() {
+      if (championPayloadCacheRef.current !== undefined) return championPayloadCacheRef.current;
+      const json = ((await fetchJsonFile(CHAMPION_RATINGS_FILE, false).catch(() => null)) ??
+        null) as ChampionRatingsPayload | null;
+      championPayloadCacheRef.current = json;
+      return json;
+    }
+
+    async function loadPayloadForScope() {
+      const primaryFile = payloadFileForLeagueScope(selectedLeagueScope);
+      const primaryPayload = await loadPayloadForFile(primaryFile);
+      const requestedProspect = requestedPlayerId
+        ? primaryPayload.players.find((player) => normalizeProspectPlayerId(player.playerId) === requestedPlayerId)
+        : undefined;
+      if (requestedProspect || !requestedPlayerId || selectedLeagueScope !== DEFAULT_LEAGUE_SCOPE) {
+        return { payload: primaryPayload, resolvedScope: selectedLeagueScope };
+      }
+
+      const fallbackScopes = [SECOND_TIER_SENIOR_SCOPE, "WOMENS", ALL_FILTER];
+      for (const fallbackScope of fallbackScopes) {
+        const fallbackPayload = await loadPayloadForFile(payloadFileForLeagueScope(fallbackScope));
+        const fallbackProspect = fallbackPayload.players.find(
+          (player) => normalizeProspectPlayerId(player.playerId) === requestedPlayerId
+        );
+        if (fallbackProspect) return { payload: fallbackPayload, resolvedScope: fallbackScope };
+      }
+      return { payload: primaryPayload, resolvedScope: selectedLeagueScope };
+    }
+
+    Promise.all([loadPayloadForScope(), loadChampionPayload()])
+      .then(([payloadResult, championJson]) => {
         if (cancelled) return;
-        const nextPayload = json as SecondTierPayload;
+        const nextPayload = payloadResult.payload;
+        const activeLeagueScope = payloadResult.resolvedScope;
+        if (activeLeagueScope !== selectedLeagueScope) setSelectedLeagueScope(activeLeagueScope);
         const defaultProspects = nextPayload.players.filter(
-          (player) => filteredGamesForPlayer(nextPayload, player, ALL_FILTER, DEFAULT_LEAGUE_SCOPE, ALL_FILTER).length > 0
+          (player) => filteredGamesForPlayer(nextPayload, player, ALL_FILTER, activeLeagueScope, ALL_FILTER).length > 0
         );
         const championGamesByDefaultKey = new Map<string, ChampionGameRow>();
         ((championJson as ChampionRatingsPayload | null)?.games ?? []).forEach((game) => {
@@ -1421,14 +1472,14 @@ export default function DraftProspectProfileDashboard({
           nextPayload.players,
           nextPayload,
           ALL_FILTER,
-          DEFAULT_LEAGUE_SCOPE,
+          activeLeagueScope,
           championGamesByDefaultKey
         );
         const defaultCohort = buildCohortRows(
           defaultProspects,
           nextPayload,
           ALL_FILTER,
-          DEFAULT_LEAGUE_SCOPE,
+          activeLeagueScope,
           ALL_FILTER,
           undefined,
           championJson as ChampionRatingsPayload | null,
@@ -1455,7 +1506,7 @@ export default function DraftProspectProfileDashboard({
     return () => {
       cancelled = true;
     };
-  }, [requestedPlayerId]);
+  }, [requestedPlayerId, selectedLeagueScope]);
 
   const seasonOptions = useMemo(() => {
     if (!payload) return [];
