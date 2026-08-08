@@ -695,6 +695,22 @@ function clamp(n: number, lo: number, hi: number) {
   return Math.max(lo, Math.min(hi, n));
 }
 
+function percentileRank(values: number[], value: number) {
+  const clean = values.filter((v) => Number.isFinite(v)).sort((a, b) => a - b);
+  if (!clean.length || !Number.isFinite(value)) return null;
+  if (clean.length === 1) return 50;
+
+  const eps = 1e-9;
+  let below = 0;
+  let equal = 0;
+  for (const v of clean) {
+    if (v < value - eps) below += 1;
+    else if (Math.abs(v - value) <= eps) equal += 1;
+  }
+
+  return clamp(((below + equal * 0.5) / clean.length) * 100, 0, 100);
+}
+
 // --------------------
 // Data loader (Azure SWA API -> /api/data?file=...)
 // --------------------
@@ -1353,38 +1369,62 @@ function HorizontalBarRows({
   rows,
   labelKey,
   valueKey,
+  referenceKey,
+  referenceLabel = "League avg",
   getColor,
+  fillOpacity = 1,
   barHeight = 14,
   valueColWidth = 44,
   labelCol = { min: 130, ideal: 170, max: 240 },
   rowGap = 12,
   colGap = 10,
+  fillHeight = false,
 }: {
   rows: any[];
   labelKey: string;
   valueKey: string;
+  referenceKey?: string;
+  referenceLabel?: string;
   getColor?: (label: string) => string;
+  fillOpacity?: number;
   barHeight?: number;
   valueColWidth?: number;
   labelCol?: { min: number; ideal: number; max: number };
   rowGap?: number;
   colGap?: number;
+  fillHeight?: boolean;
 }) {
   const max = Math.max(
     1,
-    ...rows.map((r) => {
-      const n = Number(r[valueKey]);
-      return Number.isFinite(n) ? n : 0;
+    ...rows.flatMap((r) => {
+      const value = Number(r[valueKey]);
+      const referenceValue = referenceKey ? Number(r[referenceKey]) : NaN;
+      return [
+        Number.isFinite(value) ? value : 0,
+        Number.isFinite(referenceValue) ? referenceValue : 0,
+      ];
     })
   );
   const labelColTemplate = `${labelCol.ideal}px 1fr`;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: rowGap, marginTop: 6 }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: fillHeight ? undefined : rowGap,
+        justifyContent: fillHeight ? "space-between" : undefined,
+        height: fillHeight ? "100%" : undefined,
+        marginTop: fillHeight ? 0 : 6,
+      }}
+    >
       {rows.map((r) => {
         const value = Number(r[valueKey]);
         const safeValue = Number.isFinite(value) ? value : 0;
         const pct = (safeValue / max) * 100;
+        const rawReferenceValue = referenceKey ? r[referenceKey] : null;
+        const referenceValue = rawReferenceValue == null ? NaN : Number(rawReferenceValue);
+        const referencePct = Number.isFinite(referenceValue) ? clamp((referenceValue / max) * 100, 0, 100) : null;
         const label = String(r[labelKey] ?? "");
 
         return (
@@ -1425,8 +1465,21 @@ function HorizontalBarRows({
                     height: "100%",
                     width: `${pct}%`,
                     background: getColor ? getColor(label) : AGE_CAT_COLOR[label] ?? "rgba(0,0,0,0.65)",
+                    opacity: fillOpacity,
                   }}
                 />
+                {referencePct !== null ? (
+                  <div
+                    title={`${referenceLabel}: ${referenceValue.toFixed(0)}%`}
+                    style={{
+                      position: "absolute",
+                      top: -2,
+                      bottom: -2,
+                      left: `${referencePct}%`,
+                      borderLeft: "2px dotted rgba(0,0,0,0.48)",
+                    }}
+                  />
+                ) : null}
               </div>
               <div style={{ fontSize: 12, color: "rgba(0,0,0,0.6)", textAlign: "right", lineHeight: 1 }}>
                 {Number.isFinite(value) ? `${value.toFixed(0)}%` : "—"}
@@ -4654,6 +4707,32 @@ const ageCatShare = useMemo(() => calcAgeCatShare(rosterForSeason.players), [ros
 
 const usedSeason = rosterForSeason.usedSeason;
 
+const leagueAgeCatAverageShare = useMemo(() => {
+  const byTeam = new Map<string, RosterPlayerRow[]>();
+  for (const p of rosterPlayers) {
+    if (p.season !== usedSeason || p.league !== selectedLeague) continue;
+    const teamKey = normalizeTeamId(p.team_id) || normalizeClubName(p.team);
+    if (!teamKey) continue;
+    const rows = byTeam.get(teamKey) ?? [];
+    rows.push(p);
+    byTeam.set(teamKey, rows);
+  }
+
+  const categoryTotals = new Map<string, { total: number; teams: number }>();
+  for (const players of byTeam.values()) {
+    const shares = calcAgeCatShare(players);
+    const shareByCategory = new Map(shares.map((r) => [r.age_cat, r.pct]));
+    for (const category of AGE_CAT_ORDER) {
+      const current = categoryTotals.get(category) ?? { total: 0, teams: 0 };
+      current.total += shareByCategory.get(category) ?? 0;
+      current.teams += 1;
+      categoryTotals.set(category, current);
+    }
+  }
+
+  return categoryTotals;
+}, [rosterPlayers, selectedLeague, usedSeason]);
+
 // team average age (selected club, usedSeason)
 const teamAvgAge = useMemo(() => {
   const ps = rosterForSeason.players;
@@ -4961,18 +5040,71 @@ function RankTrendTooltip({ active, label, payload }: any) {
     }));
   }, [acqBreakdown, team, season, selectedLeague]);
 
+  const leagueAcquisitionAverageShare = useMemo(() => {
+    const rows = acqBreakdown.filter((r) => r.league === selectedLeague && r.Year === season);
+    const byTeam = new Map<string, AcquisitionRow[]>();
+    const categories = new Set<string>();
+
+    for (const r of rows) {
+      const teamKey = normalizeTeamId(r.team_id) || normalizeClubName(r.Club);
+      const category = toTrimmedString(r.Draft);
+      if (!teamKey || !category) continue;
+      categories.add(category);
+      const teamRows = byTeam.get(teamKey) ?? [];
+      teamRows.push(r);
+      byTeam.set(teamKey, teamRows);
+    }
+
+    const totals = new Map<string, number>();
+    const categoryList = Array.from(categories);
+    for (const teamRows of byTeam.values()) {
+      const teamTotal = teamRows.reduce((sum, r) => sum + (Number(r.value) || 0), 0);
+      if (teamTotal <= 0) continue;
+      const shares = new Map<string, number>();
+      for (const r of teamRows) {
+        const category = toTrimmedString(r.Draft);
+        if (!category) continue;
+        shares.set(category, (shares.get(category) ?? 0) + ((Number(r.value) || 0) / teamTotal) * 100);
+      }
+      for (const category of categoryList) {
+        totals.set(category, (totals.get(category) ?? 0) + (shares.get(category) ?? 0));
+      }
+    }
+
+    const teamCount = byTeam.size || 1;
+    return new Map(categoryList.map((category) => [category, (totals.get(category) ?? 0) / teamCount]));
+  }, [acqBreakdown, season, selectedLeague]);
+
   const acquisitionBars = useMemo(
     () =>
       acquisitionSpider
+        .map((r) => ({
+          ...r,
+          leaguePct: leagueAcquisitionAverageShare.get(r.metric) ?? null,
+        }))
         .filter((r) => Number.isFinite(r.value) && r.value > 0)
         .sort((a, b) => b.value - a.value),
-    [acquisitionSpider]
+    [acquisitionSpider, leagueAcquisitionAverageShare]
   );
 
   // --------
   // Team radar
   // --------
   function buildTeamSkillRadar(targetTeamId: string) {
+  const metrics = [
+    { metric: "K-H Ratio", key: "KH_Ratio" },
+    { metric: "GB/MK Ratio", key: "GB_MK_Ratio" },
+    { metric: "Fwd Half", key: "Fwd_Half" },
+    { metric: "Scores", key: "Scores" },
+    { metric: "PP Chain", key: "PPchain" },
+    { metric: "Pts / i50", key: "Points_per_I50" },
+    { metric: "Repeat i50s", key: "Repeat_I50s" },
+    { metric: "Ball Use", key: "Rating_Ball_Use" },
+    { metric: "Ball Win", key: "Rating_Ball_Win" },
+    { metric: "Chain Metres", key: "Chain_Metres" },
+    { metric: "Time in Poss", key: "Time_in_Poss_Pct" },
+  ];
+
   const clubRows = skillRadar.filter(
     (r) =>
       normalizeTeamId(r.team_id) === normalizeTeamId(targetTeamId) &&
@@ -4985,21 +5117,32 @@ function RankTrendTooltip({ active, label, payload }: any) {
     clubRows.find((r) => toNumberOrNull(String(r.season)) === season) ??
     clubRows[0];
 
-  const toPct = (v: number) => clamp(v * 100, 0, 100);
+  const seasonRows = skillRadar.filter(
+    (r) =>
+      r.league === selectedLeague &&
+      (String(r.season).trim() === String(season).trim() ||
+        toNumberOrNull(String(r.season)) === season)
+  );
+  const toPctRank = (key: string, value: number) => {
+    const values = seasonRows
+      .map((r) => Number((r as any)[key]))
+      .filter((v) => Number.isFinite(v));
+    const pct = percentileRank(values, value);
+    return pct ?? clamp(value * 100, 0, 100);
+  };
 
-  return [
-    { metric: "K-H Ratio", value: toPct(exact.KH_Ratio) },
-    { metric: "GB/MK Ratio", value: toPct(exact.GB_MK_Ratio) },
-    { metric: "Fwd Half", value: toPct(exact.Fwd_Half) },
-    { metric: "Scores", value: toPct(exact.Scores) },
-    { metric: "PP Chain", value: toPct(exact.PPchain) },
-    { metric: "Pts / i50", value: toPct(exact.Points_per_I50) },
-    { metric: "Repeat i50s", value: toPct(exact.Repeat_I50s) },
-    { metric: "Ball Use", value: toPct(exact.Rating_Ball_Use) },
-    { metric: "Ball Win", value: toPct(exact.Rating_Ball_Win) },
-    { metric: "Chain Metres", value: toPct(exact.Chain_Metres) },
-    { metric: "Time in Poss", value: toPct(exact.Time_in_Poss_Pct) },
-  ];
+  return metrics.map(({ metric, key }) => {
+    const values = seasonRows
+      .map((r) => Number((r as any)[key]))
+      .filter((v) => Number.isFinite(v));
+    const value = Number((exact as any)[key]);
+    const leagueRawAvg = values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : NaN;
+    return {
+      metric,
+      value: toPctRank(key, value),
+      leagueAvg: percentileRank(values, leagueRawAvg) ?? 50,
+    };
+  });
 }
 
 const teamSkillRadar = useMemo(() => buildTeamSkillRadar(team), [skillRadar, team, season, selectedLeague]);
@@ -5691,9 +5834,18 @@ const mergedSkillRadar = useMemo(() => {
 
                 <div style={{ height: 260, overflow: "hidden", paddingTop: 18 }}>
                   <HorizontalBarRows
-  rows={ageCatShare.map(r => ({ ...r, pctLabel: `${r.pct.toFixed(0)}%` }))}
+  rows={ageCatShare.map(r => {
+    const leagueRef = leagueAgeCatAverageShare.get(r.age_cat);
+    return {
+      ...r,
+      pctLabel: `${r.pct.toFixed(0)}%`,
+      leaguePct: leagueRef && leagueRef.teams ? leagueRef.total / leagueRef.teams : null,
+    };
+  })}
   labelKey="age_cat"
   valueKey="pct"
+  referenceKey="leaguePct"
+  referenceLabel="League avg"
    labelCol={{ min: 0, ideal: 140, max: 140 }}
   barHeight={18}
   rowGap={18}
@@ -5713,23 +5865,27 @@ const mergedSkillRadar = useMemo(() => {
           <div className="botGrid">
             <Card>
               <SectionTitle title="How the list was built..." right={<span style={{ fontSize: 11, color: "rgba(0,0,0,0.55)" }}>share of list (%)</span>} />
-              <div style={{ minHeight: 280 }}>
+              <div style={{ height: 300 }}>
                 {acquisitionBars.length === 0 ? (
-                  <div style={{ height: 240, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(0,0,0,0.55)", fontSize: 14 }}>
+                  <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(0,0,0,0.55)", fontSize: 14 }}>
                     No list build data available for this season.
                   </div>
                 ) : (
-                  <div style={{ paddingTop: 2, paddingRight: 6 }}>
+                  <div style={{ height: "100%", paddingTop: 2, paddingRight: 6, paddingBottom: 4 }}>
                     <HorizontalBarRows
                       rows={acquisitionBars}
                       labelKey="metric"
                       valueKey="value"
+                      referenceKey="leaguePct"
+                      referenceLabel="League avg"
                       getColor={(label) => stableColorForKey(label)}
+                      fillOpacity={0.5}
                       labelCol={{ min: 0, ideal: 150, max: 210 }}
                       barHeight={14}
                       rowGap={14}
                       valueColWidth={50}
                       colGap={10}
+                      fillHeight
                     />
                   </div>
                 )}
@@ -5780,6 +5936,18 @@ const mergedSkillRadar = useMemo(() => {
   <PolarAngleAxis dataKey="metric" tick={{ fontSize: 12 }} />
   <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 11 }} />
 
+  <Radar
+    name="League avg"
+    dataKey="leagueAvg"
+    stroke="rgba(0,0,0,0.45)"
+    fill="rgba(0,0,0,0)"
+    strokeWidth={1.5}
+    strokeDasharray="4 4"
+    fillOpacity={0}
+    isAnimationActive={false}
+    connectNulls
+  />
+
   {/* Main team */}
   <Radar
     name={clubLabel}
@@ -5811,7 +5979,7 @@ const mergedSkillRadar = useMemo(() => {
 
                 </ResponsiveContainer>
               </div>
-              <div style={{ marginTop: 8, fontSize: 14, color: "rgba(0,0,0,0.55)" }}>*All metrics are normalised using the last 10 seasons of AFL data<code></code>.</div>
+              <div style={{ marginTop: 8, fontSize: 14, color: "rgba(0,0,0,0.55)" }}>*Radar values are shown as within-season league percentiles. Dotted line = league average.</div>
             </Card>
           </div>
 
