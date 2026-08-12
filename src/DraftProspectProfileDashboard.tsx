@@ -178,10 +178,13 @@ type CohortRow = {
   ballUsePerDisposal: number | null;
   ballUsePercentile: number | null;
   ballUsePerDisposalPercentile: number | null;
+  hasSeniorSecondTierGames: boolean;
+  hasWomensGames: boolean;
 };
 
 type CohortRowInput = Omit<CohortRow, "rank">;
 type RatingBasis = "AGE_ADJUSTED" | "RAW";
+type GenderFilter = typeof ALL_FILTER | "MEN" | "WOMEN";
 
 type AgeAdjustmentContext = {
   adjustments: Map<string, number>;
@@ -240,15 +243,18 @@ async function fetchJsonFile(file: string, required = true) {
   return await parseJsonResponse(response, file);
 }
 
-function payloadFileForLeagueScope(scope: string) {
-  if (scope === DEFAULT_LEAGUE_SCOPE) return MENS_U18_DATA_FILE;
-  if (scope === SECOND_TIER_SENIOR_SCOPE || scope === "VFL" || scope === "SANFL" || scope === "WAFL") {
-    return SECOND_TIER_SENIOR_DATA_FILE;
+function payloadFileForLeagueScope(scope: string, gender: GenderFilter = "MEN") {
+  if (gender === "WOMEN") return WOMENS_DATA_FILE;
+  if (gender === "MEN") {
+    if (scope === DEFAULT_LEAGUE_SCOPE) return MENS_U18_DATA_FILE;
+    if (scope === SECOND_TIER_SENIOR_SCOPE || scope === "VFL" || scope === "SANFL" || scope === "WAFL") {
+      return SECOND_TIER_SENIOR_DATA_FILE;
+    }
   }
-  if (scope === "WOMENS") return WOMENS_DATA_FILE;
   return DATA_FILE;
 }
 const ALL_FILTER = "__ALL__";
+const DEFAULT_GENDER_FILTER: GenderFilter = "MEN";
 const DEFAULT_LEAGUE_SCOPE = "MENS_U18";
 const DEFAULT_RATING_BASIS: RatingBasis = "AGE_ADJUSTED";
 const SECOND_TIER_SENIOR_SCOPE = "SECOND_TIER_SENIOR";
@@ -264,8 +270,11 @@ const PROSPECT_BALL_USE_PER_DISPOSAL_WEIGHT = 0.15;
 const PROSPECT_BEST3_WEIGHT = 0.20;
 const PROSPECT_ROLE_TRAIT_WEIGHT = 0.10;
 const PROSPECT_LEVEL_SIGNAL_WEIGHT = 0.10;
+const SENIOR_STATE_RATING_WEIGHT = 0.80;
+const SENIOR_STATE_BALL_USE_WEIGHT = 0.20;
 const TRIAL_LEAGUE_CODES = new Set(["TRIAL", "TRIALW"]);
 const WOMENS_LEAGUE_CODES = new Set(["AFLW", "AFLWPRE", "VFLW", "WAFLW", "SANFLW", "TLG", "U18WC", "U16WC", "TRIALW"]);
+const WOMENS_U18_LEAGUE_CODES = new Set(["TLG", "U18WC"]);
 const MENS_U18_LEAGUE_CODES = new Set(["TLB", "U18C", "AFLAISA", "CD"]);
 const UNDER_16_CHAMPIONSHIP_LEAGUE_CODES = new Set(["U16C", "U16WC"]);
 
@@ -275,8 +284,13 @@ const LEAGUE_SCOPE_OPTIONS = [
   { value: "VFL", label: "VFL" },
   { value: "SANFL", label: "SANFL" },
   { value: "WAFL", label: "WAFL" },
-  { value: "WOMENS", label: "Womens" },
   { value: ALL_FILTER, label: "All Leagues" },
+];
+
+const GENDER_FILTER_OPTIONS: Array<{ value: GenderFilter; label: string }> = [
+  { value: DEFAULT_GENDER_FILTER, label: "Men" },
+  { value: "WOMEN", label: "Women" },
+  { value: ALL_FILTER, label: "All" },
 ];
 
 const LEAGUE_SCOPE_CODE_SETS: Record<string, Set<string>> = {
@@ -285,6 +299,12 @@ const LEAGUE_SCOPE_CODE_SETS: Record<string, Set<string>> = {
   WAFL: new Set(["WAFL"]),
 };
 const SECOND_TIER_SENIOR_LEAGUE_CODES = new Set(["VFL", "SANFL", "WAFL"]);
+const WOMENS_LEAGUE_SCOPE_CODE_SETS: Record<string, Set<string>> = {
+  SANFL: new Set(["SANFLW"]),
+  VFL: new Set(["VFLW"]),
+  WAFL: new Set(["WAFLW"]),
+};
+const WOMENS_SECOND_TIER_SENIOR_LEAGUE_CODES = new Set(["VFLW", "SANFLW", "WAFLW"]);
 
 const MIN_GAME_OPTIONS = [
   { value: ALL_FILTER, label: "All" },
@@ -337,6 +357,30 @@ const REQUESTED_PROFILE_METRICS: RequestedMetricDef[] = [
   { id: "scoreInvolvements", label: "Score Inv.", group: "Scoring", gameKey: "scoreInvolvements", metricKeys: ["ScoreInvolvements", "SCORE_INVOLVEMENT_GOAL"] },
   { id: "intercepts", label: "Intercepts", group: "Defence", gameKey: "intercepts", metricKeys: ["Intercepts"] },
   { id: "contestedMarks", label: "Contested Marks", group: "Aerial", metricKeys: ["ContestedMarks", "POSSESSION_CONTESTED_GP_AIR"] },
+];
+
+const WOMENS_PROFILE_METRICS: RequestedMetricDef[] = [
+  { id: "rating", label: "Rating", group: "Impact", metricKeys: ["EquityRating"] },
+  {
+    id: "retainedDisposals",
+    label: "Retained Disp.",
+    group: "Ball Use",
+    gameKey: "retainedDisposals",
+    metricKeys: ["RetainedDisposals", "Retained_Disposals", "DisposalsRetained"],
+  },
+  { id: "groundBalls", label: "Ground Balls", group: "Ball Winning", gameKey: "groundBalls", metricKeys: ["GroundBallGets"] },
+  { id: "intercepts", label: "Intercepts", group: "Defence", gameKey: "intercepts", metricKeys: ["Intercepts"] },
+  { id: "marks", label: "Marks", group: "Aerial", gameKey: "marks", metricKeys: ["Marks"] },
+  {
+    id: "scoreInvolvements",
+    label: "Score Inv.",
+    group: "Scoring",
+    gameKey: "scoreInvolvements",
+    metricKeys: ["ScoreInvolvements", "SCORE_INVOLVEMENT_GOAL"],
+  },
+  { id: "metersGained", label: "Meters Gained", group: "Ball Use", gameKey: "metresGained", metricKeys: ["MetresGained", "NetMetresGained"] },
+  { id: "inside50s", label: "Inside 50s", group: "Ball Use", gameKey: "inside50s", metricKeys: ["Inside50s", "KicksIntoF50"] },
+  { id: "rebound50s", label: "Rebound 50s", group: "Ball Use", gameKey: "rebound50s", metricKeys: ["Rebound50s"] },
 ];
 
 const POSITION_STAT_REGISTRY: Record<string, StatCandidate[]> = {
@@ -510,11 +554,30 @@ function isMensUnder18Game(game: GameRow) {
   return MENS_U18_LEAGUE_CODES.has(leagueCode) || levelText.includes("under-18") || levelText.includes("under-19");
 }
 
-function isSeniorSecondTierGame(game: GameRow) {
+function isWomensUnder18Game(game: GameRow) {
+  if (!isWomensGame(game)) return false;
+  const leagueCode = String(game.leagueCode ?? "").toUpperCase();
+  const levelText = String(game.level ?? "").toLowerCase();
+  return WOMENS_U18_LEAGUE_CODES.has(leagueCode) || levelText.includes("under-18") || levelText.includes("under-19");
+}
+
+function isMensSeniorSecondTierGame(game: GameRow) {
+  if (isWomensGame(game)) return false;
   const leagueCode = String(game.leagueCode ?? "").toUpperCase();
   const levelCode = String(game.levelCode ?? "").toUpperCase();
   const levelText = String(game.level ?? "").toLowerCase();
   return SECOND_TIER_SENIOR_LEAGUE_CODES.has(leagueCode) && (levelCode === "SEN" || levelText === "seniors");
+}
+
+function isWomensSeniorSecondTierGame(game: GameRow) {
+  const leagueCode = String(game.leagueCode ?? "").toUpperCase();
+  const levelCode = String(game.levelCode ?? "").toUpperCase();
+  const levelText = String(game.level ?? "").toLowerCase();
+  return WOMENS_SECOND_TIER_SENIOR_LEAGUE_CODES.has(leagueCode) && (levelCode === "SEN" || levelText === "seniors");
+}
+
+function isSeniorSecondTierGame(game: GameRow) {
+  return isMensSeniorSecondTierGame(game) || isWomensSeniorSecondTierGame(game);
 }
 
 function isUnder16NonChampionshipGame(game: GameRow) {
@@ -539,13 +602,44 @@ function isRatedDraftProfileGame(game: GameRow) {
   return !isTrialGame(game) && !isUnder16NonChampionshipGame(game) && validRating(game) != null;
 }
 
-function leagueScopeMatchesGame(game: GameRow, selectedLeagueScope: string) {
+function genderMatchesGame(game: GameRow, selectedGender: GenderFilter) {
+  if (selectedGender === ALL_FILTER) return true;
+  const womensGame = isWomensGame(game);
+  return selectedGender === "WOMEN" ? womensGame : !womensGame;
+}
+
+function under18ScopeMatchesGame(game: GameRow, selectedGender: GenderFilter) {
+  if (selectedGender === "WOMEN") return isWomensUnder18Game(game);
+  if (selectedGender === "MEN") return isMensUnder18Game(game);
+  return isMensUnder18Game(game) || isWomensUnder18Game(game);
+}
+
+function seniorSecondTierScopeMatchesGame(game: GameRow, selectedGender: GenderFilter) {
+  if (selectedGender === "WOMEN") return isWomensSeniorSecondTierGame(game);
+  if (selectedGender === "MEN") return isMensSeniorSecondTierGame(game);
+  return isSeniorSecondTierGame(game);
+}
+
+function namedSeniorLeagueScopeMatchesGame(game: GameRow, selectedLeagueScope: string, selectedGender: GenderFilter) {
+  const leagueCode = String(game.leagueCode ?? "").toUpperCase();
+  const mensLeagueCodes = LEAGUE_SCOPE_CODE_SETS[selectedLeagueScope];
+  const womensLeagueCodes = WOMENS_LEAGUE_SCOPE_CODE_SETS[selectedLeagueScope];
+  const mensMatch = Boolean(mensLeagueCodes?.has(leagueCode) && isMensSeniorSecondTierGame(game));
+  const womensMatch = Boolean(womensLeagueCodes?.has(leagueCode) && isWomensSeniorSecondTierGame(game));
+  if (selectedGender === "WOMEN") return womensMatch;
+  if (selectedGender === "MEN") return mensMatch;
+  return mensMatch || womensMatch;
+}
+
+function leagueScopeMatchesGame(game: GameRow, selectedLeagueScope: string, selectedGender: GenderFilter) {
+  if (!genderMatchesGame(game, selectedGender)) return false;
   if (selectedLeagueScope === ALL_FILTER) return true;
-  if (selectedLeagueScope === "WOMENS") return isWomensGame(game);
-  if (selectedLeagueScope === SECOND_TIER_SENIOR_SCOPE) return isSeniorSecondTierGame(game);
-  const leagueCodes = LEAGUE_SCOPE_CODE_SETS[selectedLeagueScope];
-  if (leagueCodes) return leagueCodes.has(String(game.leagueCode ?? "").toUpperCase()) && isSeniorSecondTierGame(game);
-  return isMensUnder18Game(game);
+  if (selectedLeagueScope === DEFAULT_LEAGUE_SCOPE) return under18ScopeMatchesGame(game, selectedGender);
+  if (selectedLeagueScope === SECOND_TIER_SENIOR_SCOPE) return seniorSecondTierScopeMatchesGame(game, selectedGender);
+  if (LEAGUE_SCOPE_CODE_SETS[selectedLeagueScope] || WOMENS_LEAGUE_SCOPE_CODE_SETS[selectedLeagueScope]) {
+    return namedSeniorLeagueScopeMatchesGame(game, selectedLeagueScope, selectedGender);
+  }
+  return under18ScopeMatchesGame(game, selectedGender);
 }
 
 function seasonMatchesGame(game: GameRow, selectedSeason: string) {
@@ -561,6 +655,7 @@ function filteredGamesForPlayer(
   player: PlayerSummary,
   selectedSeason: string,
   selectedLeagueScope: string,
+  selectedGender: GenderFilter,
   selectedTeam: string
 ) {
   return (payload.gamesByPlayer[player.playerId] ?? []).filter((game) => {
@@ -568,7 +663,7 @@ function filteredGamesForPlayer(
       isRatedDraftProfileGame(game) &&
       seasonMatchesGame(game, selectedSeason) &&
       teamMatchesGame(game, selectedTeam) &&
-      leagueScopeMatchesGame(game, selectedLeagueScope)
+      leagueScopeMatchesGame(game, selectedLeagueScope, selectedGender)
     );
   });
 }
@@ -627,8 +722,8 @@ function leagueRatingWeight(game: Pick<GameRow, "team" | "leagueCode" | "league"
   const levelText = String(game.level ?? "").toLowerCase();
   const leagueText = String(game.league ?? "").toLowerCase();
 
-  if (leagueCode === "WAFL" && (levelCode === "U19" || levelText.includes("under-19"))) return 0.7;
-  if (leagueCode === "SANFL" && (levelCode === "U18" || levelText.includes("under-18"))) return 0.75;
+  if ((leagueCode === "WAFL" || leagueCode === "WAFLW") && (levelCode === "U19" || levelText.includes("under-19"))) return 0.7;
+  if ((leagueCode === "SANFL" || leagueCode === "SANFLW") && (levelCode === "U18" || levelText.includes("under-18"))) return 0.75;
   if (leagueCode === "VFL" || leagueCode === "WAFL" || leagueCode === "SANFL") return 1.3;
   if (leagueCode === "AFLAISA" || teamText === "australia" || teamText.startsWith("australia ")) return 1.2;
   if (leagueCode === "TLB" || leagueCode === "TLG" || leagueText.includes("talent league")) return 0.9;
@@ -688,12 +783,13 @@ function buildAgeAdjustmentContext(
   payload: SecondTierPayload,
   selectedSeason: string,
   selectedLeagueScope: string,
+  selectedGender: GenderFilter,
   championGamesByKey: Map<string, ChampionGameRow>
 ): AgeAdjustmentContext {
   const buckets = new Map<string, Map<number, number[]>>();
 
   players.forEach((player) => {
-    filteredGamesForPlayer(payload, player, selectedSeason, selectedLeagueScope, ALL_FILTER).forEach((game) => {
+    filteredGamesForPlayer(payload, player, selectedSeason, selectedLeagueScope, selectedGender, ALL_FILTER).forEach((game) => {
       const stage = ageStageForGame(player, game);
       if (stage == null || stage < AGE_ADJUSTMENT_TOP_AGE_STAGE || stage > 3) return;
       const rating = weightedRating(game, getChampionGame(game, championGamesByKey));
@@ -1168,10 +1264,12 @@ function selectProfileStats(
   allProspects: PlayerSummary[],
   selectedSeason: string,
   ageAdjustmentContext?: AgeAdjustmentContext | null,
-  ratingBasis: RatingBasis = "RAW"
+  ratingBasis: RatingBasis = "RAW",
+  selectedGender: GenderFilter = DEFAULT_GENDER_FILTER
 ) {
   if (!player || !payload) return [];
-  const requestedStats = REQUESTED_PROFILE_METRICS.map((metric) => {
+  const metricSet = selectedGender === "WOMEN" ? WOMENS_PROFILE_METRICS : REQUESTED_PROFILE_METRICS;
+  const requestedStats = metricSet.map((metric) => {
     const value = requestedMetricValue(metric, player, payload, championPayload, selectedSeason, ageAdjustmentContext, ratingBasis);
     if (value == null) return null;
     const cohortValues = allProspects
@@ -1225,6 +1323,7 @@ function buildCohortRows(
   payload: SecondTierPayload,
   selectedSeason: string,
   selectedLeagueScope: string,
+  selectedGender: GenderFilter,
   selectedTeam: string,
   positionGroup?: string,
   championPayload?: ChampionRatingsPayload | null,
@@ -1234,7 +1333,7 @@ function buildCohortRows(
   const rows = players
     .filter((player) => !positionGroup || normalizePositionGroup(player.position) === positionGroup)
     .map((player): CohortRowInput | null => {
-      const games = filteredGamesForPlayer(payload, player, selectedSeason, selectedLeagueScope, selectedTeam);
+      const games = filteredGamesForPlayer(payload, player, selectedSeason, selectedLeagueScope, selectedGender, selectedTeam);
       const championGames = championGamesForPlayer(championPayload ?? null, player, selectedSeason);
       const championGamesByMatchId = new Map(championGames.map((game) => [String(game.matchId), game]));
       const playerPositionGroup = normalizePositionGroup(player.position);
@@ -1273,6 +1372,8 @@ function buildCohortRows(
         ballUsePerDisposal,
         ballUsePercentile: null,
         ballUsePerDisposalPercentile: null,
+        hasSeniorSecondTierGames: games.some(isSeniorSecondTierGame),
+        hasWomensGames: games.some(isWomensGame),
       };
     })
     .filter((row): row is CohortRowInput => row != null);
@@ -1325,6 +1426,7 @@ function buildCohortRows(
       const best3RatingScore = scaledScoreFromCohort(row.best3Rating, best3RatingValues);
       const ratingScore = scaledScoreFromCohort(row.rating, ratingValues);
       const positionRatingScore = scaledScoreFromCohort(row.rating, positionRatingValues);
+      const ballUseScore = scaledScoreFromCohort(row.ballUse, ballUseValues);
       const ballUsePerDisposalScore = scaledScoreFromCohort(row.ballUsePerDisposal, ballUsePerDisposalValues);
       const roleMetricMap = roleMetricValuesByPosition.get(row.positionGroup) ?? new Map<string, number[]>();
       const roleTraitComponentScores = roleTraitKeys(row.positionGroup)
@@ -1334,14 +1436,23 @@ function buildCohortRows(
         ? roleTraitComponentScores.reduce((sum, value) => sum + value, 0) / roleTraitComponentScores.length
         : null;
       const levelSignalScore = scaledScoreFromCohort(row.levelSignal, levelSignalValues);
-      const draftRankScore = weightedProspectScore([
-        { score: ratingScore, weight: PROSPECT_GLOBAL_RATING_WEIGHT },
-        { score: positionRatingScore, weight: PROSPECT_POSITION_RATING_WEIGHT },
-        { score: ballUsePerDisposalScore, weight: PROSPECT_BALL_USE_PER_DISPOSAL_WEIGHT },
-        { score: best3RatingScore, weight: PROSPECT_BEST3_WEIGHT },
-        { score: roleTraitScore, weight: PROSPECT_ROLE_TRAIT_WEIGHT },
-        { score: levelSignalScore, weight: PROSPECT_LEVEL_SIGNAL_WEIGHT },
-      ]);
+      let rankingComponents = [
+        { score: ratingScore, weight: SENIOR_STATE_RATING_WEIGHT },
+        { score: ballUseScore, weight: SENIOR_STATE_BALL_USE_WEIGHT },
+      ];
+      if (!row.hasSeniorSecondTierGames) {
+        rankingComponents = [
+          { score: ratingScore, weight: PROSPECT_GLOBAL_RATING_WEIGHT },
+          { score: positionRatingScore, weight: PROSPECT_POSITION_RATING_WEIGHT },
+          { score: roleTraitScore, weight: PROSPECT_ROLE_TRAIT_WEIGHT },
+          { score: levelSignalScore, weight: PROSPECT_LEVEL_SIGNAL_WEIGHT },
+        ];
+        if (!row.hasWomensGames) {
+          rankingComponents.splice(2, 0, { score: ballUsePerDisposalScore, weight: PROSPECT_BALL_USE_PER_DISPOSAL_WEIGHT });
+        }
+        rankingComponents.splice(3, 0, { score: best3RatingScore, weight: PROSPECT_BEST3_WEIGHT });
+      }
+      const draftRankScore = weightedProspectScore(rankingComponents);
       return {
         ...row,
         draftRankScore,
@@ -1390,6 +1501,7 @@ export default function DraftProspectProfileDashboard({
   const [selectedPlayerId, setSelectedPlayerId] = useState("");
   const [playerSearch, setPlayerSearch] = useState("");
   const [selectedLeagueScope, setSelectedLeagueScope] = useState(DEFAULT_LEAGUE_SCOPE);
+  const [selectedGender, setSelectedGender] = useState<GenderFilter>(DEFAULT_GENDER_FILTER);
   const [selectedPositionGroup, setSelectedPositionGroup] = useState(ALL_FILTER);
   const [selectedTeam, setSelectedTeam] = useState(ALL_FILTER);
   const [selectedSeason, setSelectedSeason] = useState(
@@ -1436,24 +1548,28 @@ export default function DraftProspectProfileDashboard({
     }
 
     async function loadPayloadForScope() {
-      const primaryFile = payloadFileForLeagueScope(selectedLeagueScope);
+      const primaryFile = payloadFileForLeagueScope(selectedLeagueScope, selectedGender);
       const primaryPayload = await loadPayloadForFile(primaryFile);
       const requestedProspect = requestedPlayerId
         ? primaryPayload.players.find((player) => normalizeProspectPlayerId(player.playerId) === requestedPlayerId)
         : undefined;
       if (requestedProspect || !requestedPlayerId || selectedLeagueScope !== DEFAULT_LEAGUE_SCOPE) {
-        return { payload: primaryPayload, resolvedScope: selectedLeagueScope };
+        return { payload: primaryPayload, resolvedScope: selectedLeagueScope, resolvedGender: selectedGender };
       }
 
-      const fallbackScopes = [SECOND_TIER_SENIOR_SCOPE, "WOMENS", ALL_FILTER];
+      const fallbackScopes = [SECOND_TIER_SENIOR_SCOPE, ALL_FILTER];
+      const fallbackGenders: GenderFilter[] =
+        selectedGender === ALL_FILTER ? [ALL_FILTER] : [selectedGender, ALL_FILTER, selectedGender === "WOMEN" ? "MEN" : "WOMEN"];
       for (const fallbackScope of fallbackScopes) {
-        const fallbackPayload = await loadPayloadForFile(payloadFileForLeagueScope(fallbackScope));
-        const fallbackProspect = fallbackPayload.players.find(
-          (player) => normalizeProspectPlayerId(player.playerId) === requestedPlayerId
-        );
-        if (fallbackProspect) return { payload: fallbackPayload, resolvedScope: fallbackScope };
+        for (const fallbackGender of fallbackGenders) {
+          const fallbackPayload = await loadPayloadForFile(payloadFileForLeagueScope(fallbackScope, fallbackGender));
+          const fallbackProspect = fallbackPayload.players.find(
+            (player) => normalizeProspectPlayerId(player.playerId) === requestedPlayerId
+          );
+          if (fallbackProspect) return { payload: fallbackPayload, resolvedScope: fallbackScope, resolvedGender: fallbackGender };
+        }
       }
-      return { payload: primaryPayload, resolvedScope: selectedLeagueScope };
+      return { payload: primaryPayload, resolvedScope: selectedLeagueScope, resolvedGender: selectedGender };
     }
 
     Promise.all([loadPayloadForScope(), loadChampionPayload()])
@@ -1461,9 +1577,11 @@ export default function DraftProspectProfileDashboard({
         if (cancelled) return;
         const nextPayload = payloadResult.payload;
         const activeLeagueScope = payloadResult.resolvedScope;
+        const activeGender = payloadResult.resolvedGender ?? selectedGender;
         if (activeLeagueScope !== selectedLeagueScope) setSelectedLeagueScope(activeLeagueScope);
+        if (activeGender !== selectedGender) setSelectedGender(activeGender);
         const defaultProspects = nextPayload.players.filter(
-          (player) => filteredGamesForPlayer(nextPayload, player, ALL_FILTER, activeLeagueScope, ALL_FILTER).length > 0
+          (player) => filteredGamesForPlayer(nextPayload, player, ALL_FILTER, activeLeagueScope, activeGender, ALL_FILTER).length > 0
         );
         const championGamesByDefaultKey = new Map<string, ChampionGameRow>();
         ((championJson as ChampionRatingsPayload | null)?.games ?? []).forEach((game) => {
@@ -1474,6 +1592,7 @@ export default function DraftProspectProfileDashboard({
           nextPayload,
           ALL_FILTER,
           activeLeagueScope,
+          activeGender,
           championGamesByDefaultKey
         );
         const defaultCohort = buildCohortRows(
@@ -1481,6 +1600,7 @@ export default function DraftProspectProfileDashboard({
           nextPayload,
           ALL_FILTER,
           activeLeagueScope,
+          activeGender,
           ALL_FILTER,
           undefined,
           championJson as ChampionRatingsPayload | null,
@@ -1507,7 +1627,7 @@ export default function DraftProspectProfileDashboard({
     return () => {
       cancelled = true;
     };
-  }, [requestedPlayerId, selectedLeagueScope]);
+  }, [requestedPlayerId, selectedGender, selectedLeagueScope]);
 
   const seasonOptions = useMemo(() => {
     if (!payload) return [];
@@ -1529,8 +1649,8 @@ export default function DraftProspectProfileDashboard({
   }, [championPayload]);
 
   const ageAdjustmentContext = useMemo(
-    () => (payload ? buildAgeAdjustmentContext(payload.players, payload, selectedSeason, selectedLeagueScope, championGamesByKey) : null),
-    [championGamesByKey, payload, selectedLeagueScope, selectedSeason]
+    () => (payload ? buildAgeAdjustmentContext(payload.players, payload, selectedSeason, selectedLeagueScope, selectedGender, championGamesByKey) : null),
+    [championGamesByKey, payload, selectedGender, selectedLeagueScope, selectedSeason]
   );
 
   const prospects = useMemo(() => {
@@ -1539,7 +1659,7 @@ export default function DraftProspectProfileDashboard({
       .filter((player) => draftYearMatches(player, selectedDraftYear))
       .filter((player) => positionMatchesPlayer(player, selectedPositionGroup))
       .filter((player) => {
-        const gameCount = filteredGamesForPlayer(payload, player, selectedSeason, selectedLeagueScope, selectedTeam).length;
+        const gameCount = filteredGamesForPlayer(payload, player, selectedSeason, selectedLeagueScope, selectedGender, selectedTeam).length;
         return gameCount > 0 && minimumGamesMatches(gameCount, selectedMinimumGames);
       });
     const rankedRows = buildCohortRows(
@@ -1547,6 +1667,7 @@ export default function DraftProspectProfileDashboard({
       payload,
       selectedSeason,
       selectedLeagueScope,
+      selectedGender,
       selectedTeam,
       undefined,
       championPayload,
@@ -1565,6 +1686,7 @@ export default function DraftProspectProfileDashboard({
     championPayload,
     payload,
     selectedDraftYear,
+    selectedGender,
     selectedLeagueScope,
     selectedMinimumGames,
     selectedPositionGroup,
@@ -1579,7 +1701,7 @@ export default function DraftProspectProfileDashboard({
     payload.players
       .filter((player) => positionMatchesPlayer(player, selectedPositionGroup))
       .filter((player) => {
-        const gameCount = filteredGamesForPlayer(payload, player, selectedSeason, selectedLeagueScope, selectedTeam).length;
+        const gameCount = filteredGamesForPlayer(payload, player, selectedSeason, selectedLeagueScope, selectedGender, selectedTeam).length;
         return gameCount > 0 && minimumGamesMatches(gameCount, selectedMinimumGames);
       })
       .forEach((player) => {
@@ -1587,7 +1709,7 @@ export default function DraftProspectProfileDashboard({
         if (draftYear != null) years.add(draftYear);
       });
     return [...years].sort((a, b) => b - a);
-  }, [payload, selectedLeagueScope, selectedMinimumGames, selectedPositionGroup, selectedSeason, selectedTeam]);
+  }, [payload, selectedGender, selectedLeagueScope, selectedMinimumGames, selectedPositionGroup, selectedSeason, selectedTeam]);
 
   const positionOptions = useMemo(() => {
     if (!payload) return [];
@@ -1595,14 +1717,14 @@ export default function DraftProspectProfileDashboard({
     payload.players
       .filter((player) => draftYearMatches(player, selectedDraftYear))
       .filter((player) => {
-        const gameCount = filteredGamesForPlayer(payload, player, selectedSeason, selectedLeagueScope, selectedTeam).length;
+        const gameCount = filteredGamesForPlayer(payload, player, selectedSeason, selectedLeagueScope, selectedGender, selectedTeam).length;
         return gameCount > 0 && minimumGamesMatches(gameCount, selectedMinimumGames);
       })
       .forEach((player) => {
         groups.add(normalizePositionGroup(player.position));
       });
     return [...groups].sort((a, b) => positionGroupLabel(a).localeCompare(positionGroupLabel(b)));
-  }, [payload, selectedDraftYear, selectedLeagueScope, selectedMinimumGames, selectedSeason, selectedTeam]);
+  }, [payload, selectedDraftYear, selectedGender, selectedLeagueScope, selectedMinimumGames, selectedSeason, selectedTeam]);
 
   const teamOptions = useMemo(() => {
     if (!payload) return [];
@@ -1612,17 +1734,17 @@ export default function DraftProspectProfileDashboard({
       .filter((player) => positionMatchesPlayer(player, selectedPositionGroup))
       .filter((player) =>
         minimumGamesMatches(
-          filteredGamesForPlayer(payload, player, selectedSeason, selectedLeagueScope, ALL_FILTER).length,
+          filteredGamesForPlayer(payload, player, selectedSeason, selectedLeagueScope, selectedGender, ALL_FILTER).length,
           selectedMinimumGames
         )
       )
       .forEach((player) => {
-        filteredGamesForPlayer(payload, player, selectedSeason, selectedLeagueScope, ALL_FILTER).forEach((game) => {
+        filteredGamesForPlayer(payload, player, selectedSeason, selectedLeagueScope, selectedGender, ALL_FILTER).forEach((game) => {
           if (game.team) teams.add(game.team);
         });
     });
     return [...teams].sort((a, b) => a.localeCompare(b));
-  }, [payload, selectedDraftYear, selectedLeagueScope, selectedMinimumGames, selectedPositionGroup, selectedSeason]);
+  }, [payload, selectedDraftYear, selectedGender, selectedLeagueScope, selectedMinimumGames, selectedPositionGroup, selectedSeason]);
 
   useEffect(() => {
     if (selectedDraftYear !== ALL_FILTER && !draftYearOptions.includes(Number(selectedDraftYear))) {
@@ -1675,9 +1797,9 @@ export default function DraftProspectProfileDashboard({
   const playerGames = useMemo(
     () =>
       player && payload
-        ? filteredGamesForPlayer(payload, player, selectedSeason, selectedLeagueScope, selectedTeam).sort((a, b) => Date.parse(a.date) - Date.parse(b.date))
+        ? filteredGamesForPlayer(payload, player, selectedSeason, selectedLeagueScope, selectedGender, selectedTeam).sort((a, b) => Date.parse(a.date) - Date.parse(b.date))
         : [],
-    [payload, player, selectedLeagueScope, selectedSeason, selectedTeam]
+    [payload, player, selectedGender, selectedLeagueScope, selectedSeason, selectedTeam]
   );
   const careerGames = useMemo(
     () => (player && payload ? allLoadedGamesForPlayer(payload, player).sort((a, b) => Date.parse(a.date) - Date.parse(b.date)) : []),
@@ -1693,8 +1815,8 @@ export default function DraftProspectProfileDashboard({
     [careerGames]
   );
   const selectedStats = useMemo(
-    () => selectProfileStats(player, payload, championPayload, allProspects, selectedSeason, ageAdjustmentContext, selectedRatingBasis),
-    [ageAdjustmentContext, allProspects, championPayload, payload, player, selectedRatingBasis, selectedSeason]
+    () => selectProfileStats(player, payload, championPayload, allProspects, selectedSeason, ageAdjustmentContext, selectedRatingBasis, selectedGender),
+    [ageAdjustmentContext, allProspects, championPayload, payload, player, selectedGender, selectedRatingBasis, selectedSeason]
   );
   const topTraitStats = useMemo(
     () => [...selectedStats].sort((a, b) => b.percentile - a.percentile).slice(0, 4),
@@ -1760,11 +1882,12 @@ export default function DraftProspectProfileDashboard({
   }, [trendRows]);
   const avgRating = useMemo(() => {
     if (!player || !payload) return null;
+    const ratingMetric = selectedGender === "WOMEN" ? WOMENS_PROFILE_METRICS[0] : REQUESTED_PROFILE_METRICS[0];
     return (
       averageWeightedRating(currentSeasonGames, championGamesByKey, player, ageAdjustmentContext, selectedRatingBasis) ??
-      requestedMetricValue(REQUESTED_PROFILE_METRICS[0], player, payload, championPayload, selectedSeason, ageAdjustmentContext, selectedRatingBasis)
+      requestedMetricValue(ratingMetric, player, payload, championPayload, selectedSeason, ageAdjustmentContext, selectedRatingBasis)
     );
-  }, [ageAdjustmentContext, championGamesByKey, championPayload, currentSeasonGames, payload, player, selectedRatingBasis, selectedSeason]);
+  }, [ageAdjustmentContext, championGamesByKey, championPayload, currentSeasonGames, payload, player, selectedGender, selectedRatingBasis, selectedSeason]);
   const filteredCohort = useMemo(
     () =>
       payload
@@ -1773,6 +1896,7 @@ export default function DraftProspectProfileDashboard({
             payload,
             selectedSeason,
             selectedLeagueScope,
+            selectedGender,
             selectedTeam,
             undefined,
             championPayload,
@@ -1780,7 +1904,7 @@ export default function DraftProspectProfileDashboard({
             selectedRatingBasis
           )
         : [],
-    [ageAdjustmentContext, allProspects, championPayload, payload, selectedLeagueScope, selectedRatingBasis, selectedSeason, selectedTeam]
+    [ageAdjustmentContext, allProspects, championPayload, payload, selectedGender, selectedLeagueScope, selectedRatingBasis, selectedSeason, selectedTeam]
   );
   const positionCohort = useMemo(
     () =>
@@ -1790,6 +1914,7 @@ export default function DraftProspectProfileDashboard({
             payload,
             selectedSeason,
             selectedLeagueScope,
+            selectedGender,
             selectedTeam,
             positionGroup,
             championPayload,
@@ -1797,7 +1922,7 @@ export default function DraftProspectProfileDashboard({
             selectedRatingBasis
           )
         : [],
-    [ageAdjustmentContext, allProspects, championPayload, payload, positionGroup, selectedLeagueScope, selectedRatingBasis, selectedSeason, selectedTeam]
+    [ageAdjustmentContext, allProspects, championPayload, payload, positionGroup, selectedGender, selectedLeagueScope, selectedRatingBasis, selectedSeason, selectedTeam]
   );
   const filteredRank = filteredCohort.find((row) => row.playerId === player?.playerId)?.rank ?? null;
   const positionRank = positionCohort.find((row) => row.playerId === player?.playerId)?.rank ?? null;
@@ -1806,13 +1931,13 @@ export default function DraftProspectProfileDashboard({
     if (!payload) return [];
     const values: number[] = [];
     allProspects.forEach((candidate) => {
-      filteredGamesForPlayer(payload, candidate, selectedSeason, selectedLeagueScope, selectedTeam).forEach((game) => {
+      filteredGamesForPlayer(payload, candidate, selectedSeason, selectedLeagueScope, selectedGender, selectedTeam).forEach((game) => {
         const rating = ratingForBasis(game, candidate, getChampionGame(game, championGamesByKey), ageAdjustmentContext, selectedRatingBasis);
         if (rating != null && Number.isFinite(rating)) values.push(rating);
       });
     });
     return values;
-  }, [ageAdjustmentContext, allProspects, championGamesByKey, payload, selectedLeagueScope, selectedRatingBasis, selectedSeason, selectedTeam]);
+  }, [ageAdjustmentContext, allProspects, championGamesByKey, payload, selectedGender, selectedLeagueScope, selectedRatingBasis, selectedSeason, selectedTeam]);
 
   useEffect(() => {
     const container = cohortWrapRef.current;
@@ -1870,6 +1995,22 @@ export default function DraftProspectProfileDashboard({
             <button className="draftProspectPill" type="button" onClick={() => goTo("/second-tier-ratings")}>2nd Tier Ratings</button>
             <button className="draftProspectPill isActive" type="button">Draft Prospects</button>
           </div>
+          <label className="draftProspectControlLabel" htmlFor="draft-gender-select">Gender</label>
+          <select
+            className="draftProspectSelect draftProspectGenderSelect"
+            id="draft-gender-select"
+            value={selectedGender}
+            onChange={(event) => {
+              setSelectedGender(event.target.value as GenderFilter);
+              setSelectedTeam(ALL_FILTER);
+            }}
+          >
+            {GENDER_FILTER_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
           <label className="draftProspectControlLabel" htmlFor="draft-league-scope-select">League</label>
           <select
             className="draftProspectSelect draftProspectLeagueSelect"
@@ -1985,6 +2126,7 @@ export default function DraftProspectProfileDashboard({
             onClick={() => {
               draftYearAutoDefaultRef.current = true;
               setSelectedLeagueScope(DEFAULT_LEAGUE_SCOPE);
+              setSelectedGender(DEFAULT_GENDER_FILTER);
               setSelectedPositionGroup(ALL_FILTER);
               setSelectedTeam(ALL_FILTER);
               setSelectedSeason(ALL_FILTER);
