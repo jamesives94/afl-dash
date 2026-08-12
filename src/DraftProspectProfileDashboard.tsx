@@ -2019,7 +2019,7 @@ export default function DraftProspectProfileDashboard({
         <div className="draftProspectFilterDeck">
           <div className="draftProspectFilterGrid">
             <div className="draftProspectControlGroup">
-              <label className="draftProspectControlLabel" htmlFor="draft-gender-select">Gender</label>
+              <label className="draftProspectControlLabel" htmlFor="draft-gender-select">M/W</label>
               <select
                 className="draftProspectSelect draftProspectGenderSelect"
                 id="draft-gender-select"
