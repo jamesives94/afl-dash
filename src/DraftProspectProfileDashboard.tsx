@@ -1980,165 +1980,186 @@ export default function DraftProspectProfileDashboard({
     window.location.assign(path);
   };
 
+  const resetFilters = () => {
+    draftYearAutoDefaultRef.current = true;
+    setSelectedLeagueScope(DEFAULT_LEAGUE_SCOPE);
+    setSelectedGender(DEFAULT_GENDER_FILTER);
+    setSelectedPositionGroup(ALL_FILTER);
+    setSelectedTeam(ALL_FILTER);
+    setSelectedSeason(ALL_FILTER);
+    setSelectedDraftYear(ALL_FILTER);
+    setSelectedMinimumGames(ALL_FILTER);
+    setSelectedRatingBasis(DEFAULT_RATING_BASIS);
+    setSelectedPlayerId(prospects[0]?.playerId ?? "");
+    setPlayerSearch(prospects[0] ? playerLabel(prospects[0]) : "");
+  };
+
   return (
     <main className="draftProspectShell">
       <header className="draftProspectTopbar">
-        <div className="draftProspectBrandBlock">
-          <div className="draftProspectTitle">Draft Prospect Profile</div>
-        </div>
-        <div className="draftProspectActions">
+        <div className="draftProspectTopIntro">
+          <div className="draftProspectBrandBlock">
+            <div className="draftProspectTitle">Draft Prospect Profile</div>
+          </div>
           <div className="draftProspectViewCluster">
-            <span className="draftProspectControlLabel">View</span>
+            <span className="draftProspectInlineLabel">View</span>
             <button className="draftProspectPill" type="button" onClick={() => goTo("/team/40")}>Team</button>
             <button className="draftProspectPill" type="button" onClick={() => goTo("/")}>Career</button>
             <button className="draftProspectPill" type="button" onClick={() => goTo("/league-trends")}>League Trends</button>
             <button className="draftProspectPill" type="button" onClick={() => goTo("/second-tier-ratings")}>2nd Tier Ratings</button>
             <button className="draftProspectPill isActive" type="button">Draft Prospects</button>
           </div>
-          <label className="draftProspectControlLabel" htmlFor="draft-gender-select">Gender</label>
-          <select
-            className="draftProspectSelect draftProspectGenderSelect"
-            id="draft-gender-select"
-            value={selectedGender}
-            onChange={(event) => {
-              setSelectedGender(event.target.value as GenderFilter);
-              setSelectedTeam(ALL_FILTER);
-            }}
-          >
-            {GENDER_FILTER_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <label className="draftProspectControlLabel" htmlFor="draft-league-scope-select">League</label>
-          <select
-            className="draftProspectSelect draftProspectLeagueSelect"
-            id="draft-league-scope-select"
-            value={selectedLeagueScope}
-            onChange={(event) => setSelectedLeagueScope(event.target.value)}
-          >
-            {LEAGUE_SCOPE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <label className="draftProspectControlLabel" htmlFor="draft-position-select">Position</label>
-          <select
-            className="draftProspectSelect draftProspectPositionSelect"
-            id="draft-position-select"
-            value={selectedPositionGroup}
-            onChange={(event) => setSelectedPositionGroup(event.target.value)}
-          >
-            <option value={ALL_FILTER}>All</option>
-            {positionOptions.map((positionGroupOption) => (
-              <option key={positionGroupOption} value={positionGroupOption}>
-                {positionGroupLabel(positionGroupOption)}
-              </option>
-            ))}
-          </select>
-          <label className="draftProspectControlLabel" htmlFor="draft-season-select">Season</label>
-          <select
-            className="draftProspectSelect draftProspectSeasonSelect"
-            id="draft-season-select"
-            value={selectedSeason}
-            onChange={(event) => setSelectedSeason(event.target.value)}
-          >
-            <option value={ALL_FILTER}>All</option>
-            {seasonOptions.map((season) => (
-              <option key={season} value={String(season)}>
-                {season}
-              </option>
-            ))}
-          </select>
-          <label className="draftProspectControlLabel" htmlFor="draft-year-select">Draft Year</label>
-          <select
-            className="draftProspectSelect draftProspectBirthYearSelect"
-            id="draft-year-select"
-            value={selectedDraftYear}
-            onChange={(event) => {
-              draftYearAutoDefaultRef.current = false;
-              setSelectedDraftYear(event.target.value);
-            }}
-          >
-            <option value={ALL_FILTER}>All</option>
-            {draftYearOptions.map((draftYear) => (
-              <option key={draftYear} value={String(draftYear)}>
-                {draftYear}
-              </option>
-            ))}
-          </select>
-          <label className="draftProspectControlLabel" htmlFor="draft-min-games-select">Min Gm</label>
-          <select
-            className="draftProspectSelect draftProspectMinGamesSelect"
-            id="draft-min-games-select"
-            value={selectedMinimumGames}
-            onChange={(event) => setSelectedMinimumGames(event.target.value)}
-          >
-            {MIN_GAME_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <label className="draftProspectControlLabel" htmlFor="draft-rating-basis-select">Rating</label>
-          <select
-            className="draftProspectSelect draftProspectRatingBasisSelect"
-            id="draft-rating-basis-select"
-            value={selectedRatingBasis}
-            onChange={(event) => setSelectedRatingBasis(event.target.value as RatingBasis)}
-          >
-            <option value="AGE_ADJUSTED">Age-adjusted</option>
-            <option value="RAW">Raw</option>
-          </select>
-          <label className="draftProspectControlLabel" htmlFor="draft-player-search">Player</label>
-          <input
-            className="draftProspectSelect draftProspectPlayerSelect"
-            id="draft-player-search"
-            list="draft-prospect-player-options"
-            placeholder="Search player..."
-            value={playerSearch}
-            onChange={(event) => {
-              const nextValue = event.target.value;
-              setPlayerSearch(nextValue);
-              const exactMatch = prospects.find((option) => playerLabel(option) === nextValue);
-              if (exactMatch) {
-                if (draftYearAutoDefaultRef.current) {
-                  const draftYear = inferDraftYear(exactMatch);
-                  if (draftYear != null) setSelectedDraftYear(String(draftYear));
-                }
-                setSelectedPlayerId(exactMatch.playerId);
-              }
-            }}
-            onBlur={() => {
-              if (player) setPlayerSearch(playerLabel(player));
-            }}
-          />
-          <datalist id="draft-prospect-player-options">
-            {prospects.map((option) => (
-              <option key={option.playerId} value={playerLabel(option)} />
-            ))}
-          </datalist>
-          <button
-            className="draftProspectPill"
-            type="button"
-            onClick={() => {
-              draftYearAutoDefaultRef.current = true;
-              setSelectedLeagueScope(DEFAULT_LEAGUE_SCOPE);
-              setSelectedGender(DEFAULT_GENDER_FILTER);
-              setSelectedPositionGroup(ALL_FILTER);
-              setSelectedTeam(ALL_FILTER);
-              setSelectedSeason(ALL_FILTER);
-              setSelectedDraftYear(ALL_FILTER);
-              setSelectedMinimumGames(ALL_FILTER);
-              setSelectedRatingBasis(DEFAULT_RATING_BASIS);
-              setSelectedPlayerId(prospects[0]?.playerId ?? "");
-              setPlayerSearch(prospects[0] ? playerLabel(prospects[0]) : "");
-            }}
-          >
-            <RotateCcw size={14} /> Reset
-          </button>
+          <div className="draftProspectHeaderActions">
+            <button className="draftProspectPill" type="button" onClick={resetFilters}>
+              <RotateCcw size={14} /> Reset
+            </button>
+          </div>
+        </div>
+
+        <div className="draftProspectFilterDeck">
+          <div className="draftProspectFilterGrid">
+            <div className="draftProspectControlGroup">
+              <label className="draftProspectControlLabel" htmlFor="draft-gender-select">Gender</label>
+              <select
+                className="draftProspectSelect draftProspectGenderSelect"
+                id="draft-gender-select"
+                value={selectedGender}
+                onChange={(event) => {
+                  setSelectedGender(event.target.value as GenderFilter);
+                  setSelectedTeam(ALL_FILTER);
+                }}
+              >
+                {GENDER_FILTER_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="draftProspectControlGroup">
+              <label className="draftProspectControlLabel" htmlFor="draft-league-scope-select">League</label>
+              <select
+                className="draftProspectSelect draftProspectLeagueSelect"
+                id="draft-league-scope-select"
+                value={selectedLeagueScope}
+                onChange={(event) => setSelectedLeagueScope(event.target.value)}
+              >
+                {LEAGUE_SCOPE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="draftProspectControlGroup">
+              <label className="draftProspectControlLabel" htmlFor="draft-position-select">Position</label>
+              <select
+                className="draftProspectSelect draftProspectPositionSelect"
+                id="draft-position-select"
+                value={selectedPositionGroup}
+                onChange={(event) => setSelectedPositionGroup(event.target.value)}
+              >
+                <option value={ALL_FILTER}>All</option>
+                {positionOptions.map((positionGroupOption) => (
+                  <option key={positionGroupOption} value={positionGroupOption}>
+                    {positionGroupLabel(positionGroupOption)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="draftProspectControlGroup">
+              <label className="draftProspectControlLabel" htmlFor="draft-season-select">Season</label>
+              <select
+                className="draftProspectSelect draftProspectSeasonSelect"
+                id="draft-season-select"
+                value={selectedSeason}
+                onChange={(event) => setSelectedSeason(event.target.value)}
+              >
+                <option value={ALL_FILTER}>All</option>
+                {seasonOptions.map((season) => (
+                  <option key={season} value={String(season)}>
+                    {season}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="draftProspectControlGroup">
+              <label className="draftProspectControlLabel" htmlFor="draft-year-select">Draft Year</label>
+              <select
+                className="draftProspectSelect draftProspectBirthYearSelect"
+                id="draft-year-select"
+                value={selectedDraftYear}
+                onChange={(event) => {
+                  draftYearAutoDefaultRef.current = false;
+                  setSelectedDraftYear(event.target.value);
+                }}
+              >
+                <option value={ALL_FILTER}>All</option>
+                {draftYearOptions.map((draftYear) => (
+                  <option key={draftYear} value={String(draftYear)}>
+                    {draftYear}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="draftProspectControlGroup">
+              <label className="draftProspectControlLabel" htmlFor="draft-min-games-select">Min Gm</label>
+              <select
+                className="draftProspectSelect draftProspectMinGamesSelect"
+                id="draft-min-games-select"
+                value={selectedMinimumGames}
+                onChange={(event) => setSelectedMinimumGames(event.target.value)}
+              >
+                {MIN_GAME_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="draftProspectControlGroup">
+              <label className="draftProspectControlLabel" htmlFor="draft-rating-basis-select">Rating</label>
+              <select
+                className="draftProspectSelect draftProspectRatingBasisSelect"
+                id="draft-rating-basis-select"
+                value={selectedRatingBasis}
+                onChange={(event) => setSelectedRatingBasis(event.target.value as RatingBasis)}
+              >
+                <option value="AGE_ADJUSTED">Age-adjusted</option>
+                <option value="RAW">Raw</option>
+              </select>
+            </div>
+            <div className="draftProspectControlGroup draftProspectPlayerControlGroup">
+              <label className="draftProspectControlLabel" htmlFor="draft-player-search">Player</label>
+              <input
+                className="draftProspectSelect draftProspectPlayerSelect"
+                id="draft-player-search"
+                list="draft-prospect-player-options"
+                placeholder="Search player..."
+                value={playerSearch}
+                onChange={(event) => {
+                  const nextValue = event.target.value;
+                  setPlayerSearch(nextValue);
+                  const exactMatch = prospects.find((option) => playerLabel(option) === nextValue);
+                  if (exactMatch) {
+                    if (draftYearAutoDefaultRef.current) {
+                      const draftYear = inferDraftYear(exactMatch);
+                      if (draftYear != null) setSelectedDraftYear(String(draftYear));
+                    }
+                    setSelectedPlayerId(exactMatch.playerId);
+                  }
+                }}
+                onBlur={() => {
+                  if (player) setPlayerSearch(playerLabel(player));
+                }}
+              />
+              <datalist id="draft-prospect-player-options">
+                {prospects.map((option) => (
+                  <option key={option.playerId} value={playerLabel(option)} />
+                ))}
+              </datalist>
+            </div>
+          </div>
         </div>
       </header>
 

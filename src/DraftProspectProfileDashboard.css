@@ -7,21 +7,19 @@
 }
 
 .draftProspectTopbar {
-  align-items: center;
-  background: linear-gradient(90deg, #f1f2f4 0%, #e5e7eb 55%, #f1f2f4 100%);
+  background: linear-gradient(180deg, #ffffff 0%, #fbfbfc 100%);
   border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 26px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
-  display: flex;
-  gap: 16px;
-  justify-content: space-between;
+  border-radius: 24px;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.07);
+  display: grid;
+  gap: 14px;
   margin: 0 auto 18px;
   max-width: 1440px;
-  padding: 12px 16px;
+  padding: 16px 18px;
 }
 
 .draftProspectBrandBlock {
-  min-width: 230px;
+  min-width: 0;
 }
 
 .draftProspectTitle {
@@ -49,12 +47,56 @@
   justify-content: flex-end;
 }
 
+.draftProspectTopIntro {
+  align-items: center;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(190px, 0.74fr) minmax(520px, 1.8fr) auto;
+}
+
 .draftProspectViewCluster {
   align-items: center;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-right: 8px;
+  justify-content: center;
+  margin-right: 0;
+}
+
+.draftProspectHeaderActions {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.draftProspectInlineLabel {
+  color: rgba(0, 0, 0, 0.52);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.draftProspectFilterDeck {
+  background: rgba(245, 245, 246, 0.7);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 18px;
+  padding: 12px;
+}
+
+.draftProspectFilterGrid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(7, minmax(92px, 1fr)) minmax(220px, 1.7fr);
+}
+
+.draftProspectControlGroup {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.draftProspectPlayerControlGroup {
+  min-width: 220px;
 }
 
 .draftProspectPill {
@@ -86,49 +128,9 @@
   padding: 9px 12px;
 }
 
-.draftProspectTeamSelect {
-  min-width: 150px;
-  width: 150px;
-}
-
-.draftProspectGenderSelect {
-  min-width: 92px;
-  width: 92px;
-}
-
-.draftProspectLeagueSelect {
-  min-width: 116px;
-  width: 116px;
-}
-
-.draftProspectPositionSelect {
-  min-width: 132px;
-  width: 132px;
-}
-
-.draftProspectSeasonSelect {
-  min-width: 92px;
-  width: 92px;
-}
-
-.draftProspectBirthYearSelect {
-  min-width: 92px;
-  width: 92px;
-}
-
-.draftProspectMinGamesSelect {
-  min-width: 78px;
-  width: 78px;
-}
-
-.draftProspectRatingBasisSelect {
-  min-width: 118px;
-  width: 118px;
-}
-
-.draftProspectPlayerSelect {
-  min-width: 150px;
-  width: 150px;
+.draftProspectControlGroup .draftProspectSelect {
+  min-width: 0;
+  width: 100%;
 }
 
 .draftProspectHero,
@@ -511,15 +513,23 @@
 }
 
 @media (max-width: 1180px) {
-  .draftProspectTopbar,
   .draftProspectHero {
     align-items: stretch;
     grid-template-columns: 1fr;
   }
 
-  .draftProspectTopbar,
-  .draftProspectActions {
+  .draftProspectTopIntro {
+    align-items: start;
+    grid-template-columns: 1fr;
+  }
+
+  .draftProspectViewCluster,
+  .draftProspectHeaderActions {
     justify-content: flex-start;
+  }
+
+  .draftProspectFilterGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .draftProspectHero {
@@ -547,24 +557,22 @@
 }
 
 @media (max-width: 760px) {
-  .draftProspectSelect,
-  .draftProspectLeagueSelect,
-  .draftProspectPositionSelect,
-  .draftProspectTeamSelect,
-  .draftProspectGenderSelect,
-  .draftProspectSeasonSelect,
-  .draftProspectBirthYearSelect,
-  .draftProspectMinGamesSelect,
-  .draftProspectRatingBasisSelect,
-  .draftProspectPlayerSelect {
-    min-width: 0;
+  .draftProspectFilterGrid,
+  .draftProspectViewCluster,
+  .draftProspectHeaderActions {
+    grid-template-columns: 1fr;
     width: 100%;
   }
 
-  .draftProspectActions,
-  .draftProspectViewCluster {
+  .draftProspectViewCluster,
+  .draftProspectHeaderActions {
     align-items: stretch;
-    flex-direction: column;
+    display: grid;
+  }
+
+  .draftProspectViewCluster .draftProspectPill,
+  .draftProspectHeaderActions .draftProspectPill {
+    justify-content: center;
     width: 100%;
   }
 }
