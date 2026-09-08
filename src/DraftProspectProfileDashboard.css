@@ -712,3 +712,25 @@
 .isEmbedded .draftProspectHero {
   margin-bottom: 10px;
 }
+
+/* Keep the search input and native selects the same compact size. */
+.draftProspectPlayerControlGroup {
+  min-width: 0;
+}
+.draftProspectControlGroup .draftProspectSelect {
+  box-sizing: border-box;
+  height: 32px;
+  min-height: 32px;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  line-height: 20px;
+}
+
+@media (min-width: 900px) {
+  .draftProspectFilterGrid,
+  .isEmbedded .draftProspectFilterGrid {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: 6px;
+  }
+}
