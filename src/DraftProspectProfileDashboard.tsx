@@ -1865,7 +1865,7 @@ export default function DraftProspectProfileDashboard({
           league: game.league,
           leagueCode: game.leagueCode,
           leagueColor: leaguePointColor(game.leagueCode),
-          rating: ratingForBasis(game, player, championGame, ageAdjustmentContext, selectedRatingBasis) ?? 0,
+          rating: ratingForBasis(game, player, championGame, ageAdjustmentContext, selectedRatingBasis),
         };
       }),
     [ageAdjustmentContext, careerGames, championGamesByKey, player, selectedRatingBasis]
