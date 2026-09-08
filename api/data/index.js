@@ -82,6 +82,12 @@ module.exports = async function (context, req) {
       return;
     }
 
+    const playerId = String(req.query.playerId || "").trim();
+    if (playerId && (file !== "second_tier_ratings_payload.json" || !/^[A-Za-z0-9_-]{1,80}$/.test(playerId))) {
+      context.res = { status: 400, body: "Invalid player history request" };
+      return;
+    }
+
     const conn = process.env.AZURE_STORAGE_CONNECTION_STRING;
     const containerName = process.env.DATA_CONTAINER || "data";
 
@@ -97,12 +103,13 @@ module.exports = async function (context, req) {
     const blobClient = resolvedBlob.blobClient;
     const blobName = resolvedBlob.blobName;
     const props = resolvedBlob.props;
-    const cacheKey = [
+    const sourceCacheKey = [
       blobName,
       league,
       props.etag || "",
       props.lastModified ? props.lastModified.toISOString() : ""
     ].join("|");
+    const cacheKey = playerId ? `${sourceCacheKey}|player:${playerId}` : sourceCacheKey;
     const cached = memoryCache.get(cacheKey);
     if (cached) {
       cached.hits += 1;
@@ -111,12 +118,18 @@ module.exports = async function (context, req) {
       return;
     }
 
-    const download = await blobClient.download();
-    const rawText = await streamToString(download.readableStreamBody);
+    // Reuse the complete source across player-history requests, without sending it to the browser.
+    const sourceCached = memoryCache.get(sourceCacheKey);
+    const rawText = sourceCached?.body ?? await streamToString((await blobClient.download()).readableStreamBody);
     let body;
 
     if (file.endsWith(".json")) {
       body = filterJsonPayload(blobName, rawText, { league });
+      if (playerId) {
+        if (!sourceCached) setMemoryCache(sourceCacheKey, body);
+        const payload = typeof body === "string" ? JSON.parse(body) : body;
+        body = { playerId, games: payload.gamesByPlayer?.[playerId] ?? [] };
+      }
       setMemoryCache(cacheKey, body);
       context.res = buildJsonResponse(body, props, "MISS", blobName);
       return;

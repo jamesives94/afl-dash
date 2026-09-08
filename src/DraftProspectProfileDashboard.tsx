@@ -217,19 +217,20 @@ async function parseJsonResponse(response: Response, file: string) {
   }
 }
 
-async function fetchJsonFile(file: string, required = true) {
+async function fetchJsonFile(file: string, required = true, playerId?: string) {
   if (USE_LOCAL_DATA) {
     const response = await fetch(`${LOCAL_DATA_BASE}/${file}`, { cache: "no-store" });
     if (!response.ok) {
       if (!required) return null;
       throw new Error(`Failed to load ${file} from local snapshots (${response.status})`);
     }
-    return await parseJsonResponse(response, file);
+    const json = await parseJsonResponse(response, file);
+    return playerId ? { playerId, games: json.gamesByPlayer?.[playerId] ?? [] } : json;
   }
 
   const headers: Record<string, string> = {};
   if (DATA_API_KEY) headers["x-data-key"] = DATA_API_KEY;
-  const response = await fetch(`/api/data?file=${encodeURIComponent(file)}`, { headers, cache: "no-store" });
+  const response = await fetch(`/api/data?file=${encodeURIComponent(file)}${playerId ? `&playerId=${encodeURIComponent(playerId)}` : ""}`, { headers, cache: "no-store" });
   if (!response.ok) {
     if (!required && (response.status === 400 || response.status === 404)) return null;
     const text = await response.text().catch(() => "");
@@ -666,10 +667,6 @@ function filteredGamesForPlayer(
       leagueScopeMatchesGame(game, selectedLeagueScope, selectedGender)
     );
   });
-}
-
-function allLoadedGamesForPlayer(payload: SecondTierPayload, player: PlayerSummary) {
-  return (payload.gamesByPlayer[player.playerId] ?? []).filter(isRatedDraftProfileGame);
 }
 
 function leaguePointColor(leagueCode: string | undefined) {
@@ -1506,6 +1503,9 @@ export default function DraftProspectProfileDashboard({
   const [loadError, setLoadError] = useState("");
   const [selectedPlayerId, setSelectedPlayerId] = useState("");
   const [playerSearch, setPlayerSearch] = useState("");
+  const lastRequestedPlayerIdRef = useRef(requestedPlayerId);
+  const selectedPlayerIdRef = useRef(selectedPlayerId);
+  selectedPlayerIdRef.current = selectedPlayerId;
   const [selectedLeagueScope, setSelectedLeagueScope] = useState(DEFAULT_LEAGUE_SCOPE);
   const [selectedGender, setSelectedGender] = useState<GenderFilter>(DEFAULT_GENDER_FILTER);
   const [selectedPositionGroup, setSelectedPositionGroup] = useState(ALL_FILTER);
@@ -1518,6 +1518,11 @@ export default function DraftProspectProfileDashboard({
   const [selectedRatingBasis, setSelectedRatingBasis] = useState<RatingBasis>(DEFAULT_RATING_BASIS);
   const cohortWrapRef = useRef<HTMLDivElement | null>(null);
   const draftYearAutoDefaultRef = useRef(true);
+  const [history, setHistory] = useState<{ playerId: string; games: GameRow[] } | null>(null);
+  const [historyError, setHistoryError] = useState("");
+  const historyCacheRef = useRef<Map<string, GameRow[]>>(new Map());
+  const [loadedScope, setLoadedScope] = useState("");
+  const scopeLoading = loadedScope !== `${selectedGender}|${selectedLeagueScope}`;
   const payloadCacheRef = useRef<Map<string, SecondTierPayload>>(new Map());
   const championPayloadCacheRef = useRef<ChampionRatingsPayload | null | undefined>(undefined);
 
@@ -1527,15 +1532,11 @@ export default function DraftProspectProfileDashboard({
   }, [requestedSeason]);
 
   useEffect(() => {
-    if (!requestedPlayerId || !payload) return;
-    const requestedProspect = payload.players.find((player) => normalizeProspectPlayerId(player.playerId) === requestedPlayerId);
-    if (!requestedProspect) return;
-    setSelectedPlayerId((prev) => (prev === requestedProspect.playerId ? prev : requestedProspect.playerId));
-    setPlayerSearch(playerLabel(requestedProspect));
-  }, [payload, requestedPlayerId]);
-
-  useEffect(() => {
     let cancelled = false;
+    const playerToPreserve = lastRequestedPlayerIdRef.current !== requestedPlayerId
+      ? requestedPlayerId
+      : selectedPlayerIdRef.current;
+    lastRequestedPlayerIdRef.current = requestedPlayerId;
 
     async function loadPayloadForFile(file: string) {
       const cached = payloadCacheRef.current.get(file);
@@ -1617,9 +1618,11 @@ export default function DraftProspectProfileDashboard({
           ? nextPayload.players.find((player) => normalizeProspectPlayerId(player.playerId) === requestedPlayerId)
           : undefined;
         const firstProspect =
+          nextPayload.players.find((candidate) => candidate.playerId === playerToPreserve) ??
           requestedProspect ??
           defaultProspects.find((player) => player.playerId === defaultCohort[0]?.playerId) ??
           defaultProspects.sort((a, b) => (toNumber(b.latestRating) ?? 0) - (toNumber(a.latestRating) ?? 0))[0];
+        setLoadedScope(`${activeGender}|${activeLeagueScope}`);
         setPayload(nextPayload);
         setChampionPayload(championJson as ChampionRatingsPayload | null);
         setSelectedPlayerId(firstProspect?.playerId ?? "");
@@ -1800,6 +1803,29 @@ export default function DraftProspectProfileDashboard({
     () => prospects,
     [prospects]
   );
+  const historyPlayerId = player?.playerId;
+  useEffect(() => {
+    if (!historyPlayerId) return;
+    let cancelled = false;
+    setHistoryError("");
+    const cached = historyCacheRef.current.get(historyPlayerId);
+    if (cached) {
+      setHistory({ playerId: historyPlayerId, games: cached });
+      return;
+    }
+    fetchJsonFile(DATA_FILE, true, historyPlayerId)
+      .then((result: { playerId: string; games: GameRow[] }) => {
+        if (cancelled) return;
+        historyCacheRef.current.set(historyPlayerId, result.games);
+        setHistory(result);
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) setHistoryError(error instanceof Error ? error.message : String(error));
+      });
+    return () => { cancelled = true; };
+  }, [historyPlayerId]);
+  const historyLoading = !!historyPlayerId && history?.playerId !== historyPlayerId && !historyError;
+
   const playerGames = useMemo(
     () =>
       player && payload
@@ -1808,8 +1834,8 @@ export default function DraftProspectProfileDashboard({
     [payload, player, selectedGender, selectedLeagueScope, selectedSeason, selectedTeam]
   );
   const careerGames = useMemo(
-    () => (player && payload ? allLoadedGamesForPlayer(payload, player).sort((a, b) => Date.parse(a.date) - Date.parse(b.date)) : []),
-    [payload, player]
+    () => (history?.playerId === player?.playerId ? (history?.games ?? []).filter(isRatedDraftProfileGame).sort((a, b) => Date.parse(a.date) - Date.parse(b.date)) : []),
+    [history, player?.playerId]
   );
   const currentSeason = selectedSeason === ALL_FILTER ? toNumber(player?.latestSeason) : Number(selectedSeason);
   const currentSeasonGames = useMemo(
@@ -1886,14 +1912,10 @@ export default function DraftProspectProfileDashboard({
     if (!ratings.length) return null;
     return ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length;
   }, [trendRows]);
-  const avgRating = useMemo(() => {
-    if (!player || !payload) return null;
-    const ratingMetric = selectedGender === "WOMEN" ? WOMENS_PROFILE_METRICS[0] : REQUESTED_PROFILE_METRICS[0];
-    return (
-      averageWeightedRating(currentSeasonGames, championGamesByKey, player, ageAdjustmentContext, selectedRatingBasis) ??
-      requestedMetricValue(ratingMetric, player, payload, championPayload, selectedSeason, ageAdjustmentContext, selectedRatingBasis)
-    );
-  }, [ageAdjustmentContext, championGamesByKey, championPayload, currentSeasonGames, payload, player, selectedGender, selectedRatingBasis, selectedSeason]);
+  const avgRating = useMemo(
+    () => !player || scopeLoading ? null : averageWeightedRating(playerGames, championGamesByKey, player, ageAdjustmentContext, selectedRatingBasis),
+    [ageAdjustmentContext, championGamesByKey, playerGames, player, scopeLoading, selectedRatingBasis]
+  );
   const filteredCohort = useMemo(
     () =>
       payload
@@ -2189,11 +2211,11 @@ export default function DraftProspectProfileDashboard({
               </span>
             </div>
             <div className="draftProspectRatingDial">
-              <div className="draftProspectDial" style={{ "--score": `${Math.max(0, Math.min(100, (avgRating ?? player.latestRating ?? 0) * 4))}%` } as any}>
-                <span>{formatNumber(avgRating ?? player.latestRating, 1)}</span>
+              <div className="draftProspectDial" style={{ "--score": `${Math.max(0, Math.min(100, (avgRating ?? 0) * 4))}%` } as any}>
+                <span>{scopeLoading ? "…" : formatNumber(avgRating, 1)}</span>
               </div>
               <div>
-                <strong>Overall Rating</strong>
+                <strong>{scopeLoading ? "Updating rating…" : "Overall Rating"}</strong>
                 <span>{filteredRank ? `${ordinal(filteredRank)} of ${filteredCohort.length} filtered` : "Filtered rank unavailable"}</span>
                 <span>{positionRank ? `${ordinal(positionRank)} position` : "Position rank unavailable"}</span>
               </div>
@@ -2393,8 +2415,10 @@ export default function DraftProspectProfileDashboard({
             <section className="draftProspectPanel draftProspectGamesPanel">
               <div className="draftProspectPanelHeader">
                 <h2>Career Games</h2>
-                <span>*Excludes Trial Matches</span>
+                <span>{tableGames.length} games · All leagues and seasons · Excludes trials</span>
               </div>
+              {historyLoading ? <p role="status">Loading full game history…</p> : null}
+              {historyError ? <p role="alert">Could not load full game history: {historyError}</p> : null}
               <div className="draftProspectGamesWrap">
                 <table className="draftProspectGamesTable">
                   <thead>
