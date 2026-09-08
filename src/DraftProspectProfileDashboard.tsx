@@ -1493,6 +1493,12 @@ export default function DraftProspectProfileDashboard({
   initialPlayerId = null,
   initialSeason = null,
 }: DraftProspectProfileDashboardProps = {}) {
+  // An iframe has its own viewport; the host need not resize it for this view.
+  const embedParam = new URLSearchParams(window.location.search).get("embed")?.toLowerCase();
+  const isEmbedded = embedParam === "0" || embedParam === "false" || embedParam === "no"
+    ? false
+    : embedParam === "1" || embedParam === "true" || embedParam === "yes" || window.self !== window.top;
+  const shellClassName = `draftProspectShell${isEmbedded ? " isEmbedded" : ""}`;
   const requestedPlayerId = normalizeProspectPlayerId(initialPlayerId);
   const requestedSeason = String(initialSeason ?? "").trim();
   const [payload, setPayload] = useState<SecondTierPayload | null>(null);
@@ -1962,7 +1968,7 @@ export default function DraftProspectProfileDashboard({
 
   if (loadError) {
     return (
-      <main className="draftProspectShell">
+      <main className={shellClassName} tabIndex={isEmbedded ? 0 : undefined} aria-label="Draft prospect profile">
         <div className="draftProspectStatus">{loadError}</div>
       </main>
     );
@@ -1970,7 +1976,7 @@ export default function DraftProspectProfileDashboard({
 
   if (!payload) {
     return (
-      <main className="draftProspectShell">
+      <main className={shellClassName} tabIndex={isEmbedded ? 0 : undefined} aria-label="Draft prospect profile">
         <div className="draftProspectStatus">Loading draft prospect profile...</div>
       </main>
     );
@@ -1995,7 +2001,7 @@ export default function DraftProspectProfileDashboard({
   };
 
   return (
-    <main className="draftProspectShell">
+    <main className={shellClassName} tabIndex={isEmbedded ? 0 : undefined} aria-label="Draft prospect profile">
       <header className="draftProspectTopbar">
         <div className="draftProspectTopIntro">
           <div className="draftProspectBrandBlock">

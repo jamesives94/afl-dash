@@ -576,3 +576,139 @@
     width: 100%;
   }
 }
+
+/* Embedded pages own their scrolling because the parent may have a fixed height. */
+.draftProspectShell.isEmbedded {
+  box-sizing: border-box;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: auto;
+  padding: 8px;
+  scrollbar-gutter: stable;
+}
+
+.isEmbedded .draftProspectTopbar {
+  padding: 12px;
+  gap: 10px;
+  border-radius: 16px;
+}
+.isEmbedded .draftProspectTopIntro {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+.isEmbedded .draftProspectBrandBlock {
+  padding: 0;
+}
+.isEmbedded .draftProspectTitle {
+  font-size: 18px;
+}
+.isEmbedded .draftProspectViewCluster {
+  display: flex;
+  flex-wrap: wrap;
+  width: auto;
+  gap: 5px;
+}
+.isEmbedded .draftProspectHeaderActions {
+  display: flex;
+  flex-wrap: wrap;
+  width: auto;
+  margin-left: auto;
+  gap: 5px;
+}
+.isEmbedded .draftProspectPill {
+  width: auto;
+  min-height: 32px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.isEmbedded .draftProspectFilterDeck {
+  padding: 10px;
+  border-radius: 12px;
+}
+.isEmbedded .draftProspectFilterGrid {
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+}
+.isEmbedded .draftProspectControlGroup .draftProspectSelect {
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+  font-size: 12px;
+}
+.isEmbedded .draftProspectHero {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) minmax(190px, 0.4fr);
+  min-height: 0;
+  padding: 12px;
+  gap: 12px;
+  border-radius: 16px;
+}
+.isEmbedded .draftProspectPhoto {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  font-size: 26px;
+}
+.isEmbedded .draftProspectHeroText h1 {
+  font-size: 22px;
+  overflow-wrap: anywhere;
+}
+.isEmbedded .draftProspectRatingDial {
+  width: auto;
+  gap: 8px;
+}
+.isEmbedded .draftProspectDial {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+}
+.isEmbedded .draftProspectDial span {
+  font-size: 20px;
+}
+.isEmbedded .draftProspectPanel {
+  padding: 10px;
+}
+.isEmbedded .draftProspectGrid {
+  gap: 10px;
+}
+
+@media (min-width: 1100px) {
+  .isEmbedded .draftProspectGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-areas: "radar trend cohort" "games games cohort";
+}
+}
+
+@media (min-width: 700px) and (max-width: 1099px) {
+  .isEmbedded .draftProspectGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-areas: "radar trend" "games games" "cohort cohort";
+}
+}
+
+@media (max-width: 699px) {
+  .isEmbedded .draftProspectHero {
+  grid-template-columns: 64px minmax(0, 1fr);
+}
+  .isEmbedded .draftProspectRatingDial {
+  grid-column: 1 / -1;
+}
+  .isEmbedded .draftProspectGrid {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "radar" "trend" "games" "cohort";
+}
+  .isEmbedded .draftProspectHeaderActions {
+  margin-left: 0;
+}
+}
+
+.isEmbedded .draftProspectPlayerControlGroup,
+.isEmbedded .draftProspectHeroText {
+  min-width: 0;
+}
+.isEmbedded .draftProspectTopbar,
+.isEmbedded .draftProspectHero {
+  margin-bottom: 10px;
+}
