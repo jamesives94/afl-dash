@@ -4818,12 +4818,12 @@ const rankTrendMeta = useMemo(() => {
   const explicitForecasts = clubRows.filter(r => r.forecast_rank != null && Number.isFinite(r.forecast_rank));
   if (explicitForecasts.length) {
     const firstYear = Math.min(...explicitForecasts.map(r => r.year));
-    const history = clubRows.filter(r => r.year < firstYear && r.actual_rank != null);
+    const history = clubRows.filter(r => r.year >= firstYear - 5 && r.year < firstYear && r.actual_rank != null);
     const anchor = history[history.length - 1];
     const rows = history.map(r => ({ year: r.season_label || String(r.year), actual: r.actual_rank,
       fcstA: r === anchor ? r.actual_rank : null, fcstB: null,
       p25: null, p75: null, bandLow: null, bandRange: null, forecastLabel: "" }));
-    for (const r of explicitForecasts) {
+    for (const r of explicitForecasts.filter(r => r.year < firstYear + 2)) {
       const hasBand = r.rank_p25 != null && r.rank_p75 != null && r.rank_p75 >= r.rank_p25;
       rows.push({ year: String(r.year), actual: null, fcstA: r.forecast_rank ?? null,
         fcstB: null, p25: hasBand ? r.rank_p25! : null, p75: hasBand ? r.rank_p75! : null,
@@ -4876,7 +4876,7 @@ const rankTrendMeta = useMemo(() => {
     null;
 
   const history = clubRows
-    .filter((r) => r.year <= latestYear && r.year >= latestYear - 9)
+    .filter((r) => r.year <= latestYear && r.year >= latestYear - 4)
     .map((r) => ({
       year: String(r.year),
       actual: r.actual_rank ?? null,
@@ -5524,6 +5524,9 @@ const mergedSkillRadar = useMemo(() => {
 .teamDashboard .teamContentGrid > * { min-width: 0; border-radius: 14px !important; padding: 18px !important; }
 .teamDashboard .teamForecast > div { border-radius: 14px !important; padding: 18px !important; }
 .teamDashboard .teamContentGrid > .teamForecast { padding: 0 !important; }
+.teamDashboard .teamProjectionsGrid { align-items: stretch; }
+.teamDashboard .teamForecast { display: flex; }
+.teamDashboard .teamForecast > div { flex: 1; min-width: 0; }
 .teamDashboard .ladderLegend { display:flex; flex-wrap:wrap; gap:10px; margin-top:14px; font-size:11px; color:#616c72; }
 .teamDashboard .ladderLegend span { display:inline-flex; align-items:center; gap:5px; }
 .teamDashboard .ladderLegend i { display:inline-block; width:20px; border-top:2px solid; }
@@ -5763,7 +5766,7 @@ const mergedSkillRadar = useMemo(() => {
               {rankTrend.some(r => Number.isFinite(r.actual) || Number.isFinite(r.fcstA) || Number.isFinite(r.fcstB)) ? <>            <Card style={{ minHeight: 360, display: "flex", flexDirection: "column" }}>
               <SectionTitle title="Ladder history & outlook" />
 
-              <div style={{ fontSize: 12, color: "#616c72", marginTop: -4 }}>{clubName} · Home-and-away finish · 1 is best</div>
+              <div style={{ fontSize: 12, color: "#616c72", marginTop: -4 }}>Home-and-away Ladder Position</div>
               <div className="ladderLegend"><span><i style={{ borderColor: "#852548" }} />Actual finish</span><span><i style={{ borderColor: "#176f78", borderTopStyle: "dashed" }} />Expected finish</span><span><i style={{ height: 10, border: 0, background: "#e2eff1" }} />Middle 50% of simulations</span></div>
               <div style={{ marginTop: 8, height: 280 }}>
 
@@ -5816,9 +5819,7 @@ const mergedSkillRadar = useMemo(() => {
                 </ResponsiveContainer>
               </div>
 
-              <details style={{ marginTop: 12, fontSize: 12, color: "#616c72" }}><summary style={{ cursor: "pointer", color: "#263238" }}>Forecast assumptions &amp; interpretation</summary><div style={{ marginTop: 8 }}>{selectedLeague === "AFLW" && rankSeries.some(r => r.league === "AFLW" && r.forecast_rank != null)
-                ? "Solid = historical actual. Dashed = 2026 finish forecast and 2027–29 current-list scenarios using team and list strength. Shading = middle 50% of simulations; future scenarios assume a balanced fixture and no recruitment changes, and are not calibrated probabilities."
-                : "Solid = actual. Dashed = forecast scenarios (only from the most recent season)."}</div></details>
+
               {rankMissingActualYears.length > 0 ? (
                 <div style={{ marginTop: 6, fontSize: 12, color: "rgba(0,0,0,0.5)" }}>
                   Actual ladder rank is unavailable in <code>{rankSourceFile}</code> for: {rankMissingActualYears.join(", ")}.
