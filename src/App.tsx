@@ -5532,7 +5532,6 @@ const mergedSkillRadar = useMemo(() => {
 .teamDashboard .ladderLegend i { display:inline-block; width:20px; border-top:2px solid; }
 .teamDashboard .teamSupportingGrid { grid-template-columns: repeat(3, minmax(0,1fr)); align-items: stretch; }
 .teamDashboard .teamSupportingGrid > * { display: flex; flex-direction: column; }
-.teamDashboard .teamSupportingGrid > * > :last-child { margin-top: auto !important; padding-top: 12px; }
 .teamDashboard .ageProfileGrid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); grid-template-rows: auto 260px; gap: 12px; }
 .teamDashboard .recruitmentRow { display: grid; grid-template-columns: minmax(110px,1.1fr) minmax(70px,2fr) 36px 46px; align-items: center; gap: 10px; min-height: 40px; font-size: 13px; }
 .teamDashboard .recruitmentTrack { height: 10px; background: #edf0f2; border-radius: 5px; overflow: hidden; }
@@ -5926,7 +5925,6 @@ const mergedSkillRadar = useMemo(() => {
             <Card>
               <SectionTitle title="Player Projection Table" right={<span style={{ fontSize: 11, color: "rgba(0,0,0,0.55)" }}>{season}</span>} />
               <PlayerProjectionTable rows={playerTable} />
-              <div style={{ marginTop: 10, fontSize: 13, color: "rgba(0,0,0,0.55)" }}>AA% is the projected chance of a future All-Australian selection. — means unavailable.</div>
             </Card>
             <Card>
               <SectionTitle title="Recruitment mix" right={<span style={{ fontSize: 12 }}>{acquisitionBars.reduce((n,r) => n + r.count, 0)} recorded players</span>} />
@@ -5940,9 +5938,7 @@ const mergedSkillRadar = useMemo(() => {
                   <span style={{ textAlign: "right" }}>{r.count}</span>
                   <span style={{ textAlign: "right" }}>{r.value.toFixed(0)}%</span>
                 </div>)}
-                <p style={{ fontSize: 12, color: "#666", marginBottom: 0 }}>
-                  {Math.round(100 - (acquisitionBars.find(r => r.metric === "Unknown")?.value ?? 0))}% of recorded players have a known recruitment method.
-                </p>
+
               </> : <p style={{ color: "#666", fontSize: 13 }}>Recruitment data unavailable for this season.</p>}
             </Card>
             <Card>
@@ -6026,7 +6022,6 @@ const mergedSkillRadar = useMemo(() => {
 
                 </ResponsiveContainer>
               </div>
-              <div style={{ marginTop: 8, fontSize: 14, color: "rgba(0,0,0,0.55)" }}>*Radar values are shown as within-season league percentiles. Dotted line = league average.</div>
             </Card>
           </div>
           <div style={{ height: 8 }} />
