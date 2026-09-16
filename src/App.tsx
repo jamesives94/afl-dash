@@ -4336,7 +4336,7 @@ useEffect(() => {
               const club = normalizeClubName(r["Club"] ?? "");
               const year = toNumberOrNull(r["Year"]);
               const value = toNumberOrNull(r["value"]);
-              const draft = toTrimmedString(r["Draft"]);
+              const draft = toTrimmedString(r["Draft"]) || "Unknown";
               const teamIdentity = resolveTeamIdentity(r["team_id"], r["Club"], r["league"]);
               if (!club || !isRecentSeasonValue(year) || value === null || !draft || !teamIdentity.team_id) return null;
               return { Club: club, Year: year, Draft: draft, value, team_id: teamIdentity.team_id, league: teamIdentity.league };
@@ -4345,7 +4345,7 @@ useEffect(() => {
               const club = normalizeClubName(r["Club"] ?? "");
               const year = toNumberOrNull(r["Year"]);
               const value = toNumberOrNull(r["value"]);
-              const draft = toTrimmedString(r["Draft"]);
+              const draft = toTrimmedString(r["Draft"]) || "Unknown";
               const teamIdentity = resolveTeamIdentity(r["team_id"], r["Club"], r["league"]);
               if (!club || !isRecentSeasonValue(year) || value === null || !draft || !teamIdentity.team_id) return null;
               return { Club: club, Year: year, Draft: draft, value, team_id: teamIdentity.team_id, league: teamIdentity.league };
@@ -5029,25 +5029,26 @@ function RankTrendTooltip({ active, label, payload }: any) {
         (r) =>
           normalizeTeamId(r.team_id) === normalizeTeamId(team) &&
           r.league === selectedLeague &&
-          r.Year === season
+          r.Year === season && !["Top-5 Draft", "Top-10 Draft", "State League Recruit"].includes(r.Draft)
       )
       .sort((a, b) => b.value - a.value);
 
     const total = rows.reduce((a, r) => a + (r.value ?? 0), 0) || 1;
     return rows.map((r) => ({
-      metric: r.Draft,
+      metric: r.Draft?.trim() || "Unknown",
+      count: r.value,
       value: (r.value / total) * 100,
     }));
   }, [acqBreakdown, team, season, selectedLeague]);
 
   const leagueAcquisitionAverageShare = useMemo(() => {
-    const rows = acqBreakdown.filter((r) => r.league === selectedLeague && r.Year === season);
+    const rows = acqBreakdown.filter((r) => r.league === selectedLeague && r.Year === season && !["Top-5 Draft", "Top-10 Draft", "State League Recruit"].includes(r.Draft));
     const byTeam = new Map<string, AcquisitionRow[]>();
     const categories = new Set<string>();
 
     for (const r of rows) {
       const teamKey = normalizeTeamId(r.team_id) || normalizeClubName(r.Club);
-      const category = toTrimmedString(r.Draft);
+      const category = toTrimmedString(r.Draft) || "Unknown";
       if (!teamKey || !category) continue;
       categories.add(category);
       const teamRows = byTeam.get(teamKey) ?? [];
@@ -5062,7 +5063,7 @@ function RankTrendTooltip({ active, label, payload }: any) {
       if (teamTotal <= 0) continue;
       const shares = new Map<string, number>();
       for (const r of teamRows) {
-        const category = toTrimmedString(r.Draft);
+        const category = toTrimmedString(r.Draft) || "Unknown";
         if (!category) continue;
         shares.set(category, (shares.get(category) ?? 0) + ((Number(r.value) || 0) / teamTotal) * 100);
       }
@@ -5186,13 +5187,13 @@ const compareAcquisitionShare = useMemo(() => {
       (r) =>
         normalizeTeamId(r.team_id) === normalizeTeamId(compareTeam) &&
         r.league === selectedLeague &&
-        r.Year === season
+        r.Year === season && !["Top-5 Draft", "Top-10 Draft", "State League Recruit"].includes(r.Draft)
     )
     .sort((a, b) => a.Draft.localeCompare(b.Draft));
 
   const total = rows.reduce((a, r) => a + (r.value ?? 0), 0) || 1;
   return rows.map((r) => ({
-    metric: r.Draft,
+    metric: r.Draft?.trim() || "Unknown",
     value: (r.value / total) * 100,
   }));
 }, [acqBreakdown, compareTeam, season, selectedLeague]);
@@ -5424,11 +5425,11 @@ const mergedSkillRadar = useMemo(() => {
 
   return [
     { label: "Squad Age",        value: ageValue, sub: ageSub, icon: BarChart3, imgSrc: null as string | null },
-    { label: "Squad Experience", value: expValue, sub: expSub, icon: Gauge,    imgSrc: null as string | null },
+    { label: "Avg games per player", value: expValue, sub: expSub, icon: Gauge,    imgSrc: null as string | null },
     { label: "Squad Turnover",   value: toValue,  sub: toSub,  icon: RotateCcw,imgSrc: null as string | null },
-    { label: `${selectedLeague} Form`, value: aflValue, sub: aflSub, icon: Users, imgSrc: aflImg },
+    { label: `Leading ${selectedLeague} player rating`, value: aflValue, sub: aflSub, icon: Users, imgSrc: aflImg },
     { label: "VFL Form",         value: vflValue, sub: vflSub, icon: Home,     imgSrc: vflImg },
-  ];
+  ].filter((k) => k.label !== "VFL Form" || (selectedLeague === "AFL" && k.value !== "—"));
 }, [clubKpi, clubKpiSelection.usedSeason, teamKpis, aflFormPick, vflForm, clubKey, season, rosterTurnoverByTeamSeason, team, selectedLeague]);
 
   const isTeamPage = page === "team";
@@ -5450,8 +5451,8 @@ const mergedSkillRadar = useMemo(() => {
   }
 
   return (
-    <div style={{ minHeight: isEmbed ? "auto" : "100vh", background: "#f5f5f6", fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial", overflowX: "hidden" }}>
-      <div ref={appShellRef} style={isEmbed ? { zoom: EMBED_LAYOUT_SCALE } : undefined}>
+    <div className={isTeamPage ? "teamDashboard" : undefined} style={{ minHeight: isEmbed ? "auto" : "100vh", background: "#f5f5f6", fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial", overflowX: "hidden" }}>
+      <div ref={appShellRef} style={isEmbed && !isTeamPage ? { zoom: EMBED_LAYOUT_SCALE } : undefined}>
         <style>
           {`
           .layoutGrid { display: grid; grid-template-columns: 1fr; gap: ${isEmbed ? 10 : 14}px; padding: ${isEmbed ? 10 : 14}px; min-height: ${isEmbed ? "auto" : "100vh"}; }
@@ -5488,6 +5489,33 @@ const mergedSkillRadar = useMemo(() => {
             .kpiGrid { grid-template-columns: 1fr; }
           }
         
+
+.teamDashboard .layoutGrid { padding: clamp(12px, 2vw, 24px); }
+.teamDashboard .mainWrap { max-width: 1680px; min-width: 0; gap: 16px; }
+.teamDashboard .teamHeader { border-radius: 14px !important; background: #fff !important; box-shadow: none !important; padding: 18px !important; }
+.teamDashboard .teamHeaderTop { display: block !important; }
+.teamDashboard .teamToolbar { margin-top: 16px; gap: 8px !important; align-items: center; }
+.teamDashboard .teamToolbar > div { flex-wrap: wrap; }
+.teamDashboard .kpiGrid { grid-template-columns: repeat(auto-fit,minmax(210px,1fr)); gap: 12px; }
+.teamDashboard .teamContentGrid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.15fr); gap: 16px; align-items: start; }
+.teamDashboard .teamContentGrid > * { min-width: 0; border-radius: 14px !important; padding: 18px !important; }
+.teamDashboard .teamForecast { grid-column: 1 / -1; }
+.teamDashboard .ageProfileGrid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); grid-template-rows: auto 260px; gap: 12px; }
+.teamDashboard .recruitmentRow { display: grid; grid-template-columns: minmax(110px,1.1fr) minmax(70px,2fr) 36px 46px; align-items: center; gap: 10px; min-height: 40px; font-size: 13px; }
+.teamDashboard .recruitmentTrack { height: 10px; background: #edf0f2; border-radius: 5px; overflow: hidden; }
+.teamDashboard .recruitmentRow span { font-variant-numeric: tabular-nums; }
+.teamDashboard .exportMenu summary { padding: 8px 12px; cursor: pointer; border: 1px solid #ddd; border-radius: 18px; font-size: 12px; }
+.teamDashboard .exportMenu[open] { flex-basis: 100%; }
+@media (max-width: 1000px) { .teamDashboard .teamContentGrid { grid-template-columns: minmax(0,1fr); } .teamDashboard .kpiGrid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 560px) {
+ .teamDashboard .kpiGrid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+ .teamDashboard .ageProfileGrid { grid-template-columns: minmax(0,1fr); grid-template-rows: auto; }
+ .teamDashboard .ageProfileGrid > :nth-child(1) { order: 0; }
+ .teamDashboard .ageProfileGrid > :nth-child(3) { order: 1; }
+ .teamDashboard .ageProfileGrid > :nth-child(2) { order: 2; }
+ .teamDashboard .ageProfileGrid > :nth-child(4) { order: 3; }
+ .teamDashboard .recruitmentRow { grid-template-columns: minmax(95px,1fr) minmax(40px,1fr) 25px 38px; gap: 6px; }
+}
 .compareToggleBtn {
   position: fixed;
   right: ${isEmbed ? 10 : 14}px;
@@ -5570,7 +5598,7 @@ const mergedSkillRadar = useMemo(() => {
 
           <div className="mainWrap">
           {/* Header */}
-          <div
+          <div className="teamHeader"
             style={{
               borderRadius: 26,
               padding: "12px 16px",
@@ -5579,7 +5607,7 @@ const mergedSkillRadar = useMemo(() => {
               boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+            <div className="teamHeaderTop" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -5618,7 +5646,7 @@ const mergedSkillRadar = useMemo(() => {
                 </div>
               </div>
 
-              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <div className="teamToolbar" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginRight: 12 }}>
                   <div style={{ fontSize: 12, color: "rgba(0,0,0,0.55)" }}>View</div>
                   <Pill active={page === "team"} onClick={() => setPage("team")}>Team</Pill>
@@ -5658,13 +5686,12 @@ const mergedSkillRadar = useMemo(() => {
                   <RefreshCcw size={14} style={{ verticalAlign: "-2px", marginRight: 6 }} /> Copy link
                 </Pill>
 
-                <Pill onClick={onExportPng} disabled={exporting !== null}>
-                  {exporting === "png" ? "Exporting PNG..." : "Export PNG"}
-                </Pill>
-
-                <Pill onClick={onExportPdf} disabled={exporting !== null}>
-                  {exporting === "pdf" ? "Exporting PDF..." : "Export PDF"}
-                </Pill>
+                {isTeamPage && <Pill onClick={() => setComparePanelOpen(true)}>Compare teams</Pill>}
+                <details className="exportMenu">
+                  <summary>Export</summary>
+                  <Pill onClick={onExportPng} disabled={exporting !== null}>{exporting === "png" ? "Exporting…" : "PNG image"}</Pill>
+                  <Pill onClick={onExportPdf} disabled={exporting !== null}>{exporting === "pdf" ? "Exporting…" : "PDF document"}</Pill>
+                </details>
               </div>
             </div>
 
@@ -5702,75 +5729,11 @@ const mergedSkillRadar = useMemo(() => {
           {isTeamPage ? (
             <>
               {/* Middle row */}
-          <div className="midGrid">
-            <Card style={{ minHeight: 380, display: "flex", flexDirection: "column" }}>
-              <SectionTitle title="Season Finishing Position & Forecast" right={<span style={{ fontSize: 11, color: "rgba(0,0,0,0.55)" }}></span>} />
-
-              <div style={{ marginTop: 8, height: 300 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={rankTrend} margin={{ top: 10, right: 26, left: 0, bottom: 0 }}>
-
-
-
-                    <ReferenceArea y1={1} y2={4} fill="rgba(34, 197, 94, 0.10)" strokeOpacity={0} />
-                    <ReferenceArea y1={4} y2={14} fill="rgba(245, 158, 11, 0.10)" strokeOpacity={0} />
-                    <ReferenceArea y1={14} y2={18} fill="rgba(239, 68, 68, 0.10)" strokeOpacity={0} />
-
-                    <CartesianGrid stroke="rgba(0,0,0,0.08)" strokeDasharray="0 0" />
-                    <XAxis dataKey="year" tick={{ fontSize: 12, fill: "rgba(0,0,0,0.6)" }} axisLine={{ stroke: "rgba(0,0,0,0.2)" }} tickLine={{ stroke: "rgba(0,0,0,0.2)" }} interval={1} />
-                    <YAxis reversed tick={{ fontSize: 12, fill: "rgba(0,0,0,0.6)" }} axisLine={{ stroke: "rgba(0,0,0,0.2)" }} tickLine={{ stroke: "rgba(0,0,0,0.2)" }} width={40} domain={[1, 18]} ticks={[1, 4, 8, 12, 14, 18]} allowDecimals={false} />
-
-                    {rankTrend.length > 0 && (
-                      <ReferenceLine
-                        x={rankLastActualYear ?? undefined}
-                        stroke="rgba(0,0,0,0.18)"
-                        strokeDasharray="4 4"
-                      />
-                    )}
-
-                    <Tooltip content={<RankTrendTooltip />} />
-{/* Invisible base up to p25 */}
-<Area
-  type="monotone"
-  dataKey="bandLow"
-  stackId="band"
-  stroke="none"
-  fill="rgba(0,0,0,0)"
-  isAnimationActive={false}
-  connectNulls={false}
-/>
-
-{/* Visible band from p25 to p75 */}
-<Area
-  type="monotone"
-  dataKey="bandRange"
-  stackId="band"
-  stroke="none"
-  fill="rgba(0,0,0,0.18)"
-  isAnimationActive={false}
-  connectNulls={false}
-/>
-
-
-                    <Line type="monotone" dataKey="actual" name="Actual" stroke="rgba(0,0,0,0.85)" strokeWidth={2.4} dot={<ActualEndLabelDot />} activeDot={{ r: 3 }} isAnimationActive={false} connectNulls={false} />
-                    <Line type="monotone" dataKey="fcstA" name="Forecast +1" stroke="rgba(0,0,0,0.35)" strokeWidth={2} dot={false} strokeDasharray="4 3" isAnimationActive={false} connectNulls={false} />
-                    <Line type="monotone" dataKey="fcstB" name="Forecast +2" stroke="rgba(0,0,0,0.25)" strokeWidth={2} dot={false} strokeDasharray="4 3" isAnimationActive={false} connectNulls={false} />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
-
-              <div style={{ marginTop: 10, fontSize: 14, color: "rgba(0,0,0,0.55)" }}>Black = actual. Grey dashed = forecast scenarios (only from the most recent season).</div>
-              {rankMissingActualYears.length > 0 ? (
-                <div style={{ marginTop: 6, fontSize: 12, color: "rgba(0,0,0,0.5)" }}>
-                  Actual ladder rank is unavailable in <code>{rankSourceFile}</code> for: {rankMissingActualYears.join(", ")}.
-                </div>
-              ) : null}
-            </Card>
-
-            <Card style={{ minHeight: 420, display: "flex", flexDirection: "column" }}>
+          <div className="teamContentGrid">
+            <Card style={{ minHeight: 340, display: "flex", flexDirection: "column" }}>
               <SectionTitle title="Playing Profile: Age Distribution" />
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 0.95fr", gridTemplateRows: "auto 260px", gap: 16, alignItems: "start" }}>
+              <div className="ageProfileGrid">
                 <div style={{ fontSize: 14, fontWeight: 800, color: "rgba(0,0,0,0.72)" }}>
                   Age (count)
                   {rosterForSeason.usedSeason !== season ? (
@@ -5859,45 +5822,6 @@ const mergedSkillRadar = useMemo(() => {
 
               <div style={{ marginTop: 12, fontSize: 14, color: "rgba(0,0,0,0.5)" }}>Ages are based on the player's age at the end of the selected season.</div>
             </Card>
-          </div>
-
-          {/* Bottom row */}
-          <div className="botGrid">
-            <Card>
-              <SectionTitle title="How the list was built..." right={<span style={{ fontSize: 11, color: "rgba(0,0,0,0.55)" }}>share of list (%)</span>} />
-              <div style={{ height: 300 }}>
-                {acquisitionBars.length === 0 ? (
-                  <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(0,0,0,0.55)", fontSize: 14 }}>
-                    No list build data available for this season.
-                  </div>
-                ) : (
-                  <div style={{ height: "100%", paddingTop: 2, paddingRight: 6, paddingBottom: 4 }}>
-                    <HorizontalBarRows
-                      rows={acquisitionBars}
-                      labelKey="metric"
-                      valueKey="value"
-                      referenceKey="leaguePct"
-                      referenceLabel="League avg"
-                      getColor={(label) => stableColorForKey(label)}
-                      fillOpacity={0.5}
-                      labelCol={{ min: 0, ideal: 150, max: 210 }}
-                      barHeight={14}
-                      rowGap={14}
-                      valueColWidth={50}
-                      colGap={10}
-                      fillHeight
-                    />
-                  </div>
-                )}
-              </div>
-            </Card>
-
-            <Card>
-              <SectionTitle title="Player Projection Table" right={<span style={{ fontSize: 11, color: "rgba(0,0,0,0.55)" }}>{season}</span>} />
-              <PlayerProjectionTable rows={playerTable} />
-              <div style={{ marginTop: 10, fontSize: 13, color: "rgba(0,0,0,0.55)" }}>From <code></code> (AA % shown as probability of making a future AA side).</div>
-            </Card>
-
             <Card>
               <SectionTitle
   title="Team Profile (Radar)"
@@ -5981,15 +5905,97 @@ const mergedSkillRadar = useMemo(() => {
               </div>
               <div style={{ marginTop: 8, fontSize: 14, color: "rgba(0,0,0,0.55)" }}>*Radar values are shown as within-season league percentiles. Dotted line = league average.</div>
             </Card>
-          </div>
+            <Card>
+              <SectionTitle title="Recruitment mix" right={<span style={{ fontSize: 12 }}>{acquisitionBars.reduce((n,r) => n + r.count, 0)} recorded players</span>} />
+              {acquisitionBars.length ? <>
+                <div className="recruitmentRow" style={{ color: "#666", fontSize: 11 }}>
+                  <span>Method</span><span>Share · 0–100%</span><span>Players</span><span>%</span>
+                </div>
+                {acquisitionBars.map(r => <div className="recruitmentRow" key={r.metric}>
+                  <span>{r.metric}</span>
+                  <div className="recruitmentTrack"><div style={{ width: `${r.value}%`, height: "100%", background: stableColorForKey(r.metric) }} /></div>
+                  <span style={{ textAlign: "right" }}>{r.count}</span>
+                  <span style={{ textAlign: "right" }}>{r.value.toFixed(0)}%</span>
+                </div>)}
+                <p style={{ fontSize: 12, color: "#666", marginBottom: 0 }}>
+                  {Math.round(100 - (acquisitionBars.find(r => r.metric === "Unknown")?.value ?? 0))}% of recorded players have a known recruitment method.
+                </p>
+              </> : <p style={{ color: "#666", fontSize: 13 }}>Recruitment data unavailable for this season.</p>}
+            </Card>
+            <Card>
+              <SectionTitle title="Player Projection Table" right={<span style={{ fontSize: 11, color: "rgba(0,0,0,0.55)" }}>{season}</span>} />
+              <PlayerProjectionTable rows={playerTable} />
+              <div style={{ marginTop: 10, fontSize: 13, color: "rgba(0,0,0,0.55)" }}>AA% is the projected chance of a future All-Australian selection. — means unavailable.</div>
+            </Card>
+            <div className="teamForecast">
+              {rankTrend.some(r => Number.isFinite(r.actual) || Number.isFinite(r.fcstA) || Number.isFinite(r.fcstB)) ? <>            <Card style={{ minHeight: 360, display: "flex", flexDirection: "column" }}>
+              <SectionTitle title="Season Finishing Position & Forecast" right={<span style={{ fontSize: 11, color: "rgba(0,0,0,0.55)" }}></span>} />
 
+              <div style={{ marginTop: 8, height: 300 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={rankTrend} margin={{ top: 10, right: 26, left: 0, bottom: 0 }}>
+
+
+
+                    <ReferenceArea y1={1} y2={4} fill="rgba(34, 197, 94, 0.10)" strokeOpacity={0} />
+                    <ReferenceArea y1={4} y2={14} fill="rgba(245, 158, 11, 0.10)" strokeOpacity={0} />
+                    <ReferenceArea y1={14} y2={18} fill="rgba(239, 68, 68, 0.10)" strokeOpacity={0} />
+
+                    <CartesianGrid stroke="rgba(0,0,0,0.08)" strokeDasharray="0 0" />
+                    <XAxis dataKey="year" tick={{ fontSize: 12, fill: "rgba(0,0,0,0.6)" }} axisLine={{ stroke: "rgba(0,0,0,0.2)" }} tickLine={{ stroke: "rgba(0,0,0,0.2)" }} interval={1} />
+                    <YAxis reversed tick={{ fontSize: 12, fill: "rgba(0,0,0,0.6)" }} axisLine={{ stroke: "rgba(0,0,0,0.2)" }} tickLine={{ stroke: "rgba(0,0,0,0.2)" }} width={40} domain={[1, 18]} ticks={[1, 4, 8, 12, 14, 18]} allowDecimals={false} />
+
+                    {rankTrend.length > 0 && (
+                      <ReferenceLine
+                        x={rankLastActualYear ?? undefined}
+                        stroke="rgba(0,0,0,0.18)"
+                        strokeDasharray="4 4"
+                      />
+                    )}
+
+                    <Tooltip content={<RankTrendTooltip />} />
+{/* Invisible base up to p25 */}
+<Area
+  type="monotone"
+  dataKey="bandLow"
+  stackId="band"
+  stroke="none"
+  fill="rgba(0,0,0,0)"
+  isAnimationActive={false}
+  connectNulls={false}
+/>
+
+{/* Visible band from p25 to p75 */}
+<Area
+  type="monotone"
+  dataKey="bandRange"
+  stackId="band"
+  stroke="none"
+  fill="rgba(0,0,0,0.18)"
+  isAnimationActive={false}
+  connectNulls={false}
+/>
+
+
+                    <Line type="monotone" dataKey="actual" name="Actual" stroke="rgba(0,0,0,0.85)" strokeWidth={2.4} dot={<ActualEndLabelDot />} activeDot={{ r: 3 }} isAnimationActive={false} connectNulls={false} />
+                    <Line type="monotone" dataKey="fcstA" name="Forecast +1" stroke="rgba(0,0,0,0.35)" strokeWidth={2} dot={false} strokeDasharray="4 3" isAnimationActive={false} connectNulls={false} />
+                    <Line type="monotone" dataKey="fcstB" name="Forecast +2" stroke="rgba(0,0,0,0.25)" strokeWidth={2} dot={false} strokeDasharray="4 3" isAnimationActive={false} connectNulls={false} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div style={{ marginTop: 10, fontSize: 14, color: "rgba(0,0,0,0.55)" }}>Black = actual. Grey dashed = forecast scenarios (only from the most recent season).</div>
+              {rankMissingActualYears.length > 0 ? (
+                <div style={{ marginTop: 6, fontSize: 12, color: "rgba(0,0,0,0.5)" }}>
+                  Actual ladder rank is unavailable in <code>{rankSourceFile}</code> for: {rankMissingActualYears.join(", ")}.
+                </div>
+              ) : null}
+            </Card></> : <Card><SectionTitle title="Season finishing position & forecast" /><p style={{ margin: 0, fontSize: 13, color: "#666" }}>Finishing-position and forecast data are unavailable for this team.</p></Card>}
+            </div>
+          </div>
           <div style={{ height: 8 }} />
 {/* Right compare sidebar */}
-{!comparePanelOpen && (
-  <button className="compareToggleBtn" onClick={() => setComparePanelOpen(true)}>
-    Compare
-  </button>
-)}
+
 
 {comparePanelOpen && (
   <div className="comparePanel">
