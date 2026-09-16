@@ -5530,7 +5530,9 @@ const mergedSkillRadar = useMemo(() => {
 .teamDashboard .ladderLegend { display:flex; flex-wrap:wrap; gap:10px; margin-top:14px; font-size:11px; color:#616c72; }
 .teamDashboard .ladderLegend span { display:inline-flex; align-items:center; gap:5px; }
 .teamDashboard .ladderLegend i { display:inline-block; width:20px; border-top:2px solid; }
-.teamDashboard .teamSupportingGrid { grid-template-columns: minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr); }
+.teamDashboard .teamSupportingGrid { grid-template-columns: repeat(3, minmax(0,1fr)); align-items: stretch; }
+.teamDashboard .teamSupportingGrid > * { display: flex; flex-direction: column; }
+.teamDashboard .teamSupportingGrid > * > :last-child { margin-top: auto !important; padding-top: 12px; }
 .teamDashboard .ageProfileGrid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); grid-template-rows: auto 260px; gap: 12px; }
 .teamDashboard .recruitmentRow { display: grid; grid-template-columns: minmax(110px,1.1fr) minmax(70px,2fr) 36px 46px; align-items: center; gap: 10px; min-height: 40px; font-size: 13px; }
 .teamDashboard .recruitmentTrack { height: 10px; background: #edf0f2; border-radius: 5px; overflow: hidden; }
