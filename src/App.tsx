@@ -298,6 +298,11 @@ type AflFormRow = {
 };
 
 type RankRow = {
+  forecast_rank?: number | null;
+  rank_p25?: number | null;
+  rank_p75?: number | null;
+  forecast_kind?: string;
+  model_version?: string;
   Club: string;
   league: LeagueCode;
   year: number;
@@ -4240,6 +4245,11 @@ useEffect(() => {
                 league: "AFL" as LeagueCode,
                 year: yearN,
                 actual_rank: toNumberOrNull(r["actual_rank"]),
+                forecast_rank: toNumberOrNull(r["forecast_rank"]),
+                rank_p25: toNumberOrNull(r["rank_p25"]),
+                rank_p75: toNumberOrNull(r["rank_p75"]),
+                forecast_kind: toTrimmedString(r["forecast_kind"]),
+                model_version: toTrimmedString(r["model_version"]),
                 forecast_a_rank: toNumberOrNull(r["forecast_a_rank"]),
                 forecast_b_rank: toNumberOrNull(r["forecast_b_rank"]),
                 finish_1_p10: toNumberOrNull(r["finish_1_p10"]),
@@ -4262,6 +4272,11 @@ useEffect(() => {
                 league: "AFLW" as LeagueCode,
                 year: yearN,
                 actual_rank: toNumberOrNull(r["actual_rank"]),
+                forecast_rank: toNumberOrNull(r["forecast_rank"]),
+                rank_p25: toNumberOrNull(r["rank_p25"]),
+                rank_p75: toNumberOrNull(r["rank_p75"]),
+                forecast_kind: toTrimmedString(r["forecast_kind"]),
+                model_version: toTrimmedString(r["model_version"]),
                 forecast_a_rank: toNumberOrNull(r["forecast_a_rank"]),
                 forecast_b_rank: toNumberOrNull(r["forecast_b_rank"]),
                 finish_1_p10: toNumberOrNull(r["finish_1_p10"]),
@@ -4794,6 +4809,25 @@ const rankTrendMeta = useMemo(() => {
     .filter((r) => r.year <= DEFAULT_SEASON - 1 && r.actual_rank == null)
     .map((r) => r.year);
 
+  // Explicit target-year forecasts must never shift with an actual-rank anchor.
+  const explicitForecasts = clubRows.filter(r => r.forecast_rank != null && Number.isFinite(r.forecast_rank));
+  if (explicitForecasts.length) {
+    const firstYear = Math.min(...explicitForecasts.map(r => r.year));
+    const history = clubRows.filter(r => r.year < firstYear && r.actual_rank != null);
+    const anchor = history[history.length - 1];
+    const rows = history.map(r => ({ year: String(r.year), actual: r.actual_rank,
+      fcstA: r === anchor ? r.actual_rank : null, fcstB: null,
+      p25: null, p75: null, bandLow: null, bandRange: null, forecastLabel: "" }));
+    for (const r of explicitForecasts) {
+      const hasBand = r.rank_p25 != null && r.rank_p75 != null && r.rank_p75 >= r.rank_p25;
+      rows.push({ year: String(r.year), actual: null, fcstA: r.forecast_rank ?? null,
+        fcstB: null, p25: hasBand ? r.rank_p25! : null, p75: hasBand ? r.rank_p75! : null,
+        bandLow: hasBand ? r.rank_p25! : null, bandRange: hasBand ? r.rank_p75! - r.rank_p25! : null,
+        forecastLabel: r.forecast_kind === "current_list_scenario" ? "Current-list scenario" : "Season finish forecast" } as any);
+    }
+    return {rows: rows.sort((a,b) => Number(a.year)-Number(b.year)), missingActualYears};
+  }
+
   // Forecast rows are anchored on the latest year where an actual rank exists.
   // This prevents future-placeholder rows (with NA actuals) from shifting forecast years too far out.
   const latestActual = [...clubRows].reverse().find((r) => r.actual_rank != null) ?? clubRows[clubRows.length - 1];
@@ -4961,7 +4995,7 @@ function RankTrendTooltip({ active, label, payload }: any) {
   const isPlus2 =
     lastActualYearN != null && Number.isFinite(lastActualYearN) && Number.isFinite(yearN) && yearN === lastActualYearN + 2;
   const forecast = isPlus2 ? (fcstB ?? fcstA) : (fcstA ?? fcstB);
-  const forecastLabel = isPlus2 ? "Forecast +2" : "Forecast +1";
+  const forecastLabel = row.forecastLabel || (isPlus2 ? "Forecast +2" : "Forecast +1");
   const outcomeBand = rankBandLabel(forecast);
 
   return (
@@ -5790,7 +5824,9 @@ const mergedSkillRadar = useMemo(() => {
                 </ResponsiveContainer>
               </div>
 
-              <div style={{ marginTop: 10, fontSize: 14, color: "rgba(0,0,0,0.55)" }}>Black = actual. Grey dashed = forecast scenarios (only from the most recent season).</div>
+              <div style={{ marginTop: 10, fontSize: 14, color: "rgba(0,0,0,0.55)" }}>{selectedLeague === "AFLW" && rankSeries.some(r => r.league === "AFLW" && r.forecast_rank != null)
+                ? "Black = historical actual. Dashed = 2026 finish forecast and 2027–29 current-list scenarios using team and list strength. Shading = middle 50% of simulations; future scenarios assume a balanced fixture and no recruitment changes, and are not calibrated probabilities."
+                : "Black = actual. Grey dashed = forecast scenarios (only from the most recent season)."}</div>
               {rankMissingActualYears.length > 0 ? (
                 <div style={{ marginTop: 6, fontSize: 12, color: "rgba(0,0,0,0.5)" }}>
                   Actual ladder rank is unavailable in <code>{rankSourceFile}</code> for: {rankMissingActualYears.join(", ")}.
