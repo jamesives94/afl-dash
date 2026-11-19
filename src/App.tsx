@@ -1,3 +1,5 @@
+import LastUpdatedFooter from "./LastUpdatedFooter";
+import { recordUploadDate } from "./lib/uploadDates";
 // src/App.tsx
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import LeagueTrendsDashboard from "./LeagueTrendsDashboard";
@@ -1018,6 +1020,7 @@ async function fetchDashboardPayload(file: string): Promise<DashboardPayload | n
     if (!res.ok) return null;
 
     const json = await res.json();
+    recordUploadDate(file, res);
     return json && typeof json === "object" && !Array.isArray(json) ? (json as DashboardPayload) : null;
   } catch {
     return null;
@@ -1166,6 +1169,7 @@ async function fetchApiRows(file: string): Promise<{ rows: Record<string, any>[]
   }
 
   const json = await res.json();
+  recordUploadDate(file, res);
   const rows = Array.isArray(json) ? json : [];
   const lastUpdatedValue = toTrimmedString(
     res.headers.get("x-file-last-modified") ??
@@ -6265,6 +6269,19 @@ const mergedSkillRadar = useMemo(() => {
           )}
 
 
+            {!loading && !loadErr && page !== "trends" && <LastUpdatedFooter files={page === "team" ? [
+              `team_dashboard_${DEFAULT_SEASON}.json`,
+              selectedLeague === "AFLW" ? "roster_players_aflw.csv" : "roster_players.csv",
+              selectedLeague === "AFLW" ? "team_kpis_aflw.csv" : "team_kpis.csv",
+              selectedLeague === "AFLW" ? "team_rank_timeseries_aflw.csv" : "team_rank_timeseries.csv",
+              selectedLeague === "AFLW" ? "player_projections_aflw.csv" : "player_projections.csv",
+              selectedLeague === "AFLW" ? "team_skill_radar_aflw.csv" : "team_skill_radar.csv",
+              selectedLeague === "AFLW" ? "player_acquisition_breakdown_aflw.csv" : "player_acquisition_breakdown.csv",
+            ] : [
+              `career_dashboard_${DEFAULT_SEASON}.json`,
+              selectedLeague === "AFLW" ? "career_projections_aflw.csv" : "career_projections.csv",
+              "comparable_players.csv",
+            ]} />}
           </div>
         </div>
       </div>

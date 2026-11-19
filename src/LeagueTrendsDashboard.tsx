@@ -1,4 +1,5 @@
 // @ts-nocheck
+import LastUpdatedFooter from "./LastUpdatedFooter";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Area,
@@ -554,6 +555,7 @@ export default function LeagueTrendsDashboard({ embedded = false } = {}) {
           ))}
         </div>
       )}
+      {activePayload && !loadError && <LastUpdatedFooter files={[`league_trends.json:${leagueFilter}`]} />}
     </main>
   );
 }

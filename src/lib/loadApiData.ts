@@ -1,3 +1,4 @@
+import { recordUploadDate } from "./uploadDates";
 export async function loadApiData<T = any>(file: string, params: Record<string, string> = {}): Promise<T> {
   const search = new URLSearchParams({ file, ...params });
   const headers: Record<string, string> = {};
@@ -12,5 +13,7 @@ export async function loadApiData<T = any>(file: string, params: Record<string, 
     throw new Error(`API error ${res.status}: ${text}`);
   }
 
-  return res.json();
+  const data = await res.json();
+  recordUploadDate(params.league ? `${file}:${params.league}` : file, res);
+  return data;
 }

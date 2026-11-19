@@ -1,3 +1,5 @@
+import LastUpdatedFooter from "./LastUpdatedFooter";
+import { recordUploadDate } from "./lib/uploadDates";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CartesianGrid,
@@ -241,7 +243,9 @@ async function fetchJsonFile(file: string, required = true, playerId?: string) {
         : `Failed to load ${file} via API (${response.status})`
     );
   }
-  return await parseJsonResponse(response, file);
+  const json = await parseJsonResponse(response, file);
+  recordUploadDate(file, response);
+  return json;
 }
 
 function payloadFileForLeagueScope(scope: string, gender: GenderFilter = "MEN") {
@@ -2479,6 +2483,7 @@ export default function DraftProspectProfileDashboard({
           </section>
         </>
       )}
+      <LastUpdatedFooter files={[payloadFileForLeagueScope(selectedLeagueScope, selectedGender), CHAMPION_RATINGS_FILE]} />
     </main>
   );
 }
